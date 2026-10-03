@@ -111,7 +111,7 @@
     "clsx": "^2.1.1",
     "electron-updater": "^6.8.9",
     "eventsource": "^4.1.1",
-    "koffi": "^2.16.3",
+    "koffi": "^3.3.2",
     "lucide-react": "^1.47.0",
     "openai": "^7.17.0",
     "pocketbase": "^0.28.1",

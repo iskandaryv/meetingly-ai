@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Every window is a transparent, frameless surface; the panel draws its own glass. */
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+  overflow: hidden;
+  color: rgb(255 255 255 / 0.92);
+  /* Bundled (offline): Inter with optical sizing, crisp at the small sizes the panel uses. */
+  font-family: "Inter Variable", "Segoe UI", system-ui, sans-serif;
+  font-optical-sizing: auto;
+  font-feature-settings: "cv11", "ss03";
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+body[data-window="main"] #root {
+  width: max-content;
+}
+
+/* The dashboard is a normal OS window: opaque, selectable text. */
+body[data-window="dashboard"],
+body[data-window="dashboard"] #root {
+  background: #141416 !important;
+  user-select: text;
+}
+
+.glass {
+  @apply rounded-xl border border-white/15 bg-black/85 shadow-2xl backdrop-blur-xl;
+}
+
+.drag {
+  -webkit-app-region: drag;
+}
+.no-drag,
+button,
+input,
+textarea,
+select,
+a {
+  -webkit-app-region: no-drag;
+}
+
+.selectable {
+  user-select: text;
+  cursor: text;
+}
+
+/* Thin scrollbars that stay out of the way. */
+.scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.25) transparent;
+}
+.scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 0.25);
+  border-radius: 3px;
+}
+.scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Rendered assistant text. */
+.md p {
+  margin: 0 0 0.5em;
+}
+.md p:last-child {
+  margin-bottom: 0;
+}
+.md ul,
+.md ol {
+  margin: 0 0 0.5em 1.1em;
+  list-style: disc;
+}
+.md ol {
+  list-style: decimal;
+}
+.md li {
+  margin: 0.15em 0;
+}
+.md code {
+  @apply rounded bg-white/10 px-1 py-0.5 font-mono text-[12px] text-amber-200;
+}
+.md pre {
+  @apply my-2 overflow-x-auto rounded-md border border-white/10 bg-black/60 p-3 font-mono text-[12px] leading-relaxed text-emerald-200;
+}
+.md pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+.md strong {
+  @apply font-semibold text-white;
+}
+
+input[type="password"],
+input[type="text"],
+input[type="search"],
+textarea,
+select {
+  color-scheme: dark;
+}

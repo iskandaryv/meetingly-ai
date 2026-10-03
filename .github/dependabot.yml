@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /app
+    schedule:
+      interval: monthly
+    groups:
+      dependencies:
+        update-types: [minor, patch]
+    ignore:
+      # Major versions need a deliberate migration; do them by hand.
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+  - package-ecosystem: npm
+    directory: /relay
+    schedule:
+      interval: monthly
+    groups:
+      dependencies:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

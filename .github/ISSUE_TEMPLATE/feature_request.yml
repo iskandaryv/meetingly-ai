@@ -1,0 +1,11 @@
+name: Feature request
+description: An idea that would make Meetingly better
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like Meetingly to do?
+      description: Describe the situation in a meeting or interview where it would help.
+    validations:
+      required: true

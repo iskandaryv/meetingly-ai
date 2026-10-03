@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"], "@shared/*": ["shared/*"] }
+  },
+  "include": ["src", "shared", "vite.config.mts", "vitest.config.mts"]
+}

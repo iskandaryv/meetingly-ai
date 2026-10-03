@@ -1,0 +1,24 @@
+[Unit]
+Description=Meetingly relay (LLM gateway + Deepgram proxy)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=igpt
+Group=igpt
+WorkingDirectory=/opt/igpt-relay
+EnvironmentFile=/etc/igpt-relay.env
+ExecStart=/usr/bin/node /opt/igpt-relay/relay.mjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/igpt-relay
+AmbientCapabilities=
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

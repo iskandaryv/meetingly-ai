@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  app:
+    name: App (typecheck + tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    env:
+      # Tests do not launch Electron; skip its 100 MB binary.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  relay:
+    name: Relay (tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: relay
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: node --test

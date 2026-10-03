@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Website and download
+    url: https://meetinglyai.com
+    about: Install the latest version.
+  - name: Email support
+    url: mailto:support@aiprimetech.io
+    about: Account, billing or anything private.

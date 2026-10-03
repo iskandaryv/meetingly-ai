@@ -1,0 +1,24 @@
+[Unit]
+Description=Meetingly relay (LLM gateway + Deepgram proxy)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=meetingly
+Group=meetingly
+WorkingDirectory=/opt/meetingly-relay
+EnvironmentFile=/etc/meetingly-relay.env
+ExecStart=/usr/bin/node /opt/meetingly-relay/relay.mjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/meetingly-relay
+AmbientCapabilities=
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

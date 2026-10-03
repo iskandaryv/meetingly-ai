@@ -1,0 +1,139 @@
+{
+  "name": "meetingly",
+  "productName": "Meetingly",
+  "version": "1.0.0",
+  "description": "Desktop AI meeting assistant: live transcription, hands-free answers, screenshot analysis and meeting reports.",
+  "main": "dist-electron/main.js",
+  "private": true,
+  "license": "Apache-2.0",
+  "author": "iskandaryv <iskandaryv@mail.ru>",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.electron.json --noEmit",
+    "test": "vitest run",
+    "smoke": "node scripts/smoke.mjs",
+    "dist": "vite build && electron-builder",
+    "dist:win": "vite build && electron-builder --win",
+    "smoke:chat": "node scripts/smoke.mjs chat",
+    "smoke:listen": "node scripts/smoke.mjs listen",
+    "smoke:cloud": "node scripts/smoke.mjs cloud",
+    "fetch:asr": "node scripts/fetch-asr-native.mjs",
+    "smoke:asr": "node scripts/smoke.mjs asr"
+  },
+  "build": {
+    "appId": "com.aiprimetech.meetingly",
+    "productName": "Meetingly",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "extraResources": [
+      {
+        "from": "build/tray.png",
+        "to": "tray.png"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.ico",
+      "extraResources": [
+        {
+          "from": "vendor/transcribe/win-${arch}",
+          "to": "transcribe"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.png",
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Meetingly transcribes your meetings from the microphone.",
+        "NSAudioCaptureUsageDescription": "Meetingly can transcribe the other side of the call from system audio.",
+        "NSScreenCaptureUsageDescription": "Meetingly can analyze what is on your screen when you ask it to.",
+        "LSUIElement": true
+      },
+      "extraResources": [
+        {
+          "from": "vendor/transcribe/mac-${arch}",
+          "to": "transcribe"
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icon.png",
+      "category": "Office",
+      "maintainer": "iskandaryv@mail.ru",
+      "extraResources": [
+        {
+          "from": "vendor/transcribe/linux-${arch}",
+          "to": "transcribe"
+        }
+      ]
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://meetinglyai.com/download"
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/koffi/**"
+    ]
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "electron-updater": "^6.8.9",
+    "eventsource": "^4.1.1",
+    "koffi": "^2.16.3",
+    "lucide-react": "^1.47.0",
+    "openai": "^7.17.0",
+    "pocketbase": "^0.28.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tailwind-merge": "^2.6.0",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^6.1.1",
+    "autoprefixer": "^10.6.1",
+    "electron": "^44.4.1",
+    "electron-builder": "^26.15.3",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.0",
+    "vite-plugin-electron": "^1.1.2",
+    "vitest": "^5.0.1"
+  }
+}

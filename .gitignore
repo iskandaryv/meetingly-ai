@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dist-electron/
+release/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea/
+.vscode/
+*.local
+app/vendor/transcribe/

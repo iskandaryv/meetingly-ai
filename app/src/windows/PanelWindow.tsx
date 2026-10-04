@@ -9,12 +9,13 @@ import {
   type ChatChunk,
   type ChatMessage,
   type PanelTab,
+  type PlanState,
   type QuickActionId,
   type SuggestionsState
 } from "@shared/types"
 import { api } from "@/lib/api"
 import { useAudioCapture, useLiveTranscript, type Interim, type TranscriptLine } from "@/lib/capture"
-import { useEvent, useSessionState, useSettings, useSuggestions } from "@/lib/hooks"
+import { useEvent, usePlanState, useSessionState, useSettings, useSuggestions } from "@/lib/hooks"
 import type { AudioLevels } from "@/lib/audio"
 import { cn, copyText } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -33,6 +34,7 @@ export function PanelWindow() {
   const capture = useAudioCapture(session)
   const transcript = useLiveTranscript(session)
   const suggestions = useSuggestions()
+  const plan = usePlanState()
 
   useEffect(() => {
     void api.invoke("windows:state").then((s) => setTab(s.panelTab))
@@ -97,11 +99,11 @@ export function PanelWindow() {
           </div>
         </header>
         <div className="flex min-h-0 flex-1">
-          {rail && <Suggestions state={suggestions} />}
+          {rail && <Suggestions state={suggestions} plan={plan} />}
           <div className="flex min-w-0 flex-1 flex-col">
             {/* Both tabs stay mounted: a reply keeps streaming and scroll positions survive tab switches. */}
             <div className={cn("min-h-0 flex-1 flex-col", tab === "answers" ? "flex" : "hidden")}>
-              <Answers listening={session.status !== "idle"} handsFree={handsFree} />
+              <Answers listening={session.status !== "idle"} handsFree={handsFree} plan={plan} />
             </div>
             <div className={cn("min-h-0 flex-1 flex-col", tab === "transcript" ? "flex" : "hidden")}>
               <Transcript
@@ -143,7 +145,7 @@ const ACTION_ICONS: Record<QuickActionId, React.ReactNode> = {
 }
 
 /** Questions drawn from the conversation, then fixed quick actions; a click answers in the Answers tab. */
-function Suggestions({ state }: { state: SuggestionsState }) {
+function Suggestions({ state, plan }: { state: SuggestionsState; plan: PlanState }) {
   const [busy, setBusy] = useState(false)
   useEvent("chat:busy", setBusy)
   const use = (id: string) => void api.invoke("suggestions:use", id).catch(() => {})
@@ -170,7 +172,11 @@ function Suggestions({ state }: { state: SuggestionsState }) {
       <div className="scroll min-h-0 flex-1 space-y-0.5 px-1 pb-1">
         {state.items.length === 0 ? (
           <p className="px-1.5 py-1 text-[11px] leading-snug text-white/35">
-            {state.updating ? "Reading the conversation…" : "Questions show up here as the conversation goes."}
+            {plan.used && plan.limits && plan.used.listening >= plan.limits.listening
+              ? `Paused for today: ${plan.plan === "pro" ? "the daily limit is used" : "upgrade to Pro for more"}.`
+              : state.updating
+                ? "Reading the conversation…"
+                : "Questions show up here as the conversation goes."}
           </p>
         ) : (
           state.items.map((s) => (
@@ -205,7 +211,7 @@ function Suggestions({ state }: { state: SuggestionsState }) {
   )
 }
 
-function Answers({ listening, handsFree }: { listening: boolean; handsFree: boolean }) {
+function Answers({ listening, handsFree, plan }: { listening: boolean; handsFree: boolean; plan: PlanState }) {
   const [history, setHistory] = useState<ChatMessage[]>([])
   const [stream, setStream] = useState<ChatChunk | null>(null)
   const [busy, setBusy] = useState(false)
@@ -274,6 +280,8 @@ function Answers({ listening, handsFree }: { listening: boolean; handsFree: bool
         </div>
       )}
 
+      <PlanBar plan={plan} />
+
       <form
         className="flex items-center gap-1 border-t border-white/10 p-1.5"
         onSubmit={(e) => {
@@ -300,6 +308,32 @@ function Answers({ listening, handsFree }: { listening: boolean; handsFree: bool
         </Button>
       </form>
     </>
+  )
+}
+
+/** Without an account: the sign-up prompt. On the free plan: today's answers left. Nothing on Pro. */
+function PlanBar({ plan }: { plan: PlanState }) {
+  if (plan.status === "signed-out") {
+    return (
+      <div className="flex items-center gap-2 border-t border-white/10 bg-sky-500/10 px-2.5 py-1.5">
+        <span className="min-w-0 flex-1 text-[11.5px] leading-snug text-sky-100">Create a free account to get AI answers: 100 a day, no card.</span>
+        <Button variant="primary" size="sm" className="h-6 px-2.5 text-[11px]" onClick={() => void api.invoke("cloud:link-start").catch(() => {})}>
+          Sign up free
+        </Button>
+      </div>
+    )
+  }
+  if (plan.status !== "ok" || plan.plan === "pro" || !plan.used || !plan.limits) return null
+  const left = Math.max(0, plan.limits.answers - plan.used.answers)
+  return (
+    <div className="flex items-center gap-1.5 border-t border-white/10 px-2.5 py-1 text-[11px] text-white/45">
+      <span className={cn("min-w-0 flex-1 truncate", left === 0 && "text-amber-200")}>
+        {left === 0 ? "No answers left today. They come back at midnight UTC." : `${left} of ${plan.limits.answers} answers left today`}
+      </span>
+      <button type="button" className="font-medium text-sky-300 hover:text-sky-200" onClick={() => void api.invoke("plan:upgrade").catch(() => {})}>
+        Upgrade
+      </button>
+    </div>
   )
 }
 

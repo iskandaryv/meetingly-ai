@@ -1,6 +1,7 @@
 import OpenAI from "openai"
 import { APP_TOKEN, relayHttpUrl } from "../../shared/relay"
 import { getLanguage, type LanguageCode } from "../../shared/types"
+import { relayIdentity } from "./relayAuth"
 import type { SettingsStore } from "./settings"
 
 export interface LlmMessage {
@@ -17,7 +18,7 @@ export interface LlmResult {
  * What a request is for. The relay picks the model for each task from its own config
  * (and falls back on its own), so changing models never needs an app release.
  */
-export type LlmTask = "answer" | "suggest" | "vision" | "report"
+export type LlmTask = "answer" | "auto" | "suggest" | "vision" | "report"
 
 /** The wire format needs a model name; the relay ignores it. */
 const RELAY_MODEL = "relay"
@@ -33,7 +34,6 @@ export class Llm {
     this.client = new OpenAI({
       apiKey: APP_TOKEN,
       baseURL: `${relayHttpUrl(relayUrl)}/v1`,
-      defaultHeaders: { "X-Device-Id": settings.deviceId() },
       maxRetries: 1,
       timeout: 90_000
     })
@@ -45,7 +45,7 @@ export class Llm {
 
   /** Chat completion; streams through `onChunk` when provided. */
   async chat(messages: LlmMessage[], onChunk?: (delta: string) => void, task: LlmTask = "answer"): Promise<LlmResult> {
-    const options = { headers: { "X-Meetingly-Task": task } }
+    const options = { headers: { ...relayIdentity(this.settings), "X-Meetingly-Task": task } }
     if (!onChunk) {
       const res = await this.client.chat.completions.create({ model: RELAY_MODEL, messages }, options)
       return { text: res.choices[0]?.message?.content ?? "", tokens: res.usage?.total_tokens ?? 0 }
@@ -83,7 +83,7 @@ export class Llm {
           }
         ]
       },
-      { headers: { "X-Meetingly-Task": "vision" satisfies LlmTask } }
+      { headers: { ...relayIdentity(this.settings), "X-Meetingly-Task": "vision" satisfies LlmTask } }
     )
     return { text: res.choices[0]?.message?.content ?? "", tokens: res.usage?.total_tokens ?? 0 }
   }
@@ -92,6 +92,9 @@ export class Llm {
 /** Turn relay / network failures into something a person can act on. */
 export function describeRelayError(err: unknown): string {
   const status = (err as { status?: number })?.status
+  // Limits, sign-in and plan errors come with a code and words meant for the user: show them as they are.
+  const relay = (err as { error?: { code?: string; message?: string } })?.error
+  if (relay?.code && relay.message) return relay.message
   const message = err instanceof Error ? err.message : String(err)
   if (status === 401) return "This build of Meetingly is no longer accepted by the server. Please update the app."
   if (status === 429) return /transcription/i.test(message) ? "Daily transcription limit reached. Try again tomorrow." : "Daily limit reached. Try again tomorrow."

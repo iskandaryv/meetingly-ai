@@ -1,7 +1,7 @@
 import { useState } from "react"
-import { Cloud, CloudOff, ExternalLink, Link2, Link2Off, RefreshCw } from "lucide-react"
+import { Cloud, CloudOff, ExternalLink, Link2, Link2Off, RefreshCw, Sparkles } from "lucide-react"
 import { api } from "@/lib/api"
-import { useCloudState } from "@/lib/hooks"
+import { useCloudState, usePlanState } from "@/lib/hooks"
 import { formatWhen } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 /** Link this install to an account; settings, prompts and meetings then follow the account. */
 export function AccountSection() {
   const cloud = useCloudState()
+  const plan = usePlanState()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -49,6 +50,21 @@ export function AccountSection() {
           </p>
         </div>
       </div>
+
+      {plan.status === "ok" && plan.used && plan.limits && (
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-md border border-white/10 bg-black/20 px-3 py-2">
+          <div className="text-xs text-white/70">
+            <span className="font-medium text-white">{plan.plan === "pro" ? "Pro" : "Free plan"}</span>
+            {" · "}
+            {plan.plan === "pro"
+              ? "unlimited answers"
+              : `${Math.max(0, plan.limits.answers - plan.used.answers)} of ${plan.limits.answers} answers left today`}
+          </div>
+          <Button variant={plan.plan === "pro" ? "ghost" : "primary"} size="sm" onClick={() => run(() => api.invoke("plan:upgrade"))}>
+            <Sparkles className="h-3.5 w-3.5" /> {plan.plan === "pro" ? "Manage plan" : "Upgrade to Pro"}
+          </Button>
+        </div>
+      )}
 
       {cloud.status === "linking" && (
         <div className="mb-3 rounded-md border border-sky-400/30 bg-sky-500/10 p-3 text-center">

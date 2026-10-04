@@ -56,6 +56,11 @@ export class SettingsStore extends EventEmitter {
     return this.data.deviceId
   }
 
+  /** This build's version (sent to the relay, which treats builds before accounts as guests). */
+  appVersion(): string {
+    return this.meta.version
+  }
+
   activePrompt(): Prompt {
     return this.data.prompts.find((p) => p.id === this.data.activePromptId) ?? this.data.prompts[0] ?? DEFAULT_PROMPT
   }

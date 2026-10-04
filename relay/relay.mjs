@@ -1,23 +1,29 @@
-// Meetingly relay. The desktop app never sees provider keys; it talks to this
-// service with a shared app token and a per-install device id. This process
-// terminates TLS itself (no nginx: 80/443 on the box belong to other services).
+// Meetingly relay. The desktop app never sees provider keys; it talks to this service with a shared
+// app token, a per-install device id and (from 1.1.0) the user's account token. Budgets are per
+// account and plan (plans.mjs); the account service on this box says who the account is.
 //
 // Endpoints
-//   GET  /health                      liveness + version
+//   GET  /health                      liveness, version, models, plan limits
+//   GET  /v1/usage                    today's usage and limits for the calling account
 //   POST /v1/chat/completions         OpenAI-compatible, streamed or not, forwarded to the upstream gateway
 //   GET  /v1/listen  (WebSocket)      Deepgram live transcription, bidirectional passthrough
 //
+// Request headers from the app: Authorization: Bearer <APP_TOKEN>, X-Device-Id, X-Meetingly-Task,
+// X-Meetingly-Account (account token), X-Meetingly-Client (app version; absent in 1.0.0).
+//
 // Deployed on Voyra behind nginx at https://aiprimetech.io/igpt/ (nginx strips the prefix).
 // Env (see relay.env.example): UPSTREAM_BASE_URL, UPSTREAM_API_KEY, DEEPGRAM_API_KEY, APP_TOKEN, HOST, PORT, TRUST_PROXY,
-//   TLS_CERT/TLS_KEY (only without nginx in front), DEFAULT_MODEL, FALLBACK_MODEL, MODEL_<TASK>, quotas.
+//   TLS_CERT/TLS_KEY (only without nginx in front), DEFAULT_MODEL, FALLBACK_MODEL, MODEL_<TASK>, CHAT_PER_DAY, RPM_PER_IP.
 
 import fs from "node:fs"
 import http from "node:http"
 import https from "node:https"
 import path from "node:path"
 import { WebSocket, WebSocketServer } from "ws"
-import { ANSWER_TASKS, ReplyWatcher } from "./answers.mjs"
+import { Accounts } from "./accounts.mjs"
+import { ReplyWatcher } from "./answers.mjs"
 import { modelConfig, modelsFor } from "./models.mjs"
+import { chargeFor, checkBudget, GUEST_UNTIL, IP_ANSWERS_PER_DAY, PLANS, taskSpec } from "./plans.mjs"
 import { Quotas } from "./quotas.mjs"
 
 const env = process.env
@@ -31,8 +37,8 @@ const UPSTREAM_BASE_URL = (env.UPSTREAM_BASE_URL ?? "https://claudeshop.store/v1
 const UPSTREAM_API_KEY = (env.UPSTREAM_API_KEY ?? env.OPENROUTER_API_KEY ?? "").trim() || required("UPSTREAM_API_KEY")
 const DEEPGRAM_API_KEY = required("DEEPGRAM_API_KEY")
 const MODELS = modelConfig(env)
-// Free answers per device per day. Hands-free checks that answer nothing, suggestions and reports do not count.
-const ANSWERS_PER_DAY = Number(env.ANSWERS_PER_DAY ?? 100)
+// Absolute requests per key per day, whatever they are: the last line against runaway clients.
+const REQUESTS_PER_DAY = Number(env.CHAT_PER_DAY ?? 2000)
 const MAX_TOKENS = Number(env.MAX_TOKENS ?? 4096)
 // Reasoning models: how hard to think. "low" keeps a live assistant snappy. Empty = do not send.
 const REASONING_EFFORT = (env.REASONING_EFFORT ?? "low").trim()
@@ -41,11 +47,9 @@ const VERSION = JSON.parse(fs.readFileSync(new URL("./package.json", import.meta
 
 const quotas = new Quotas({
   file: env.USAGE_FILE ?? "/var/lib/meetingly-relay/usage.json",
-  chatPerDay: Number(env.CHAT_PER_DAY ?? 400),
-  answersPerDay: ANSWERS_PER_DAY,
-  audioMinutesPerDay: Number(env.AUDIO_MINUTES_PER_DAY ?? 300),
   requestsPerMinutePerIp: Number(env.RPM_PER_IP ?? 60)
 })
+const accounts = new Accounts()
 
 const ALLOWED_LISTEN_PARAMS = new Set([
   "language", "encoding", "sample_rate", "channels", "interim_results", "punctuate",
@@ -58,16 +62,15 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, "http://relay")
   try {
     if (req.method === "GET" && url.pathname === "/health") {
-      return json(res, 200, { ok: true, version: VERSION, models: MODELS, limits: { answersPerDay: ANSWERS_PER_DAY, requestsPerDay: Number(env.CHAT_PER_DAY ?? 400) } })
+      return json(res, 200, { ok: true, version: VERSION, models: MODELS, plans: PLANS, guestUntil: new Date(GUEST_UNTIL).toISOString() })
     }
     const auth = authenticate(req, url)
     if (!auth.ok) return json(res, 401, { error: { message: auth.reason } })
     const ip = clientIp(req)
-    if (!quotas.allowRequest(ip)) return json(res, 429, { error: { message: "Too many requests, slow down." } })
+    if (!quotas.allowRequest(ip)) return limited(res, "rate_limit", "Too many requests at once. Slow down a little.")
 
-    if (req.method === "POST" && url.pathname === "/v1/chat/completions") {
-      return await chatCompletions(req, res, auth.device)
-    }
+    if (url.pathname === "/v1/chat/completions" && req.method === "POST") return await chatCompletions(req, res, ip)
+    if (url.pathname === "/v1/usage" && req.method === "GET") return await usage(req, res, ip)
     json(res, 404, { error: { message: "Not found" } })
   } catch (err) {
     console.error(`[relay] ${req.method} ${url.pathname}:`, err.message)
@@ -77,14 +80,23 @@ const server = createServer(async (req, res) => {
 })
 
 const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 })
-server.on("upgrade", (req, socket, head) => {
-  const url = new URL(req.url, "http://relay")
-  if (url.pathname !== "/v1/listen") return rejectUpgrade(socket, 404, "Not found")
-  const auth = authenticate(req, url)
-  if (!auth.ok) return rejectUpgrade(socket, 401, auth.reason)
-  if (!quotas.allowRequest(clientIp(req))) return rejectUpgrade(socket, 429, "Too many requests")
-  if (!quotas.allowAudio(auth.device)) return rejectUpgrade(socket, 429, "Daily transcription limit reached")
-  wss.handleUpgrade(req, socket, head, (client) => proxyListen(client, url, auth.device))
+server.on("upgrade", async (req, socket, head) => {
+  try {
+    const url = new URL(req.url, "http://relay")
+    if (url.pathname !== "/v1/listen") return rejectUpgrade(socket, 404, "Not found")
+    const auth = authenticate(req, url)
+    if (!auth.ok) return rejectUpgrade(socket, 401, auth.reason)
+    const ip = clientIp(req)
+    if (!quotas.allowRequest(ip)) return rejectUpgrade(socket, 429, "Too many requests")
+    const who = await identify(req, ip, url)
+    if (who.error) return rejectUpgrade(socket, who.error.status, who.error.message)
+    const plan = PLANS[who.plan]
+    if (quotas.used(who.key).audioMinutes >= plan.audioMinutes) return rejectUpgrade(socket, 429, "Daily transcription limit reached")
+    wss.handleUpgrade(req, socket, head, (client) => proxyListen(client, url, who))
+  } catch (err) {
+    console.error("[relay] listen upgrade:", err.message)
+    rejectUpgrade(socket, 500, "Relay error")
+  }
 })
 
 server.listen(PORT, HOST, () => {
@@ -101,10 +113,41 @@ for (const sig of ["SIGINT", "SIGTERM"]) {
 
 // ---------------------------------------------------------------------------
 
-async function chatCompletions(req, res, device) {
-  if (!quotas.allowChat(device)) {
-    return json(res, 429, { error: { message: "Daily chat limit reached. Try again tomorrow." } })
+/**
+ * Who is calling and on which plan. Accounts (1.1.0+) are keyed by user; builds from before accounts
+ * (no X-Meetingly-Client header) get the small guest allowance per IP until GUEST_UNTIL.
+ */
+async function identify(req, ip, url) {
+  const token = String(req.headers["x-meetingly-account"] ?? url?.searchParams.get("account") ?? "").trim()
+  const client = String(req.headers["x-meetingly-client"] ?? url?.searchParams.get("client") ?? "").trim()
+  if (token) {
+    let account
+    try {
+      account = await accounts.resolve(token)
+    } catch (err) {
+      console.warn("[relay] account service unreachable:", err.message)
+      return { error: { status: 503, code: "account_unavailable", message: "The account service is unavailable. Try again in a minute." } }
+    }
+    if (!account.ok) return { error: { status: 401, code: "account_required", message: "Your sign-in has expired. Connect your account again in Dashboard → Settings." } }
+    return { key: `u:${account.userId}`, plan: account.plan }
   }
+  if (!client && Date.now() < GUEST_UNTIL) return { key: `ip:${ip}`, plan: "guest" }
+  return { error: { status: 401, code: "account_required", message: "Create a free Meetingly account to use AI answers: Dashboard → Settings → Connect account." } }
+}
+
+async function usage(req, res, ip) {
+  const who = await identify(req, ip, null)
+  if (who.error) return json(res, who.error.status, { error: who.error })
+  json(res, 200, { plan: who.plan, limits: PLANS[who.plan], used: quotas.used(who.key), resetAt: quotas.resetAt() })
+}
+
+async function chatCompletions(req, res, ip) {
+  const who = await identify(req, ip, null)
+  if (who.error) return json(res, who.error.status, { error: who.error })
+  const task = String(req.headers["x-meetingly-task"] ?? "")
+  const spec = taskSpec(task)
+  if (!spec) return json(res, 400, { error: { message: "Unknown task" } })
+
   const raw = await readBody(req, MAX_BODY_BYTES)
   let body
   try {
@@ -115,79 +158,93 @@ async function chatCompletions(req, res, device) {
   if (!Array.isArray(body.messages) || body.messages.length === 0) {
     return json(res, 400, { error: { message: "messages required" } })
   }
+  if (spec.noStream && body.stream) return json(res, 400, { error: { message: "This task is not streamed" } })
 
-  // Only a fixed set of fields goes upstream. Reasoning models (gpt-5.x) reject
-  // `temperature` and prefer `max_completion_tokens`, so neither `temperature`
-  // nor `max_tokens` is forwarded. The model comes from the relay's config for the
-  // request's task; whatever model the client names is ignored.
+  // Budgets before anything goes upstream.
+  const plan = PLANS[who.plan]
+  const used = quotas.used(who.key)
+  if (used.requests >= REQUESTS_PER_DAY) return limited(res, "daily_limit", "Today's usage limit is reached. It resets at midnight UTC.", who.plan)
+  if (quotas.inFlight(who.key) >= plan.concurrent) return limited(res, "busy", "Another request is still running. Try again in a moment.", who.plan)
+  const over = checkBudget(who.plan, used, task)
+  if (over) return limited(res, over.code, over.message, who.plan)
+  if (spec.bucket === "answers" && who.plan !== "pro" && quotas.used(`ipa:${ip}`).answers >= IP_ANSWERS_PER_DAY) {
+    return limited(res, "network_limit", "Too many free answers from this network today. It resets at midnight UTC.", who.plan)
+  }
+
+  // Only a fixed set of fields goes upstream. Reasoning models (gpt-5.x) reject `temperature` and prefer
+  // `max_completion_tokens`, so neither `temperature` nor `max_tokens` is forwarded. The model comes from
+  // the relay's config for the request's task; whatever model the client names is ignored.
   const requested = Number(body.max_completion_tokens ?? body.max_tokens)
   const forwarded = {
     messages: body.messages,
     stream: Boolean(body.stream),
-    max_completion_tokens: Math.min(requested || MAX_TOKENS, MAX_TOKENS),
+    max_completion_tokens: Math.min(requested || MAX_TOKENS, MAX_TOKENS, spec.maxTokens),
     ...(REASONING_EFFORT ? { reasoning_effort: REASONING_EFFORT } : {}),
     ...(body.stream ? { stream_options: { include_usage: true } } : {})
   }
-  const task = String(req.headers["x-meetingly-task"] ?? "")
-  const models = modelsFor(MODELS, task)
-  const isAnswer = ANSWER_TASKS.has(task)
-  if (isAnswer && !quotas.allowAnswer(device)) {
-    return json(res, 429, { error: { message: `Daily limit of ${ANSWERS_PER_DAY} free answers reached. It resets at midnight UTC.` } })
-  }
+  const models = modelsFor(MODELS, task === "auto" ? "answer" : task)
 
-  // The next model is tried only when one fails before sending anything (unknown model, rate limit, outage).
-  let upstream = null
-  let served = ""
-  for (const [i, model] of models.entries()) {
-    const last = i === models.length - 1
-    try {
-      upstream = await fetch(`${UPSTREAM_BASE_URL}/chat/completions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${UPSTREAM_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ model, ...forwarded }),
-        signal: AbortSignal.timeout(120_000)
-      })
-    } catch (err) {
-      if (last) throw err
-      console.warn(`[relay] ${model} unreachable (${task || "chat"}), trying ${models[i + 1]}: ${err.message}`)
-      continue
-    }
-    served = model
-    if (upstream.ok || last) break
-    const detail = (await upstream.text().catch(() => "")).slice(0, 200)
-    console.warn(`[relay] ${model} answered ${upstream.status} (${task || "chat"}), trying ${models[i + 1]}: ${detail}`)
-  }
-
-  quotas.countChat(device)
-  res.writeHead(upstream.status, {
-    "Content-Type": upstream.headers.get("content-type") ?? "application/json",
-    "Cache-Control": "no-store",
-    "X-Meetingly-Model": served
-  })
-  if (!upstream.body) return res.end()
-  // Stream the upstream body straight through; works for SSE and plain JSON alike. An answer
-  // counts toward the daily limit once it is clear the reply really answered something.
-  const watcher = isAnswer && upstream.ok ? new ReplyWatcher(Boolean(body.stream)) : null
-  const decoder = new TextDecoder()
-  const reader = upstream.body.getReader()
-  req.on("close", () => reader.cancel().catch(() => {}))
+  quotas.begin(who.key)
+  let watcher = null
+  let upstreamOk = false
   try {
+    // The next model is tried only when one fails before sending anything (unknown model, rate limit, outage).
+    let upstream = null
+    let served = ""
+    for (const [i, model] of models.entries()) {
+      const last = i === models.length - 1
+      try {
+        upstream = await fetch(`${UPSTREAM_BASE_URL}/chat/completions`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${UPSTREAM_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model, ...forwarded }),
+          signal: AbortSignal.timeout(120_000)
+        })
+      } catch (err) {
+        if (last) throw err
+        console.warn(`[relay] ${model} unreachable (${task || "chat"}), trying ${models[i + 1]}: ${err.message}`)
+        continue
+      }
+      served = model
+      if (upstream.ok || last) break
+      const detail = (await upstream.text().catch(() => "")).slice(0, 200)
+      console.warn(`[relay] ${model} answered ${upstream.status} (${task || "chat"}), trying ${models[i + 1]}: ${detail}`)
+    }
+
+    upstreamOk = upstream.ok
+    res.writeHead(upstream.status, {
+      "Content-Type": upstream.headers.get("content-type") ?? "application/json",
+      "Cache-Control": "no-store",
+      "X-Meetingly-Model": served,
+      "X-Meetingly-Plan": who.plan
+    })
+    if (!upstream.body) return res.end()
+    // Stream the upstream body straight through; works for SSE and plain JSON alike. The watcher reads
+    // along to decide afterwards what the reply was (an answer, a skip) and how many tokens it took.
+    watcher = upstream.ok ? new ReplyWatcher(Boolean(body.stream)) : null
+    const decoder = new TextDecoder()
+    const reader = upstream.body.getReader()
+    req.on("close", () => reader.cancel().catch(() => {}))
     for (;;) {
       const { done, value } = await reader.read()
       if (done) break
       watcher?.push(decoder.decode(value, { stream: true }))
       res.write(value)
     }
+    res.end()
   } finally {
-    if (watcher?.verdict() === "answer") quotas.countAnswer(device)
+    quotas.end(who.key)
+    quotas.add(who.key, "requests")
+    if (upstreamOk && watcher) {
+      const field = chargeFor(task, watcher.verdict())
+      if (field) quotas.add(who.key, field)
+      if (field === "answers" && who.plan !== "pro") quotas.add(`ipa:${ip}`, "answers")
+      quotas.add(who.key, "tokens", watcher.tokens())
+    }
   }
-  res.end()
 }
 
-function proxyListen(client, url, device) {
+function proxyListen(client, url, who) {
   const params = new URLSearchParams()
   for (const [k, v] of url.searchParams) if (ALLOWED_LISTEN_PARAMS.has(k)) params.set(k, v)
   params.set("model", "nova-2")
@@ -200,14 +257,21 @@ function proxyListen(client, url, device) {
   const startedAt = Date.now()
   const queued = []
   let closed = false
+  const limit = PLANS[who.plan].audioMinutes
+  const before = quotas.used(who.key).audioMinutes
 
   const closeBoth = (code = 1000, reason = "") => {
     if (closed) return
     closed = true
-    quotas.countAudio(device, (Date.now() - startedAt) / 60000)
+    clearInterval(meter)
+    quotas.add(who.key, "audioMinutes", (Date.now() - startedAt) / 60000)
     try { client.close(code, reason) } catch {}
     try { upstream.close(code, reason) } catch {}
   }
+  // A long session must not run past the day's minutes just because it started under them.
+  const meter = setInterval(() => {
+    if (before + (Date.now() - startedAt) / 60000 >= limit) closeBoth(4429, "Daily transcription limit reached")
+  }, 30_000)
 
   upstream.on("open", () => {
     for (const msg of queued.splice(0)) upstream.send(msg)
@@ -231,6 +295,12 @@ function proxyListen(client, url, device) {
   })
   client.on("close", () => closeBoth())
   client.on("error", () => closeBoth(1011, "client error"))
+}
+
+/** 429 with a code the app maps to a clear message; never retried by the client SDK. */
+function limited(res, code, message, plan) {
+  res.writeHead(429, { "Content-Type": "application/json", "Cache-Control": "no-store", "x-should-retry": "false" })
+  res.end(JSON.stringify({ error: { message, code, plan: plan ?? null, resetAt: quotas.resetAt() } }))
 }
 
 // ---------------------------------------------------------------------------

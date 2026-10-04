@@ -10,6 +10,7 @@ import type {
   SessionState,
   Settings,
   SettingsView,
+  PlanState,
   SuggestionsState,
   TranscriptEvent,
   Utterance,
@@ -76,6 +77,11 @@ export interface InvokeMap {
   "cloud:open-web": () => void
   "cloud:sync-now": () => CloudState
 
+  "plan:state": () => PlanState
+  "plan:refresh": () => PlanState
+  /** Open the account's plan page in the browser (signed in when the account is linked). */
+  "plan:upgrade": () => void
+
   "meetings:list": () => Meeting[]
   "meetings:get": (id: string) => Meeting | null
   "meetings:delete": (id: string) => void
@@ -97,6 +103,7 @@ export interface EventMap {
   "suggestions:state": SuggestionsState
   "meetings:changed": undefined
   "cloud:state": CloudState
+  "plan:state": PlanState
 }
 
 export type InvokeChannel = keyof InvokeMap
@@ -140,6 +147,9 @@ export const INVOKE_CHANNELS: InvokeChannel[] = [
   "cloud:unlink",
   "cloud:open-web",
   "cloud:sync-now",
+  "plan:state",
+  "plan:refresh",
+  "plan:upgrade",
   "meetings:list",
   "meetings:get",
   "meetings:delete",
@@ -159,7 +169,8 @@ export const EVENT_CHANNELS: EventChannel[] = [
   "chat:cleared",
   "suggestions:state",
   "meetings:changed",
-  "cloud:state"
+  "cloud:state",
+  "plan:state"
 ]
 
 /** Shape exposed on `window.api` by the preload script. */

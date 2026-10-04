@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events"
+import { relayIdentity } from "./relayAuth"
 import {
   getLanguage,
   segmentLabel,
@@ -176,7 +177,7 @@ export class RecordingSession extends EventEmitter {
       ? this.deps.createSocket(deviceId, language.deepgram)
       : local
         ? new LocalAsrSocket({ language: language.asr, model: this.deps.asrModel! })
-        : new DeepgramSocket({ deviceId, language: language.deepgram })
+        : new DeepgramSocket({ deviceId, language: language.deepgram, headers: relayIdentity(this.deps.settings) })
     this.socket = socket
 
     socket.on("transcript", (event: TranscriptEvent) => this.onTranscript(event))

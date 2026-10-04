@@ -191,7 +191,7 @@ export class ChatService extends EventEmitter {
           return
         }
         this.emit("chunk", { id, text: delta })
-      })
+      }, probe ? "auto" : "answer")
       // `state` is changed inside the stream callback, which TypeScript's narrowing cannot see.
       const outcome = state as "wait" | "skip" | "answer"
       if (outcome !== "answer") {

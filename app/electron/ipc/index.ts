@@ -2,6 +2,7 @@ import { app, ipcMain, shell, type IpcMainInvokeEvent } from "electron"
 import type { InvokeChannel, InvokeMap } from "../../shared/ipc"
 import type { ChatService } from "../services/chat"
 import type { CloudSync } from "../services/cloud"
+import type { PlanService } from "../services/plan"
 import type { Logger } from "../services/logger"
 import type { MeetingStore } from "../services/meetings"
 import type { ReportGenerator } from "../services/reports"
@@ -22,6 +23,7 @@ export interface IpcDeps {
   reports: ReportGenerator
   logger: Logger
   cloud: CloudSync
+  plan: PlanService
 }
 
 type Handler<K extends InvokeChannel> = (
@@ -43,7 +45,7 @@ function handle<K extends InvokeChannel>(channel: K, fn: Handler<K>): void {
 }
 
 export function registerIpc(deps: IpcDeps): void {
-  const { settings, windows, session, chat, suggestions, meetings, reports, logger, cloud } = deps
+  const { settings, windows, session, chat, suggestions, meetings, reports, logger, cloud, plan } = deps
 
   // Settings
   handle("settings:get", () => settings.view())
@@ -113,6 +115,11 @@ export function registerIpc(deps: IpcDeps): void {
   handle("cloud:open-web", () => cloud.openWeb())
   handle("cloud:sync-now", () => cloud.syncNow())
 
+  // Plan and usage
+  handle("plan:state", () => plan.getState())
+  handle("plan:refresh", () => plan.refresh())
+  handle("plan:upgrade", () => cloud.openWeb("billing"))
+
   // Meetings
   handle("meetings:list", () => meetings.list())
   handle("meetings:get", (_e, id) => meetings.get(id))
@@ -149,6 +156,19 @@ export function registerIpc(deps: IpcDeps): void {
   meetings.on("changed", () => windows.broadcast("meetings:changed", undefined))
   meetings.on("changed-quiet", () => windows.broadcast("meetings:changed", undefined))
   cloud.on("state", (state) => windows.broadcast("cloud:state", state))
+  plan.on("state", (state) => windows.broadcast("plan:state", state))
+  // Usage moves with every answer and every limit error; linking or unlinking changes the plan itself.
+  chat.on("message", (message) => {
+    if (message.role === "assistant") plan.refreshSoon()
+  })
+  let linkedToken = settings.get().cloud?.token ?? ""
+  settings.onChange((s) => {
+    const token = s.cloud?.token ?? ""
+    if (token !== linkedToken) {
+      linkedToken = token
+      plan.refreshSoon(500)
+    }
+  })
   windows.on("state", (state) => windows.broadcast("windows:state", state))
   settings.onChange(() => {
     fitPanel()

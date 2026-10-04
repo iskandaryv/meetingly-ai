@@ -5,12 +5,25 @@ Small Node service that owns the LLM gateway key (claudeshop.store) and the Deep
 Runs on **Voyra** (US East, `ssh voyra`) as `meetingly-relay.service` on `127.0.0.1:8090`, behind the existing nginx. Public base URL: **`https://aiprimetech.io/igpt`**. nginx strips the `/igpt/` prefix, so no extra DNS record or certificate is needed.
 
 ```
-GET  /igpt/health                     -> { ok, version, models: { default, fallback, perTask } }
+GET  /igpt/health                     -> { ok, version, models, plans, guestUntil }
+GET  /igpt/v1/usage                   today's usage and limits for the calling account
 POST /igpt/v1/chat/completions        OpenAI-compatible; Authorization: Bearer <APP_TOKEN>, X-Device-Id: <id>
 GET  /igpt/v1/listen (WebSocket)      Deepgram live passthrough; same auth via headers or ?token=&device=
 ```
 
-Limits per device per day: **100 free answers** (`ANSWERS_PER_DAY`; only real answers count, not hands-free checks that answer nothing, suggestions or reports), 2000 requests in total, 300 minutes of audio; 60 requests/min per IP.
+**Accounts and plans.** From app 1.1.0 every request carries the user's account token (`X-Meetingly-Account`); the relay asks the account service (`GET 127.0.0.1:8091/api/meetingly/entitlement`, cached 5 min) for the user and plan, and counts per account per UTC day. Budgets are in `plans.mjs`:
+
+| | Guest (1.0.0, per IP, until 2026-11-04) | Free | Pro |
+|---|---|---|---|
+| answers (`answer`, real answers of `auto`) | 20 | 100 | 1,500 |
+| screen analysis (`vision`) | 3 | 10 | 200 |
+| listening (`suggest`, `auto` checks that answer nothing) | 60 | 300 | 3,000 |
+| meeting reports (`report`) | 2 | 5 | 50 |
+| tokens (ceiling over everything) | 60k | 300k | 4M |
+| requests at once | 1 | 2 | 3 |
+| Deepgram minutes | 30 | 60 | 600 |
+
+Plus 600 free answers per IP per day across accounts, `CHAT_PER_DAY` requests per account, 60 requests/min per IP. Limits answer 429 with `{error: {code, message, resetAt}}` and `x-should-retry: false`. `GET /v1/usage` returns plan, limits, today's use and the reset time.
 
 **Models are chosen here, never by the app.** The app sends `X-Meetingly-Task: answer | suggest | vision | report`; `DEFAULT_MODEL` serves every task, `MODEL_<TASK>` overrides one, `FALLBACK_MODEL` is tried when the first choice fails before sending anything. Responses carry `X-Meetingly-Model` with the model that served them. To switch models, edit `/etc/meetingly-relay.env` and `systemctl restart igpt-relay`; no app release needed.
 

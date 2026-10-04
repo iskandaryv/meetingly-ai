@@ -1,7 +1,7 @@
 {
   "name": "meetingly",
   "productName": "Meetingly",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Desktop AI meeting assistant: live transcription, hands-free answers, screenshot analysis and meeting reports.",
   "main": "dist-electron/main.js",
   "private": true,

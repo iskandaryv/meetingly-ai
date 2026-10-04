@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { ANSWER_TASKS, ReplyWatcher } from "./answers.mjs"
+import { ReplyWatcher } from "./answers.mjs"
 
 const sse = (...deltas) => deltas.map((d) => `data: ${JSON.stringify({ choices: [{ delta: { content: d } }] })}\n\n`).join("") + "data: [DONE]\n\n"
 
@@ -31,7 +31,17 @@ test("nothing back is not an answer", () => {
   assert.equal(watch(true, "data: [DONE]\n\n"), "empty")
 })
 
-test("answers, screen analysis and builds without a task count; suggestions and reports do not", () => {
-  for (const t of ["answer", "vision", ""]) assert.ok(ANSWER_TASKS.has(t))
-  for (const t of ["suggest", "report"]) assert.ok(!ANSWER_TASKS.has(t))
+test("token usage is read from the last SSE chunk and from JSON bodies", () => {
+  const streamed = new ReplyWatcher(true)
+  const body = sse("Hello") + `data: ${JSON.stringify({ choices: [], usage: { total_tokens: 321 } })}
+
+data: [DONE]
+
+`
+  for (let i = 0; i < body.length; i += 5) streamed.push(body.slice(i, i + 5))
+  assert.equal(streamed.tokens(), 321)
+  assert.equal(streamed.verdict(), "answer")
+  const plain = new ReplyWatcher(false)
+  plain.push(JSON.stringify({ choices: [{ message: { content: "Hi" } }], usage: { total_tokens: 77 } }))
+  assert.equal(plain.tokens(), 77)
 })

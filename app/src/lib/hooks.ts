@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import type { EventChannel, EventMap } from "@shared/ipc"
 import type { CloudState } from "@shared/cloud"
-import type { SessionState, SettingsView, SuggestionsState, WindowsState } from "@shared/types"
+import type { PlanState, SessionState, SettingsView, SuggestionsState, WindowsState } from "@shared/types"
 import { api } from "./api"
 
 /** Subscribe to a main-process event for the lifetime of the component. */
@@ -80,6 +80,15 @@ export function useFitWindow<T extends HTMLElement>(extra = { width: 0, height: 
     }
   }, [extra.width, extra.height])
   return ref
+}
+
+export function usePlanState(): PlanState {
+  const [state, setState] = useState<PlanState>({ status: "unknown" })
+  useEffect(() => {
+    void api.invoke("plan:state").then(setState)
+  }, [])
+  useEvent("plan:state", setState)
+  return state
 }
 
 export function useCloudState(): CloudState {

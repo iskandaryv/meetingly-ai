@@ -406,6 +406,27 @@ export interface Meeting {
   updatedAt: number
 }
 
+/** Plans the relay knows. "guest" is the allowance for builds from before accounts. */
+export type PlanName = "guest" | "free" | "pro"
+
+export interface PlanUsage {
+  answers: number
+  vision: number
+  listening: number
+  reports: number
+}
+
+/** The account's plan and today's usage, as the relay counts it. */
+export interface PlanState {
+  /** signed-out: no account linked (or its sign-in expired); offline: the relay could not be reached. */
+  status: "unknown" | "signed-out" | "ok" | "offline"
+  plan?: PlanName
+  used?: PlanUsage
+  limits?: PlanUsage
+  /** When today's counts reset (midnight UTC). */
+  resetAt?: string
+}
+
 export interface WindowsState {
   /** The attached panel is visible. */
   chat: boolean

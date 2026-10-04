@@ -12,6 +12,7 @@ import { RecordingSession } from "./services/session"
 import { AsrModel } from "./services/asrModel"
 import { SettingsStore } from "./services/settings"
 import { SuggestionService } from "./services/suggestions"
+import { PlanService } from "./services/plan"
 import { ShortcutManager } from "./shortcuts"
 import { createTray } from "./tray"
 import { WindowManager } from "./windows/WindowManager"
@@ -68,6 +69,8 @@ function bootstrap(): void {
     cloudUrl: process.env.IGPT_CLOUD_URL || undefined
   })
   cloud.on("state", (s) => logger.info("cloud", `status ${s.status}`, { email: s.email, error: s.error }))
+  const plan = new PlanService({ settings })
+  plan.on("state", (s) => logger.info("plan", `${s.status} ${s.plan ?? ""}`, { answers: s.used?.answers, limit: s.limits?.answers }))
 
   let lastShortcuts = JSON.stringify(settings.get().shortcuts)
   const applySettings = () => {
@@ -84,7 +87,7 @@ function bootstrap(): void {
   app.whenReady().then(() => {
     if (process.platform === "darwin") app.dock?.hide()
     installSystemAudioHandler()
-    registerIpc({ settings, windows, session, chat, suggestions, meetings, reports, logger, cloud })
+    registerIpc({ settings, windows, session, chat, suggestions, meetings, reports, logger, cloud, plan })
     instrument({ logger, settings, session, chat, windows })
     applySettings()
     settings.onChange(applySettings)
@@ -92,6 +95,7 @@ function bootstrap(): void {
     void reports.resumeUnfinished()
     // Reconnect to the linked account, if any. Never blocks startup.
     void cloud.start().catch((err) => logger.warn("cloud", "start failed", err))
+    if (!process.env.IGPT_SMOKE) plan.start()
     windows.createMain()
     createTray(windows, settings)
     shortcuts.register()

@@ -148,11 +148,13 @@ export class CloudSync extends EventEmitter {
     return this.state()
   }
 
-  async openWeb(): Promise<void> {
+  /** Open the web dashboard, signed in when this device is linked; `page` is a dashboard route such as "billing". */
+  async openWeb(page = ""): Promise<void> {
     const account = this.deps.settings.get().cloud
     const base = cloudUrl(this.deps.cloudUrl)
-    if (!account || !this.pb?.authStore.token) return this.deps.openExternal(`${base}/#/`)
-    await this.deps.openExternal(`${base}/#/auth?token=${encodeURIComponent(this.pb.authStore.token)}`)
+    if (!account || !this.pb?.authStore.token) return this.deps.openExternal(`${base}/#/${page}`)
+    const next = page ? `&next=${encodeURIComponent(page)}` : ""
+    await this.deps.openExternal(`${base}/#/auth?token=${encodeURIComponent(this.pb.authStore.token)}${next}`)
   }
 
   async syncNow(): Promise<CloudState> {

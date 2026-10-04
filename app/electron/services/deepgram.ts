@@ -6,6 +6,8 @@ import type { TranscriptEvent } from "../../shared/types"
 export interface DeepgramOptions {
   /** Per-install id sent to the relay for quotas. */
   deviceId: string
+  /** Account and client headers for the relay (see relayAuth.ts). */
+  headers?: Record<string, string>
   language: string
   sampleRate?: number
   /** Override the relay base URL (tests, development). */
@@ -50,7 +52,7 @@ export class DeepgramSocket extends EventEmitter {
     })
     const base = relayWsUrl(this.opts.relayUrl ?? process.env.IGPT_RELAY_URL ?? undefined)
     const ws = new WebSocket(`${base}/v1/listen?${params}`, {
-      headers: { Authorization: `Bearer ${APP_TOKEN}`, "X-Device-Id": this.opts.deviceId }
+      headers: { Authorization: `Bearer ${APP_TOKEN}`, "X-Device-Id": this.opts.deviceId, ...this.opts.headers }
     })
     this.ws = ws
 

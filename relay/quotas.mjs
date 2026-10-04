@@ -1,70 +1,77 @@
 import fs from "node:fs"
 import path from "node:path"
 
+const FIELDS = ["requests", "answers", "vision", "listening", "reports", "tokens", "audioMinutes"]
+
 /**
- * Per-device daily counters and per-IP rate limiting. Kept in memory and
- * flushed to a JSON file once a minute so restarts do not reset the day.
+ * Daily counters per key ("u:<userId>" for accounts, "ip:<ip>" for guests, "ipa:<ip>" for the
+ * per-network answer total), requests in flight per key, and per-IP rate limiting. Counters live in
+ * memory and are flushed to a JSON file once a minute so restarts do not reset the day.
  */
 export class Quotas {
-  constructor({ file, chatPerDay, answersPerDay = Infinity, audioMinutesPerDay, requestsPerMinutePerIp, now = () => Date.now() }) {
+  constructor({ file, requestsPerMinutePerIp, now = () => Date.now() }) {
     this.file = file
-    this.chatPerDay = chatPerDay
-    this.answersPerDay = answersPerDay
-    this.audioMinutesPerDay = audioMinutesPerDay
     this.rpm = requestsPerMinutePerIp
     this.now = now
     this.ipHits = new Map() // ip -> timestamps within the last minute
+    this.flight = new Map() // key -> requests in progress
     this.days = this.load()
     this.timer = setInterval(() => this.flush(), 60_000)
     this.timer.unref?.()
   }
 
+  /** Sliding one-minute window per IP. */
   allowRequest(ip) {
     const t = this.now()
     const hits = (this.ipHits.get(ip) ?? []).filter((x) => t - x < 60_000)
     hits.push(t)
     this.ipHits.set(ip, hits)
-    if (this.ipHits.size > 10_000) this.ipHits.clear()
+    if (this.ipHits.size > 20_000) {
+      // Forget quiet IPs instead of resetting everyone.
+      for (const [k, v] of this.ipHits) if (!v.length || t - v[v.length - 1] >= 60_000) this.ipHits.delete(k)
+    }
     return hits.length <= this.rpm
   }
 
-  allowChat(device) {
-    return this.entry(device).chat < this.chatPerDay
+  /** Today's counters for a key (zeros when unseen; reading never creates an entry). */
+  used(key) {
+    const bucket = this.days[this.dayKey()]
+    const e = bucket?.[key]
+    return Object.fromEntries(FIELDS.map((f) => [f, e?.[f] ?? 0]))
   }
 
-  countChat(device) {
-    this.entry(device).chat += 1
+  add(key, field, amount = 1) {
+    if (!(amount > 0)) return
+    const e = this.entry(key)
+    e[field] = (e[field] ?? 0) + amount
   }
 
-  /** The free daily answer limit; every request still counts toward the chat cap above. */
-  allowAnswer(device) {
-    return (this.entry(device).answers ?? 0) < this.answersPerDay
+  inFlight(key) {
+    return this.flight.get(key) ?? 0
   }
 
-  countAnswer(device) {
-    const e = this.entry(device)
-    e.answers = (e.answers ?? 0) + 1
+  begin(key) {
+    this.flight.set(key, this.inFlight(key) + 1)
   }
 
-  allowAudio(device) {
-    return this.entry(device).audioMinutes < this.audioMinutesPerDay
+  end(key) {
+    const n = this.inFlight(key) - 1
+    if (n > 0) this.flight.set(key, n)
+    else this.flight.delete(key)
   }
 
-  countAudio(device, minutes) {
-    this.entry(device).audioMinutes += Math.max(0, minutes)
+  /** When today's counters reset (next midnight UTC). */
+  resetAt() {
+    const d = new Date(this.now())
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1)).toISOString()
   }
 
-  usage(device) {
-    const e = this.entry(device)
-    return { chat: e.chat, chatLimit: this.chatPerDay, answers: e.answers ?? 0, answersLimit: this.answersPerDay, audioMinutes: Math.round(e.audioMinutes), audioLimit: this.audioMinutesPerDay }
-  }
-
-  entry(device) {
+  entry(key) {
     const day = this.dayKey()
     if (!this.days[day]) this.days = { [day]: {} } // new day: drop yesterday
     const bucket = this.days[day]
-    if (!bucket[device]) bucket[device] = { chat: 0, answers: 0, audioMinutes: 0 }
-    return bucket[device]
+    if (!bucket[key]) bucket[key] = {}
+    return bucket[key]
   }
 
   dayKey() {

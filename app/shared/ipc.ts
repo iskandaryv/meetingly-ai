@@ -13,6 +13,7 @@ import type {
   PlanState,
   SuggestionsState,
   TranscriptEvent,
+  UpdateState,
   Utterance,
   WindowKind,
   WindowsState,
@@ -100,6 +101,7 @@ export interface EventMap {
   "meetings:changed": undefined
   "cloud:state": CloudState
   "plan:state": PlanState
+  "update:state": UpdateState
 }
 
 export type InvokeChannel = keyof InvokeMap
@@ -162,7 +164,8 @@ export const EVENT_CHANNELS: EventChannel[] = [
   "suggestions:state",
   "meetings:changed",
   "cloud:state",
-  "plan:state"
+  "plan:state",
+  "update:state"
 ]
 
 /** Shape exposed on `window.api` by the preload script. */

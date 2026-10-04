@@ -3,7 +3,8 @@ import { Camera, Captions, Check, EyeOff, LayoutDashboard, MessageSquare, Mic, P
 import { DEFAULT_SHORTCUTS } from "@shared/types"
 import { t } from "@shared/i18n"
 import { api, shortcutLabel } from "@/lib/api"
-import { useElapsed, useFitWindow, useSessionState, useSettings, useWindowsState } from "@/lib/hooks"
+import { useElapsed, useEvent, useFitWindow, useSessionState, useSettings, useWindowsState } from "@/lib/hooks"
+import type { UpdateState } from "@shared/types"
 import { Button } from "@/components/ui/button"
 import { Dot } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -17,6 +18,14 @@ export function MainWindow() {
   const KEYS = settings?.shortcuts ?? DEFAULT_SHORTCUTS
   const elapsed = useElapsed(session.startedAt)
   const [error, setError] = useState<string | null>(null)
+  const [update, setUpdate] = useState<UpdateState | null>(null)
+  useEvent("update:state", setUpdate)
+  const updateNotice =
+    update?.status === "installing"
+      ? t("Updating Meetingly to {version}…", { version: update.version ?? "" })
+      : update?.status === "needs-move"
+        ? t("Move Meetingly to the Applications folder to get updates.")
+        : null
 
   const run = async (action: () => Promise<unknown>) => {
     try {
@@ -115,8 +124,8 @@ export function MainWindow() {
           <Power className="h-4 w-4" />
         </Button>
       </div>
-      {(error || session.notice) && (
-        <div className="mt-1 max-w-[520px] truncate rounded-md bg-black/80 px-3 py-1 text-xs text-amber-200">{error ?? session.notice}</div>
+      {(error || session.notice || updateNotice) && (
+        <div className="mt-1 max-w-[520px] truncate rounded-md bg-black/80 px-3 py-1 text-xs text-amber-200">{error ?? session.notice ?? updateNotice}</div>
       )}
     </div>
   )

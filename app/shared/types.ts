@@ -434,6 +434,12 @@ export interface PlanState {
   resetAt?: string
 }
 
+/** What the updater is doing, for the toolbar: installing (the app restarts in a moment), or stuck. */
+export interface UpdateState {
+  status: "installing" | "needs-move"
+  version?: string
+}
+
 export interface WindowsState {
   /** The attached panel is visible. */
   chat: boolean

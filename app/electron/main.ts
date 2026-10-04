@@ -103,7 +103,13 @@ function bootstrap(): void {
     windows.createMain()
     createTray(windows, settings, { openWeb: (page) => void cloud.openWeb(page), openLogs: () => shell.showItemInFolder(logger.file) })
     shortcuts.register()
-    if (!process.env.IGPT_SMOKE) startAutoUpdates(logger)
+    if (!process.env.IGPT_SMOKE) {
+      startAutoUpdates({
+        logger,
+        isBusy: () => session.state().status !== "idle",
+        onState: (state) => windows.broadcast("update:state", state)
+      })
+    }
     // Fetch the on-device speech model in the background so the first Listen does not wait for it.
     if (settings.get().transcriptionEngine === "local" && !asrModel.isReady() && !process.env.IGPT_SMOKE) {
       let last = -10

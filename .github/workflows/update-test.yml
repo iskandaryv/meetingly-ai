@@ -1,0 +1,112 @@
+name: Update test
+
+# End-to-end check that installed apps update themselves: install this version, publish the same code as
+# the next patch version on a local feed, start the installed app pointed at that feed, and expect it to
+# replace itself with the new version and start again, with nobody clicking anything.
+# Runs on clean Windows and macOS machines (Actions → Update test → Run workflow).
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            package: npx electron-builder --win nsis --x64 --publish never
+          - name: macOS (Apple Silicon)
+            os: macos-14
+            package: npx electron-builder --mac zip --arm64 --publish never -c.mac.identity=-
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: app
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      FEED: http://127.0.0.1:8766
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run fetch:asr
+
+      - name: Build the installed version
+        run: |
+          npm run build
+          ${{ matrix.package }}
+          mkdir -p ../old && cp release/*.exe release/*.zip ../old/ 2>/dev/null || true
+          ls -la ../old
+          echo "OLD=$(node -p 'require("./package.json").version')" >> "$GITHUB_ENV"
+
+      - name: Build the update (next patch version)
+        run: |
+          rm -rf release
+          npm version patch --no-git-tag-version
+          npm run build
+          ${{ matrix.package }}
+          mkdir -p ../feed
+          cp release/latest*.yml ../feed/
+          cp release/*.exe release/*.zip release/*.blockmap ../feed/ 2>/dev/null || true
+          ls -la ../feed
+          cat ../feed/latest*.yml
+          echo "NEW=$(node -p 'require("./package.json").version')" >> "$GITHUB_ENV"
+
+      - name: Install the old version
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            "../old/Meetingly Setup ${OLD}.exe" /S
+            echo "APP=$LOCALAPPDATA/Programs/Meetingly/Meetingly.exe" >> "$GITHUB_ENV"
+          else
+            ditto -x -k "../old/Meetingly-${OLD}-arm64.zip" /Applications
+            echo "APP=/Applications/Meetingly.app/Contents/MacOS/Meetingly" >> "$GITHUB_ENV"
+          fi
+
+      - name: Serve the update feed
+        run: |
+          (cd ../feed && python3 -m http.server 8766 --bind 127.0.0.1 > ../feed.log 2>&1 &)
+          sleep 2
+          curl -fsS "$FEED/$( [ "$RUNNER_OS" = "Windows" ] && echo latest.yml || echo latest-mac.yml )" | head -3
+
+      - name: Start the old version and wait for it to update itself
+        run: |
+          version() {
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              powershell -NoProfile -Command "(Get-Item \"$LOCALAPPDATA\\Programs\\Meetingly\\Meetingly.exe\").VersionInfo.ProductVersion" 2>/dev/null | tr -d '\r'
+            else
+              defaults read /Applications/Meetingly.app/Contents/Info.plist CFBundleShortVersionString 2>/dev/null
+            fi
+          }
+          running() {
+            if [ "$RUNNER_OS" = "Windows" ]; then tasklist | grep -qi "Meetingly.exe"; else pgrep -f "Meetingly.app/Contents/MacOS/Meetingly" > /dev/null; fi
+          }
+          echo "installed: $(version)"
+          MEETINGLY_UPDATE_URL="$FEED" "$APP" > ../app.log 2>&1 &
+          for i in $(seq 1 120); do
+            v=$(version)
+            if [ "$v" = "$NEW" ] || [ "${v%.*}" = "${NEW}" ]; then
+              echo "updated to $v after ~$((i * 3)) s"
+              sleep 10
+              if running; then echo "the new version is running"; exit 0; fi
+              echo "updated, but the app did not start again"; exit 1
+            fi
+            sleep 3
+          done
+          echo "still on $(version) after 6 minutes"; exit 1
+
+      - name: Logs
+        if: always()
+        run: |
+          cat ../feed.log || true
+          for f in "$APPDATA/Meetingly/logs/meetingly.log" "$HOME/Library/Application Support/Meetingly/logs/meetingly.log"; do
+            [ -f "$f" ] && { echo "== $f"; grep -iE "updater|error" "$f" | tail -40; }
+          done
+          true

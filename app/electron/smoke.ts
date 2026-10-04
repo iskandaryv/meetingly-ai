@@ -307,50 +307,59 @@ async function asrSmoke(model: AsrModel, wav: string, language: string): Promise
 
 /**
  * Account linking and two-way sync against a real server. Needs:
- *   IGPT_CLOUD_URL          the PocketBase base URL (an ssh tunnel to production works)
- *   IGPT_SMOKE_USER/_PASS   an existing account that plays the "browser" side
- * Ends with the device unlinked again.
+ *   IGPT_CLOUD_URL          the account service base URL (an ssh tunnel to a test copy works)
+ *   IGPT_SMOKE_USER/_PASS   an existing, verified account that plays the browser side
+ * A second, scripted "computer" is linked to the same account to make changes this app must receive.
+ * Ends with both devices unlinked again.
  */
 async function cloudSmoke({ cloud, settings, meetings }: Pick<SmokeDeps, "cloud" | "settings" | "meetings">): Promise<Record<string, unknown> & { ok: boolean }> {
   const base = (process.env.IGPT_CLOUD_URL ?? "").replace(/\/+$/, "")
-  const identity = process.env.IGPT_SMOKE_USER
+  const email = process.env.IGPT_SMOKE_USER
   const password = process.env.IGPT_SMOKE_PASS
   const steps: Record<string, unknown> = {}
   const fail = (step: string, detail: unknown) => ({ ok: false, failedAt: step, detail, steps })
-  if (!base || !identity || !password) return fail("env", "IGPT_CLOUD_URL, IGPT_SMOKE_USER and IGPT_SMOKE_PASS are required")
+  if (!base || !email || !password) return fail("env", "IGPT_CLOUD_URL, IGPT_SMOKE_USER and IGPT_SMOKE_PASS are required")
 
-  const json = async (url: string, init: RequestInit & { token?: string } = {}) => {
-    const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init.token ? { Authorization: init.token } : {}), ...(init.headers ?? {}) } })
-    const body = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(`${init.method ?? "GET"} ${url} -> ${res.status} ${JSON.stringify(body).slice(0, 200)}`)
-    return body as Record<string, any>
+  const call = async (method: string, path: string, opts: { body?: unknown; token?: string; cookie?: string } = {}) => {
+    const res = await fetch(`${base}${path}`, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        ...(opts.token ? { Authorization: `Bearer ${opts.token}` } : {}),
+        ...(opts.cookie ? { Cookie: opts.cookie } : {})
+      },
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined
+    })
+    const body = (await res.json().catch(() => ({}))) as Record<string, any>
+    if (!res.ok) throw new Error(`${method} ${path} -> ${res.status} ${JSON.stringify(body).slice(0, 200)}`)
+    return { body, res }
   }
   const waitFor = async (what: string, check: () => boolean | Promise<boolean>, ms = 15000) => {
     const deadline = Date.now() + ms
     while (Date.now() < deadline) {
       if (await check()) return true
-      await sleep(400)
+      await sleep(300)
     }
     throw new Error(`timed out waiting for ${what}`)
   }
 
+  let otherToken = ""
   try {
     // Seed one local meeting so the upload path is exercised.
-    if (meetings.list().length === 0) {
-      meetings.save({
-        id: `smoke_${Date.now()}`,
-        title: "Smoke meeting",
-        startTime: Date.now() - 60000,
-        endTime: Date.now(),
-        duration: 60000,
-        transcript: [{ text: "hello from the smoke test", timestamp: Date.now(), confidence: 1, speaker: 0 }],
-        fullTranscriptText: "hello from the smoke test",
-        language: "en",
-        status: "completed",
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      })
-    }
+    const smokeMeetingId = `smoke_${Date.now()}`
+    meetings.save({
+      id: smokeMeetingId,
+      title: "Smoke meeting",
+      startTime: Date.now() - 60000,
+      endTime: Date.now(),
+      duration: 60000,
+      transcript: [{ text: "hello from the smoke test", timestamp: Date.now(), confidence: 1, speaker: 0 }],
+      fullTranscriptText: "hello from the smoke test",
+      language: "en",
+      status: "completed",
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    })
     if (settings.get().cloud) await cloud.unlink()
 
     // 1. app side: start linking (no browser is opened in smoke mode)
@@ -358,55 +367,63 @@ async function cloudSmoke({ cloud, settings, meetings }: Pick<SmokeDeps, "cloud"
     steps.code = started.code
     if (!started.code) return fail("link-start", started)
 
-    // 2. browser side: sign in and claim the code
-    const auth = await json(`${base}/api/collections/users/auth-with-password`, { method: "POST", body: JSON.stringify({ identity, password }) })
-    const userToken = auth.token as string
-    const userId = auth.record.id as string
-    await json(`${base}/api/igpt/link/claim`, { method: "POST", token: userToken, body: JSON.stringify({ code: started.code }) })
+    // 2. browser side: sign in and confirm the code
+    const signIn = await call("POST", "/api/auth/sign-in", { body: { email, password } })
+    const cookie = (signIn.res.headers.getSetCookie?.() ?? []).map((c) => c.split(";")[0]).find((c) => c.startsWith("session=")) ?? ""
+    if (!cookie) return fail("sign-in", "no session cookie")
+    await call("POST", "/api/app/link/claim", { cookie, body: { code: started.code } })
 
-    // 3. app side: poll picks the token up and goes online
+    // 3. app side: the poll picks the token up and goes online
     await waitFor("cloud online", () => cloud.state().status === "online", 20000)
     steps.linkedAs = cloud.state().email
 
-    // 4. server has profile, prompts and the meeting
-    const profiles = await json(`${base}/api/collections/profiles/records?filter=${encodeURIComponent(`user="${userId}"`)}`, { token: userToken })
-    steps.profile = profiles.totalItems
-    const prompts = await json(`${base}/api/collections/prompts/records`, { token: userToken })
-    steps.prompts = prompts.totalItems
-    const remoteMeetings = await json(`${base}/api/collections/meetings/records`, { token: userToken })
-    steps.meetings = remoteMeetings.totalItems
-    if (profiles.totalItems !== 1 || prompts.totalItems < 1 || remoteMeetings.totalItems < 1) return fail("initial-upload", steps)
+    // 4. a second computer on the same account, scripted
+    const otherId = `smoke${Date.now().toString(36)}other`
+    const other = await call("POST", "/api/app/link/start", { body: { deviceId: otherId, name: "Smoke second computer", platform: "linux", appVersion: "smoke" } })
+    await call("POST", "/api/app/link/claim", { cookie, body: { code: other.body.code } })
+    otherToken = (await call("GET", `/api/app/link/poll?code=${other.body.code}&deviceId=${otherId}`)).body.token
+    if (!otherToken) return fail("second-device", "no token")
 
-    // 5. remote -> local (realtime): change a setting in the "browser"
-    const profile = profiles.items[0]
+    // 5. the account has this app's profile, prompts and meeting
+    const profile = (await call("GET", "/api/app/profile", { token: otherToken })).body.profile
+    const prompts = (await call("GET", "/api/app/prompts", { token: otherToken })).body.prompts as { id: string; title: string; content: string; notes: string; active: boolean }[]
+    await waitFor("meeting upload", async () => (await call("GET", "/api/app/meetings", { token: otherToken })).body.index.some((m: { localId: string }) => m.localId === smokeMeetingId))
+    steps.initialUpload = { profile: Boolean(profile), prompts: prompts.length, meeting: "ok" }
+    if (!profile || prompts.length < 1) return fail("initial-upload", steps)
+
+    // 6. other computer -> this app (live): a setting
     const before = settings.get().answerLength
     const target = before === "short" ? "medium" : "short"
-    await json(`${base}/api/collections/profiles/records/${profile.id}`, { method: "PATCH", token: userToken, body: JSON.stringify({ settings: { ...profile.settings, answerLength: target }, version: (profile.version ?? 0) + 1 }) })
-    await waitFor("remote setting to arrive", () => settings.get().answerLength === target, 15000)
+    await call("PUT", "/api/app/profile", { token: otherToken, body: { settings: { ...profile.settings, answerLength: target } } })
+    await waitFor("remote setting to arrive", () => settings.get().answerLength === target)
     steps.remoteToLocal = "ok"
 
-    // 6. local -> remote: change a setting in the app
+    // 7. this app -> the account: a setting
     const lang = settings.get().outputLanguage === "fr" ? "de" : "fr"
     settings.update({ outputLanguage: lang })
-    await waitFor("local setting to upload", async () => {
-      const p = await json(`${base}/api/collections/profiles/records/${profile.id}`, { token: userToken })
-      return p.settings?.outputLanguage === lang
-    }, 15000)
+    await waitFor("local setting to upload", async () => (await call("GET", "/api/app/profile", { token: otherToken })).body.profile?.settings?.outputLanguage === lang)
     steps.localToRemote = "ok"
 
-    // 7. prompt edited remotely shows up locally
-    const promptId = prompts.items[0].id as string
-    await json(`${base}/api/collections/prompts/records/${promptId}`, { method: "PATCH", token: userToken, body: JSON.stringify({ notes: "smoke background note" }) })
-    await waitFor("remote prompt edit", () => settings.get().prompts.some((p) => p.notes === "smoke background note"), 15000)
+    // 8. a prompt edited on the other computer shows up here
+    await call("PUT", "/api/app/prompts", { token: otherToken, body: { prompts: prompts.map((p, i) => ({ ...p, notes: i === 0 ? "smoke background note" : p.notes })) } })
+    await waitFor("remote prompt edit", () => settings.get().prompts.some((p) => p.notes === "smoke background note"))
     steps.promptSync = "ok"
 
-    // 8. clean up: restore and unlink
+    // 9. the meeting deleted on the other computer disappears here
+    await call("DELETE", `/api/app/meetings/${smokeMeetingId}`, { token: otherToken })
+    await waitFor("remote meeting delete", () => !meetings.get(smokeMeetingId))
+    steps.meetingDelete = "ok"
+
+    // 10. clean up: restore, unlink both
     settings.update({ answerLength: before, outputLanguage: "en" })
     await sleep(1500)
+    await call("DELETE", "/api/app/device", { token: otherToken })
+    otherToken = ""
     await cloud.unlink()
     steps.unlinked = cloud.state().status
     return { ok: cloud.state().status === "off", steps }
   } catch (err) {
+    if (otherToken) await call("DELETE", "/api/app/device", { token: otherToken }).catch(() => undefined)
     return fail("exception", (err as Error).message)
   }
 }

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 
 /**
- * Who is calling: the app sends the account's sign-in token, the account service (PocketBase on this
+ * Who is calling: the app sends its device token, the account service (account.meetinglyai.com, on this
  * box) says which user and plan it belongs to. Answers are cached so the account service sees one
  * lookup per account every few minutes, not one per request.
  */
@@ -30,7 +30,7 @@ export class Accounts {
     try {
       res = await this.fetch(`${this.baseUrl}/api/meetingly/entitlement`, { headers: { Authorization: token }, signal: AbortSignal.timeout(5000) })
     } catch (err) {
-      if (hit) return hit.value // stale beats refusing everyone while PocketBase restarts
+      if (hit) return hit.value // stale beats refusing everyone while the account service restarts
       throw err
     }
     let value

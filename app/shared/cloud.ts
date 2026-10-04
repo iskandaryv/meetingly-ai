@@ -1,5 +1,5 @@
 /**
- * The account / sync service (PocketBase). Separate from the AI relay.
+ * The account / sync service (account.meetinglyai.com). Separate from the AI relay.
  * Override for development with IGPT_CLOUD_URL (e.g. http://127.0.0.1:8091 over an ssh tunnel).
  */
 export const CLOUD_URL = "https://account.meetinglyai.com"
@@ -10,7 +10,7 @@ export function cloudUrl(base?: string): string {
 
 export interface CloudAccount {
   url: string
-  /** The device's own auth token; refreshed by the app, never shown in the UI. */
+  /** The device's own token (revoked when the device is unlinked); never shown in the UI. */
   token: string
   userId: string
   email: string

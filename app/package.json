@@ -114,7 +114,6 @@
     "koffi": "^2.16.3",
     "lucide-react": "^1.47.0",
     "openai": "^7.17.0",
-    "pocketbase": "^0.28.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tailwind-merge": "^2.6.0",

@@ -125,6 +125,7 @@ export function registerIpc(deps: IpcDeps): void {
   handle("meetings:get", (_e, id) => meetings.get(id))
   handle("meetings:delete", (_e, id) => {
     meetings.delete(id)
+    void cloud.meetingDeleted(id)
   })
   handle("meetings:regenerate", (_e, id) => reports.generate(id))
 

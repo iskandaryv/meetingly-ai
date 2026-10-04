@@ -55,7 +55,14 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerSidebar": "build/installerSidebar.bmp",
+      "uninstallerSidebar": "build/uninstallerSidebar.bmp",
+      "installerHeader": "build/installerHeader.bmp",
+      "shortcutName": "Meetingly",
+      "uninstallDisplayName": "Meetingly"
     },
     "mac": {
       "category": "public.app-category.productivity",
@@ -63,7 +70,8 @@
         "dmg",
         "zip"
       ],
-      "icon": "build/icon.png",
+      "icon": "build/icon-1024.png",
+      "artifactName": "Meetingly-${version}-${arch}.${ext}",
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
@@ -85,7 +93,8 @@
         "AppImage",
         "deb"
       ],
-      "icon": "build/icon.png",
+      "icon": "build/icon-1024.png",
+      "artifactName": "Meetingly-${version}-${arch}.${ext}",
       "category": "Office",
       "maintainer": "iskandaryv@mail.ru",
       "extraResources": [

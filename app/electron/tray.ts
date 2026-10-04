@@ -6,7 +6,13 @@ import type { WindowManager } from "./windows/WindowManager"
 
 let tray: Tray | null = null
 
-export function createTray(windows: WindowManager, settings: SettingsStore): Tray {
+interface TrayActions {
+  /** The web dashboard (signed in): the overview, or a page such as the guide. */
+  openWeb: (page?: "guide") => void
+  openLogs: () => void
+}
+
+export function createTray(windows: WindowManager, settings: SettingsStore, actions: TrayActions): Tray {
   const iconPath = app.isPackaged
     ? path.join(process.resourcesPath, "tray.png")
     : path.join(app.getAppPath(), "build", "tray.png")
@@ -24,7 +30,10 @@ export function createTray(windows: WindowManager, settings: SettingsStore): Tra
         { label: t("Show toolbar"), click: () => windows.centerMain() },
         { label: t("Show / hide all windows"), click: () => windows.toggleAll() },
         { label: t("Live transcript"), click: () => windows.showPanel("transcript") },
-        { label: t("Dashboard"), click: () => windows.show("dashboard") },
+        { type: "separator" },
+        { label: t("Open web dashboard"), click: () => actions.openWeb() },
+        { label: t("Guide"), click: () => actions.openWeb("guide") },
+        { label: t("Open the log folder"), click: () => actions.openLogs() },
         { type: "separator" },
         { label: t("Quit Meetingly"), click: () => app.quit() }
       ])

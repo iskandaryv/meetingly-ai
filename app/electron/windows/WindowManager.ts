@@ -3,14 +3,14 @@ import path from "node:path"
 import { EventEmitter } from "node:events"
 import type { EventChannel, EventMap } from "../../shared/ipc"
 import type { PanelTab, WindowKind, WindowsState } from "../../shared/types"
-import { GAP, MAIN_TOP_MARGIN, MOVE_STEP, PANEL_OVERLAP, WINDOW_SPECS } from "./config"
+import { MAIN_TOP_MARGIN, MOVE_STEP, PANEL_OVERLAP, WINDOW_SPECS } from "./config"
 import { attachContextMenu } from "../copy"
 
-const KINDS: WindowKind[] = ["main", "chat", "dashboard"]
+const KINDS: WindowKind[] = ["main", "chat"]
 
 /**
- * Creates and positions the windows: the toolbar (main), the panel attached right under it
- * (window kind "chat": answers and live transcript as tabs) and the dashboard.
+ * Creates and positions the windows: the toolbar (main) and the panel attached right under it
+ * (window kind "chat": answers and live transcript as tabs). Settings live on the web dashboard.
  *
  * Events: "state" (WindowsState)
  */
@@ -51,7 +51,7 @@ export class WindowManager extends EventEmitter {
   }
 
   state(): WindowsState {
-    return { chat: this.isVisible("chat"), dashboard: this.isVisible("dashboard"), panelTab: this.panelTab }
+    return { chat: this.isVisible("chat"), panelTab: this.panelTab }
   }
 
   /** Show the panel on a tab (background: see show()). */
@@ -347,23 +347,9 @@ export class WindowManager extends EventEmitter {
         y: Math.round(area.y + (area.height - size.height) / 2)
       }
     }
-    // Side windows sit next to the toolbar+chat cluster, not just the (narrow) toolbar.
-    const chat = this.get("chat")
-    const chatBounds = chat && chat.isVisible() && kind !== "chat" ? chat.getBounds() : null
-    const clusterRight = chatBounds ? Math.max(m.x + m.width, chatBounds.x + chatBounds.width) : m.x + m.width
-    let x: number
-    let y: number
-    switch (kind) {
-      case "chat":
-        // Attached: centered under the toolbar with only a hairline seam.
-        x = m.x + (m.width - size.width) / 2
-        y = m.y + m.height - PANEL_OVERLAP
-        break
-      case "dashboard":
-        x = clusterRight + GAP
-        y = m.y
-        break
-    }
+    // The panel: attached, centered under the toolbar with only a hairline seam.
+    const x = m.x + (m.width - size.width) / 2
+    const y = m.y + m.height - PANEL_OVERLAP
     return {
       x: Math.round(clamp(x, area.x, area.x + area.width - size.width)),
       y: Math.round(clamp(y, area.y, area.y + area.height - size.height))

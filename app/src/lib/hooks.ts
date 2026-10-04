@@ -37,7 +37,7 @@ export function useSessionState(): SessionState {
 }
 
 export function useWindowsState(): WindowsState {
-  const [state, setState] = useState<WindowsState>({ chat: false, dashboard: false, panelTab: "answers" })
+  const [state, setState] = useState<WindowsState>({ chat: false, panelTab: "answers" })
   useEffect(() => {
     void api.invoke("windows:state").then(setState)
   }, [])

@@ -14,10 +14,10 @@ import {
   type SuggestionsState
 } from "@shared/types"
 import { t } from "@shared/i18n"
-import { api } from "@/lib/api"
+import { api, shortcutLabel } from "@/lib/api"
 import { useAudioCapture, useLiveTranscript, type Interim, type TranscriptLine } from "@/lib/capture"
-import { useEvent, usePlanState, useSessionState, useSettings, useSuggestions } from "@/lib/hooks"
-import type { AudioLevels } from "@/lib/audio"
+import { useCloudState, useEvent, usePlanState, useSessionState, useSettings, useSuggestions } from "@/lib/hooks"
+import { listAudioInputs, type AudioInputDevice, type AudioLevels } from "@/lib/audio"
 import { cn, copyText } from "@/lib/utils"
 import { markdownToPlain } from "@/lib/plain-text"
 import { Button } from "@/components/ui/button"
@@ -100,6 +100,16 @@ export function PanelWindow() {
             </Button>
           </div>
         </header>
+        {settings && settings.shortcutConflicts.length > 0 && (
+          <div className="flex items-center gap-2 border-b border-amber-400/20 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-200">
+            <span className="min-w-0 flex-1 truncate">
+              {t("Another app already uses {keys}. Pick other keys on the web dashboard.", { keys: settings.shortcutConflicts.map((a) => shortcutLabel(settings.shortcuts[a])).join(", ") })}
+            </span>
+            <button type="button" className="no-drag shrink-0 font-medium text-amber-100 hover:text-white" onClick={() => void api.invoke("cloud:open-web")}>
+              {t("Open")}
+            </button>
+          </div>
+        )}
         <div className="flex min-h-0 flex-1">
           {rail && <Suggestions state={suggestions} plan={plan} />}
           <div className="flex min-w-0 flex-1 flex-col">
@@ -116,6 +126,8 @@ export function PanelWindow() {
                 lines={transcript.lines}
                 interim={transcript.interim}
                 onSource={(s) => void update({ audioSource: s })}
+                deviceId={settings?.audioDeviceId ?? ""}
+                onDevice={(id) => void update({ audioDeviceId: id })}
               />
             </div>
           </div>
@@ -316,14 +328,40 @@ function Answers({ listening, handsFree, plan }: { listening: boolean; handsFree
 }
 
 /** Without an account: the sign-up prompt. On the free plan: today's answers left. Nothing on Pro. */
+/**
+ * The account line under the answers. Signed out: sign up or sign in happens in the browser, which links
+ * this computer (the code shown here must match the one on the page). Signed in on Free: answers left today.
+ */
 function PlanBar({ plan }: { plan: PlanState }) {
+  const cloud = useCloudState()
+  if (cloud.status === "linking" && cloud.code) {
+    return (
+      <div className="flex items-center gap-2 border-t border-white/10 bg-sky-500/10 px-2.5 py-1.5 text-[11.5px] text-sky-100">
+        <span className="min-w-0 flex-1 leading-snug">
+          {t("Confirm this code in your browser:")} <span className="selectable font-mono font-semibold tracking-[0.2em] text-white">{cloud.code}</span>
+        </span>
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => void api.invoke("cloud:link-start").catch(() => {})}>
+          {t("Open the page again")}
+        </Button>
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => void api.invoke("cloud:link-cancel")}>
+          {t("Cancel")}
+        </Button>
+      </div>
+    )
+  }
   if (plan.status === "signed-out") {
     return (
-      <div className="flex items-center gap-2 border-t border-white/10 bg-sky-500/10 px-2.5 py-1.5">
-        <span className="min-w-0 flex-1 text-[11.5px] leading-snug text-sky-100">{t("Create a free account to get AI answers: 100 a day, no card.")}</span>
-        <Button variant="primary" size="sm" className="h-6 px-2.5 text-[11px]" onClick={() => void api.invoke("cloud:link-start").catch(() => {})}>
-          {t("Sign up free")}
-        </Button>
+      <div className="border-t border-white/10 bg-sky-500/10 px-2.5 py-1.5">
+        <div className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 text-[11.5px] leading-snug text-sky-100">{t("Create a free account to get AI answers: 100 a day, no card.")}</span>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px] text-sky-100" onClick={() => void api.invoke("cloud:link-start").catch(() => {})}>
+            {t("Sign in")}
+          </Button>
+          <Button variant="primary" size="sm" className="h-6 px-2.5 text-[11px]" onClick={() => void api.invoke("cloud:link-start").catch(() => {})}>
+            {t("Sign up free")}
+          </Button>
+        </div>
+        {cloud.error && <p className="mt-1 text-[11px] text-amber-200">{cloud.error}</p>}
       </div>
     )
   }
@@ -414,8 +452,10 @@ function Transcript(props: {
   lines: TranscriptLine[]
   interim: Interim
   onSource: (s: AudioSource) => void
+  deviceId: string
+  onDevice: (id: string) => void
 }) {
-  const { status, connected, source, notice, lines, interim, onSource } = props
+  const { status, connected, source, notice, lines, interim, onSource, deviceId, onDevice } = props
   const ref = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState(false)
   const live = [interim.them, interim.you, interim.other].filter(Boolean).join(" ")
@@ -453,14 +493,33 @@ function Transcript(props: {
         </div>
       )}
       <div className="flex items-center gap-1 border-t border-white/10 p-1.5">
-        <Select value={source} onChange={(e) => onSource(e.target.value as AudioSource)} className="h-7 flex-1 bg-black/30 px-2 py-0 text-[11px]" title={t("What to transcribe")}>
+        <Select value={source} onChange={(e) => onSource(e.target.value as AudioSource)} className="h-7 min-w-0 flex-1 bg-black/30 px-2 py-0 text-[11px]" title={t("What to transcribe")}>
           {(Object.keys(AUDIO_SOURCE_LABELS) as AudioSource[]).map((s) => <option key={s} value={s}>{t(AUDIO_SOURCE_LABELS[s])}</option>)}
         </Select>
+        {source !== "system" && <MicPicker value={deviceId} onChange={onDevice} />}
         <Button variant="ghost" size="icon-sm" onClick={copy} disabled={!text} title={t("Copy transcript")}>
           {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
         </Button>
       </div>
     </>
+  )
+}
+
+/** The microphone to listen with; the list is read again whenever it is opened, so new devices show up. */
+function MicPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const [devices, setDevices] = useState<AudioInputDevice[]>([])
+  const refresh = () => void listAudioInputs().then(setDevices).catch(() => setDevices([]))
+  useEffect(refresh, [])
+  return (
+    <Select value={value} onChange={(e) => onChange(e.target.value)} onFocus={refresh} className="h-7 min-w-0 flex-1 bg-black/30 px-2 py-0 text-[11px]" title={t("Microphone")}>
+      <option value="">{t("Default microphone")}</option>
+      {devices.map((d) => (
+        <option key={d.id} value={d.id}>
+          {d.isMonitor ? t("{label} (system audio)", { label: d.label }) : d.label}
+        </option>
+      ))}
+      {value && !devices.some((d) => d.id === value) && <option value={value}>{t("Previously selected device (unplugged)")}</option>}
+    </Select>
   )
 }
 

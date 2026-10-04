@@ -62,7 +62,6 @@ function bootstrap(): void {
   })
   const suggestions = new SuggestionService({ settings, llm, session, chat })
 
-  const shortcuts = new ShortcutManager({ settings, windows, session, chat })
   const cloud = new CloudSync({
     settings,
     meetings,
@@ -71,6 +70,7 @@ function bootstrap(): void {
     openExternal: process.env.IGPT_SMOKE ? async () => {} : (url) => shell.openExternal(url),
     cloudUrl: process.env.IGPT_CLOUD_URL || undefined
   })
+  const shortcuts = new ShortcutManager({ settings, windows, session, chat, openWeb: () => void cloud.openWeb() })
   cloud.on("state", (s) => logger.info("cloud", `status ${s.status}`, { email: s.email, error: s.error }))
   const plan = new PlanService({ settings })
   plan.on("state", (s) => logger.info("plan", `${s.status} ${s.plan ?? ""}`, { answers: s.used?.answers, limit: s.limits?.answers }))
@@ -101,7 +101,7 @@ function bootstrap(): void {
     void cloud.start().catch((err) => logger.warn("cloud", "start failed", err))
     if (!process.env.IGPT_SMOKE) plan.start()
     windows.createMain()
-    createTray(windows, settings)
+    createTray(windows, settings, { openWeb: (page) => void cloud.openWeb(page), openLogs: () => shell.showItemInFolder(logger.file) })
     shortcuts.register()
     if (!process.env.IGPT_SMOKE) startAutoUpdates(logger)
     // Fetch the on-device speech model in the background so the first Listen does not wait for it.

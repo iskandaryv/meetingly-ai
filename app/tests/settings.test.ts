@@ -109,7 +109,7 @@ describe("shortcuts", () => {
     }))
     const shortcuts = new SettingsStore(file).get().shortcuts
     expect(shortcuts.toggleAll).toBe("CommandOrControl+B")
-    expect(shortcuts.chat).toBe("CommandOrControl+C")
+    expect(shortcuts.chat).toBe("CommandOrControl+Shift+C")
     expect(shortcuts.moveLeft).toBe("CommandOrControl+Left")
     expect(shortcuts.listen).toBe("Shift+F9")
   })

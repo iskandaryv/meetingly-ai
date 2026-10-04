@@ -8,6 +8,7 @@ import {
   DEFAULT_SHORTCUTS,
   LANGUAGES,
   LEGACY_DEFAULT_SHORTCUTS,
+  RETIRED_DEFAULT_SHORTCUTS,
   LEGACY_DEFAULT_SYSTEM_PROMPTS,
   type Prompt,
   type Settings,
@@ -58,9 +59,9 @@ export class SettingsStore extends EventEmitter {
     return this.data.deviceId
   }
 
-  /** The interface language in use: the user's choice, or the system language when Meetingly speaks it. */
+  /** The interface language: the system language when Meetingly speaks it, else English. */
   uiLocale(): LanguageCode {
-    return resolveLocale(this.data.uiLanguage, this.meta.locale ?? "en")
+    return resolveLocale("auto", this.meta.locale ?? "en")
   }
 
   /** This build's version (sent to the relay, which treats builds before accounts as guests). */
@@ -132,8 +133,9 @@ export function normalize(s: Settings): Settings {
   const shortcuts = { ...DEFAULT_SHORTCUTS }
   for (const key of Object.keys(DEFAULT_SHORTCUTS) as ShortcutAction[]) {
     const v = s.shortcuts?.[key]
-    // A shortcut still on the old Ctrl+Alt default follows the new default; custom ones stay.
-    if (typeof v === "string" && v.trim() !== LEGACY_DEFAULT_SHORTCUTS[key]) shortcuts[key] = v.trim()
+    // A shortcut still on an earlier default (Ctrl+Alt chords, Ctrl+C for chat) follows the current one;
+    // custom ones stay.
+    if (typeof v === "string" && v.trim() !== LEGACY_DEFAULT_SHORTCUTS[key] && v.trim() !== RETIRED_DEFAULT_SHORTCUTS[key]) shortcuts[key] = v.trim()
   }
   return {
     ...s,
@@ -145,7 +147,6 @@ export function normalize(s: Settings): Settings {
     outputLanguage: LANGUAGES.some((l) => l.code === s.outputLanguage) ? s.outputLanguage : "en",
     audioLanguage: LANGUAGES.some((l) => l.code === s.audioLanguage) ? s.audioLanguage : "en",
     transcriptionEngine: s.transcriptionEngine === "cloud" ? "cloud" : "local",
-    suggestions: s.suggestions !== false,
-    uiLanguage: s.uiLanguage === "auto" || LANGUAGES.some((l) => l.code === s.uiLanguage) ? s.uiLanguage ?? "auto" : "auto"
+    suggestions: s.suggestions !== false
   }
 }

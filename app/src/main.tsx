@@ -7,12 +7,10 @@ import { setLocale } from "@shared/i18n"
 import { useSettings } from "@/lib/hooks"
 import { MainWindow } from "./windows/MainWindow"
 import { PanelWindow } from "./windows/PanelWindow"
-import { DashboardWindow } from "./windows/DashboardWindow"
 
 const WINDOWS: Record<WindowKind, React.FC> = {
   main: MainWindow,
-  chat: PanelWindow,
-  dashboard: DashboardWindow
+  chat: PanelWindow
 }
 
 function currentKind(): WindowKind {

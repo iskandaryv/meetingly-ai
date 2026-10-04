@@ -74,7 +74,7 @@ export interface InvokeMap {
   "cloud:link-cancel": () => CloudState
   "cloud:unlink": () => CloudState
   /** Opens the web dashboard signed in as this device. */
-  "cloud:open-web": () => void
+  "cloud:open-web": (page?: "billing" | "meetings" | "guide") => void
   "cloud:sync-now": () => CloudState
 
   "plan:state": () => PlanState
@@ -82,10 +82,6 @@ export interface InvokeMap {
   /** Open the account's plan page in the browser (signed in when the account is linked). */
   "plan:upgrade": () => void
 
-  "meetings:list": () => Meeting[]
-  "meetings:get": (id: string) => Meeting | null
-  "meetings:delete": (id: string) => void
-  "meetings:regenerate": (id: string) => Meeting | null
 }
 
 /** Main -> renderer push events. */
@@ -150,10 +146,6 @@ export const INVOKE_CHANNELS: InvokeChannel[] = [
   "plan:state",
   "plan:refresh",
   "plan:upgrade",
-  "meetings:list",
-  "meetings:get",
-  "meetings:delete",
-  "meetings:regenerate"
 ]
 
 export const EVENT_CHANNELS: EventChannel[] = [

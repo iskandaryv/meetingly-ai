@@ -13,7 +13,7 @@ import type { WindowManager } from "./windows/WindowManager"
 import { SUGGESTIONS_WIDTH } from "./windows/config"
 import { copySelection } from "./copy"
 
-const KINDS: WindowKind[] = ["main", "chat", "dashboard"]
+const KINDS: WindowKind[] = ["main", "chat"]
 
 interface SmokeDeps {
   windows: WindowManager
@@ -177,9 +177,13 @@ async function copySmoke(windows: WindowManager): Promise<Record<string, unknown
       text: "**Sharding splits one database into many by key.**\n- Pick a stable shard key\n- Route queries by key",
       timestamp: Date.now()
     })
-    await sleep(600)
     const panel = windows.get("chat")
     if (!panel) return { ok: false, steps, error: "no panel" }
+    // The panel may still be loading: wait until the answer is on screen.
+    for (let i = 0; i < 25; i++) {
+      if (await panel.webContents.executeJavaScript("document.querySelectorAll('.md').length > 0").catch(() => false)) break
+      await sleep(200)
+    }
     panel.focus()
     await sleep(300)
     await clipboard.writeText("before")
@@ -195,7 +199,16 @@ async function copySmoke(windows: WindowManager): Promise<Record<string, unknown
     steps.clipboardAfterDirect = (await clipboard.readText()).slice(0, 60)
     const directOk = steps.direct === true && (await clipboard.readText()).includes(answer)
 
-    // The real key press, through Windows and the global shortcut.
+    // Ctrl+C typed into the window itself (Chromium's own copy, now that Ctrl+C is no global shortcut).
+    await clipboard.writeText("before")
+    await panel.webContents.executeJavaScript(select)
+    panel.webContents.sendInputEvent({ type: "keyDown", keyCode: "C", modifiers: ["control"] })
+    panel.webContents.sendInputEvent({ type: "keyUp", keyCode: "C", modifiers: ["control"] })
+    await sleep(500)
+    steps.clipboardAfterWindowKey = (await clipboard.readText()).slice(0, 60)
+    const windowKeyOk = (await clipboard.readText()).includes(answer)
+
+    // The real key press, through Windows (and the global shortcut, if one is bound to Ctrl+C).
     let keyOk: boolean | undefined
     if (process.platform === "win32") {
       await clipboard.writeText("before")
@@ -207,9 +220,9 @@ async function copySmoke(windows: WindowManager): Promise<Record<string, unknown
       steps.panelVisibleAfterKey = panel.isVisible()
       keyOk = (await clipboard.readText()).includes(answer) && panel.isVisible()
     }
-    // A smoke run started in the background may not get OS focus; then the key press can't reach the panel.
-    const keyCounts = steps.focusedBeforeKey === true
-    return { ok: steps.noSelectionCopies === false && directOk && (!keyCounts || keyOk !== false), keyPress: keyCounts ? keyOk : "skipped: no OS focus", steps }
+    // Informational: a smoke run started in the background is often not the OS foreground window, so a
+    // synthetic key press may land elsewhere. The two checks above cover both ways Ctrl+C copies.
+    return { ok: steps.noSelectionCopies === false && directOk && windowKeyOk, windowKey: windowKeyOk, keyPress: keyOk, steps }
   } catch (err) {
     return { ok: false, steps, error: (err as Error).message }
   } finally {

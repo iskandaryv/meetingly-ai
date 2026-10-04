@@ -64,6 +64,9 @@ class CloudError extends Error {
   }
 }
 
+/** Dashboard pages the app opens. */
+const WEB_PAGES: Record<string, string> = { billing: "/dashboard/plan", meetings: "/dashboard/meetings", guide: "/dashboard/guide" }
+
 const POLL_MS = 2000
 const LINK_TIMEOUT_MS = 10 * 60 * 1000
 const PUSH_DEBOUNCE_MS = 800
@@ -126,8 +129,12 @@ export class CloudSync extends EventEmitter {
     await this.connect(account)
   }
 
+  /** Starts linking in the browser; while a code is pending, opens its page again. */
   async linkStart(): Promise<CloudState> {
-    if (this.linking) return this.state()
+    if (this.linking) {
+      await this.deps.openExternal(this.linking.url)
+      return this.state()
+    }
     const base = cloudUrl(this.deps.cloudUrl)
     const res = await fetch(`${base}/api/app/link/start`, {
       method: "POST",
@@ -160,10 +167,10 @@ export class CloudSync extends EventEmitter {
     return this.state()
   }
 
-  /** Open the web dashboard, signed in when this device is linked; `page` is "billing" for the plan page. */
+  /** Open the web dashboard, signed in when this device is linked: `page` is "billing", "meetings", "guide" or the overview. */
   async openWeb(page = ""): Promise<void> {
     const base = cloudUrl(this.deps.cloudUrl || this.deps.settings.get().cloud?.url)
-    const next = page === "billing" ? "/dashboard/plan" : "/dashboard"
+    const next = WEB_PAGES[page] ?? "/dashboard"
     if (!this.deps.settings.get().cloud) return this.deps.openExternal(`${base}${next}`)
     try {
       const { url } = await this.api<{ url: string }>("POST", "/api/app/web-login", { next })
@@ -180,13 +187,6 @@ export class CloudSync extends EventEmitter {
     if (this.online) await this.reconcile().catch((err) => this.fail(err))
     else await this.connect(account)
     return this.state()
-  }
-
-  /** A meeting deleted in this app is deleted on the account (and so on the user's other devices) too. */
-  async meetingDeleted(localId: string): Promise<void> {
-    this.remoteUpdated.delete(localId)
-    if (!this.online) return
-    await this.api("DELETE", `/api/app/meetings/${encodeURIComponent(localId)}`).catch((err) => console.warn("[cloud] meeting delete failed:", (err as Error).message))
   }
 
   // ---------------------------------------------------------------- linking

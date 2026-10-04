@@ -22,13 +22,11 @@ export interface WindowSpec {
 export const WINDOW_SPECS: Record<WindowKind, WindowSpec> = {
   main: { width: 360, height: 44, minWidth: 200, minHeight: 32, maxWidth: 900, maxHeight: 120, resizable: false, focusable: false, decorated: false },
   // The attached panel: answers and live transcript as tabs, directly under the toolbar.
-  chat: { width: 528, height: 380, minWidth: 380, minHeight: 220, maxWidth: 900, maxHeight: 800, resizable: true, focusable: true, decorated: false },
-  dashboard: { width: 900, height: 660, minWidth: 640, minHeight: 480, maxWidth: 1600, maxHeight: 1200, resizable: true, focusable: true, decorated: true }
+  chat: { width: 528, height: 380, minWidth: 380, minHeight: 220, maxWidth: 900, maxHeight: 800, resizable: true, focusable: true, decorated: false }
 }
 
 /** The suggestions rail on the left of the panel; the panel widens by this while it shows. */
 export const SUGGESTIONS_WIDTH = 200
-export const GAP = 16
 /** The panel tucks under the toolbar: each window has a 4 px transparent margin, so this leaves a 4 px seam. */
 export const PANEL_OVERLAP = 4
 export const MAIN_TOP_MARGIN = 40

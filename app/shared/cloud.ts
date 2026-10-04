@@ -31,5 +31,16 @@ export interface CloudState {
 }
 
 /** Keys of Settings that follow the account across devices. */
-export const CLOUD_SETTING_KEYS = ["outputLanguage", "audioLanguage", "audioSource", "autoAnswer", "answerLength", "stealth", "autoLaunch", "shortcuts"] as const
+export const CLOUD_SETTING_KEYS = [
+  "outputLanguage",
+  "audioLanguage",
+  "audioSource",
+  "autoAnswer",
+  "answerLength",
+  "stealth",
+  "autoLaunch",
+  "shortcuts",
+  "suggestions",
+  "transcriptionEngine"
+] as const
 export type CloudSettingKey = (typeof CLOUD_SETTING_KEYS)[number]

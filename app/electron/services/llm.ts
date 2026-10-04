@@ -119,7 +119,7 @@ function relayMessage(e: RelayError): string {
   const n = e.limit ?? 0
   switch (e.code) {
     case "account_required":
-      return t("Create a free Meetingly account to use AI answers: Dashboard → Settings → Connect account.")
+      return t("Create a free Meetingly account to use AI answers: click Sign up free at the bottom of the panel.")
     case "account_unavailable":
       return t("The account service is unavailable. Try again in a minute.")
     case "answers_limit":

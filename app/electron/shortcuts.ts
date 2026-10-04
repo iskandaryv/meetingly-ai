@@ -12,6 +12,8 @@ interface Deps {
   windows: WindowManager
   session: RecordingSession
   chat: ChatService
+  /** Opens the web dashboard in the browser, signed in. */
+  openWeb: () => void
 }
 
 /**
@@ -28,7 +30,7 @@ export class ShortcutManager {
       showToolbar: () => windows.centerMain(),
       toggleAll: () => windows.toggleAll(),
       chat: () => windows.togglePanel("answers"),
-      dashboard: () => windows.toggle("dashboard"),
+      dashboard: () => deps.openWeb(),
       screenshot: () => {
         windows.showPanel("answers")
         void chat.screenshot().catch(() => {})

@@ -24,13 +24,6 @@ body[data-window="main"] #root {
   width: max-content;
 }
 
-/* The dashboard is a normal OS window: opaque, selectable text. */
-body[data-window="dashboard"],
-body[data-window="dashboard"] #root {
-  background: #141416 !important;
-  user-select: text;
-}
-
 .glass {
   @apply rounded-xl border border-white/15 bg-black/85 shadow-2xl backdrop-blur-xl;
 }

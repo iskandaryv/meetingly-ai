@@ -1,7 +1,7 @@
 // Types shared by the Electron main process and the renderer.
 
-/** The toolbar, the attached panel (answers + live transcript) and the dashboard. */
-export type WindowKind = "main" | "chat" | "dashboard"
+/** The toolbar and the attached panel (answers + live transcript). Everything else is on the web dashboard. */
+export type WindowKind = "main" | "chat"
 
 /** Tabs of the attached panel (window kind "chat"). */
 export type PanelTab = "answers" | "transcript"
@@ -127,15 +127,15 @@ export type ShortcutAction =
 export type Shortcuts = Record<ShortcutAction, string>
 
 /**
- * Plain Ctrl/Cmd chords, no Alt (owner's decision). Global shortcuts take the key from every
- * other app while Meetingly runs: with these defaults Ctrl+C no longer copies and Ctrl+arrows
- * no longer jump by word elsewhere. Users can rebind any of them in Settings.
+ * Plain Ctrl/Cmd chords where they're free (owner's decision). Global shortcuts take the key from every
+ * other app while Meetingly runs, so Toggle chat is Ctrl+Shift+C rather than Ctrl+C (which must keep
+ * copying everywhere); Ctrl+arrows no longer jump by word elsewhere. Users rebind them on the web dashboard.
  */
 export const DEFAULT_SHORTCUTS: Shortcuts = {
   showToolbar: "CommandOrControl+Space",
   toggleAll: "CommandOrControl+B",
   listen: "CommandOrControl+L",
-  chat: "CommandOrControl+C",
+  chat: "CommandOrControl+Shift+C",
   screenshot: "CommandOrControl+Enter",
   dashboard: "CommandOrControl+D",
   moveLeft: "CommandOrControl+Left",
@@ -158,13 +158,18 @@ export const LEGACY_DEFAULT_SHORTCUTS: Shortcuts = {
   moveDown: "CommandOrControl+Alt+Down"
 }
 
+/** Later defaults that were replaced; a saved value still equal to one of these follows the current default. */
+export const RETIRED_DEFAULT_SHORTCUTS: Partial<Shortcuts> = {
+  chat: "CommandOrControl+C"
+}
+
 export const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
   showToolbar: "Show and center the toolbar",
   toggleAll: "Hide / show all windows",
   listen: "Start / pause / resume listening",
   chat: "Toggle chat",
   screenshot: "Analyze the screen in chat",
-  dashboard: "Toggle dashboard",
+  dashboard: "Open the web dashboard",
   moveLeft: "Move toolbar left",
   moveRight: "Move toolbar right",
   moveUp: "Move toolbar up",
@@ -184,8 +189,6 @@ export interface Settings {
   answerLength: AnswerLength
   /** Show suggested questions on the left of the panel while listening. */
   suggestions: boolean
-  /** Language of the app's own interface; "auto" follows the system. */
-  uiLanguage: LanguageCode | "auto"
   stealth: boolean
   autoLaunch: boolean
   prompts: Prompt[]
@@ -256,7 +259,6 @@ export const DEFAULT_SETTINGS: Settings = {
   autoAnswer: "questions",
   answerLength: "auto",
   suggestions: true,
-  uiLanguage: "auto",
   stealth: true,
   autoLaunch: false,
   prompts: [DEFAULT_PROMPT],
@@ -269,7 +271,7 @@ export const DEFAULT_SETTINGS: Settings = {
 export interface SettingsView extends Settings {
   version: string
   platform: string
-  /** The interface language actually in use (uiLanguage resolved against the system language). */
+  /** The interface language in use: the system language when Meetingly speaks it, else English. */
   uiLocale: LanguageCode
   /** Shortcuts that could not be registered because another app owns them. */
   shortcutConflicts: ShortcutAction[]
@@ -435,7 +437,6 @@ export interface PlanState {
 export interface WindowsState {
   /** The attached panel is visible. */
   chat: boolean
-  dashboard: boolean
   panelTab: PanelTab
 }
 

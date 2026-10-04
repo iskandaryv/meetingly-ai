@@ -45,7 +45,7 @@ function handle<K extends InvokeChannel>(channel: K, fn: Handler<K>): void {
 }
 
 export function registerIpc(deps: IpcDeps): void {
-  const { settings, windows, session, chat, suggestions, meetings, reports, logger, cloud, plan } = deps
+  const { settings, windows, session, chat, suggestions, meetings, logger, cloud, plan } = deps
 
   // Settings
   handle("settings:get", () => settings.view())
@@ -112,22 +112,13 @@ export function registerIpc(deps: IpcDeps): void {
   handle("cloud:link-start", () => cloud.linkStart())
   handle("cloud:link-cancel", () => cloud.linkCancel())
   handle("cloud:unlink", () => cloud.unlink())
-  handle("cloud:open-web", () => cloud.openWeb())
+  handle("cloud:open-web", (_e, page) => cloud.openWeb(page))
   handle("cloud:sync-now", () => cloud.syncNow())
 
   // Plan and usage
   handle("plan:state", () => plan.getState())
   handle("plan:refresh", () => plan.refresh())
   handle("plan:upgrade", () => cloud.openWeb("billing"))
-
-  // Meetings
-  handle("meetings:list", () => meetings.list())
-  handle("meetings:get", (_e, id) => meetings.get(id))
-  handle("meetings:delete", (_e, id) => {
-    meetings.delete(id)
-    void cloud.meetingDeleted(id)
-  })
-  handle("meetings:regenerate", (_e, id) => reports.generate(id))
 
   /** The panel is wider while the suggestions rail shows (during a session, setting on). */
   const fitPanel = () => windows.setPanelExtra(suggestionsVisible(settings.get(), session.state().status) ? SUGGESTIONS_WIDTH : 0)

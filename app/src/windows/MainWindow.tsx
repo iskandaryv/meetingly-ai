@@ -35,8 +35,9 @@ export function MainWindow() {
     })
   const finish = () =>
     run(async () => {
+      // Every finished session becomes a meeting: its report shows on the web dashboard's Meetings page.
       const meeting = await api.invoke("session:finish")
-      if (meeting) await api.invoke("windows:show", "dashboard")
+      if (meeting) await api.invoke("cloud:open-web", "meetings")
     })
   const screenshot = () =>
     run(async () => {
@@ -104,12 +105,7 @@ export function MainWindow() {
         <Button variant="ghost" size="icon" onClick={screenshot} title={t("Analyze screen ({shortcut})", { shortcut: shortcutLabel(KEYS.screenshot) })}>
           <Camera className="h-4 w-4" />
         </Button>
-        <Button
-          variant={windows.dashboard ? "secondary" : "ghost"}
-          size="icon"
-          onClick={() => api.invoke("windows:toggle", "dashboard")}
-          title={t("Dashboard ({shortcut})", { shortcut: shortcutLabel(KEYS.dashboard) })}
-        >
+        <Button variant="ghost" size="icon" onClick={() => api.invoke("cloud:open-web")} title={t("Open web dashboard ({shortcut})", { shortcut: shortcutLabel(KEYS.dashboard) })}>
           <LayoutDashboard className="h-4 w-4" />
         </Button>
 

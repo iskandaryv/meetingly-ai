@@ -154,7 +154,7 @@ export class RecordingSession extends EventEmitter {
       updatedAt: endTime
     }
     this.deps.meetings.save(meeting)
-    // Report generation runs in the background; the dashboard refreshes on meetings:changed.
+    // Report generation runs in the background; the meeting syncs to the web dashboard when it's done.
     void this.deps.reports.generate(meeting.id).catch((err) => console.error("[session] report failed:", err))
     return meeting
   }

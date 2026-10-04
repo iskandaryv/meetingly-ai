@@ -47,6 +47,8 @@ function startElectronUpdater({ logger, onState }: Deps, feed: string, installNo
   if (process.env.MEETINGLY_UPDATE_URL) autoUpdater.setFeedURL({ provider: "generic", url: feed })
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
+  // The installer we publish is the full one, never the small web stub.
+  autoUpdater.disableWebInstaller = true
   autoUpdater.on("update-available", (info) => logger.info("updater", `update available: ${info.version}`))
   autoUpdater.on("update-downloaded", (info) => {
     if (!installNow()) {

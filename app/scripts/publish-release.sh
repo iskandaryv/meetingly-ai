@@ -12,6 +12,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 VERSION=$(node -p "require('./package.json').version")
+# Always package what is in the repo now, never an older dist/.
+npm run build >/dev/null
 npx electron-builder --win --publish never >/dev/null
 SETUP="release/Meetingly Setup ${VERSION}.exe"
 PORTABLE="release/Meetingly ${VERSION}.exe"
@@ -29,7 +31,7 @@ sed -i "s|Meetingly Setup ${VERSION}.exe|Meetingly-Setup-${VERSION}.exe|g" "$STA
 
 # macOS and Linux, built on GitHub Actions. The box downloads them itself (much faster than this PC);
 # the GitHub token goes over stdin, never onto a command line.
-REPO=$(git config --get remote.origin.url | sed -E "s#.*github.com[:/](.+)\.git$#\1#; s#.*github.com[:/](.+)$#\1#")
+REPO=$(git config --get remote.origin.url | sed -E 's#.*github.com[:/](.+)\.git$#\1#; s#.*github.com[:/](.+)$#\1#')
 RUN=$(gh run list -R "$REPO" --workflow desktop-builds.yml --status success --limit 1 --json databaseId --jq ".[0].databaseId" 2>/dev/null || true)
 IDS=""
 [ -n "$RUN" ] && IDS=$(gh api "repos/$REPO/actions/runs/$RUN/artifacts" --jq '.artifacts[] | "\(.name)=\(.id)"' | tr '\n' ' ')

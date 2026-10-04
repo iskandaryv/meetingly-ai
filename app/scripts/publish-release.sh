@@ -27,33 +27,33 @@ cp "${SETUP}.blockmap" "$STAGE/Meetingly-Setup-${VERSION}.exe.blockmap" 2>/dev/n
 # latest.yml references the versioned file name used by electron-builder; align it with what we uploaded.
 sed -i "s|Meetingly Setup ${VERSION}.exe|Meetingly-Setup-${VERSION}.exe|g" "$STAGE/latest.yml"
 
-# macOS and Linux, built on GitHub Actions.
-REPO=$(git config --get remote.origin.url | sed -E 's#.*github.com[:/](.+)\.git$#\1#; s#.*github.com[:/](.+)$#\1#')
-RUN=$(gh run list -R "$REPO" --workflow desktop-builds.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
-if [ -n "$RUN" ]; then
-  ART=$(mktemp -d)
-  gh run download "$RUN" -R "$REPO" -D "$ART"
-  found=0
-  for f in "$ART"/*/*"${VERSION}"* "$ART"/*/latest-mac.yml "$ART"/*/latest-linux.yml; do
-    [ -f "$f" ] && cp "$f" "$STAGE/" && found=1
-  done
-  if [ "$found" = 1 ] && ls "$STAGE"/*"${VERSION}"*.dmg >/dev/null 2>&1; then
-    # Stable names for the website's download buttons.
-    cp "$STAGE/Meetingly-${VERSION}-arm64.dmg" "$STAGE/Meetingly-mac-arm64.dmg"
-    cp "$STAGE/Meetingly-${VERSION}-x64.dmg" "$STAGE/Meetingly-mac-x64.dmg"
-  fi
-  if ls "$STAGE"/*"${VERSION}"*.AppImage >/dev/null 2>&1; then
-    cp "$STAGE/Meetingly-${VERSION}-x86_64.AppImage" "$STAGE/Meetingly-linux.AppImage"
-    cp "$STAGE/Meetingly-${VERSION}-amd64.deb" "$STAGE/Meetingly-linux.deb"
-  fi
-  grep -q "version: ${VERSION}" "$STAGE/latest-mac.yml" 2>/dev/null || echo "warning: the macOS build is not version ${VERSION}"
-  rm -rf "$ART"
-else
-  echo "no successful Desktop builds run: publishing Windows only"
-fi
+# macOS and Linux, built on GitHub Actions. The box downloads them itself (much faster than this PC);
+# the GitHub token goes over stdin, never onto a command line.
+REPO=$(git config --get remote.origin.url | sed -E "s#.*github.com[:/](.+)\.git$#\1#; s#.*github.com[:/](.+)$#\1#")
+RUN=$(gh run list -R "$REPO" --workflow desktop-builds.yml --status success --limit 1 --json databaseId --jq ".[0].databaseId" 2>/dev/null || true)
+IDS=""
+[ -n "$RUN" ] && IDS=$(gh api "repos/$REPO/actions/runs/$RUN/artifacts" --jq '.artifacts[] | "\(.name)=\(.id)"' | tr '\n' ' ')
 
 tar czf - -C "$STAGE" . | ssh "$HOST" "mkdir -p /var/www/meetingly/download && tar xzf - -C /var/www/meetingly/download && chmod -R a+rX /var/www/meetingly/download"
 rm -rf "$STAGE"
+
+if [ -n "$IDS" ]; then
+  gh auth token | ssh "$HOST" "read T; set -e; D=/tmp/meetingly-ci-$VERSION; rm -rf \$D; mkdir -p \$D; cd \$D
+    for p in $IDS; do n=\${p%%=*}; i=\${p#*=}
+      curl -fsSL -H \"Authorization: Bearer \$T\" -o \$n.zip https://api.github.com/repos/$REPO/actions/artifacts/\$i/zip
+      mkdir -p \$n && (cd \$n && python3 -m zipfile -e ../\$n.zip .) && rm \$n.zip
+    done
+    grep -q 'version: $VERSION' */latest-mac.yml || { echo 'the macOS/Linux builds are not version $VERSION: run Desktop builds first'; exit 1; }
+    W=/var/www/meetingly/download
+    cp */*$VERSION* */latest-mac.yml */latest-linux.yml \$W/
+    cp \$W/Meetingly-$VERSION-arm64.dmg \$W/Meetingly-mac-arm64.dmg
+    cp \$W/Meetingly-$VERSION-x64.dmg \$W/Meetingly-mac-x64.dmg
+    cp \$W/Meetingly-$VERSION-x86_64.AppImage \$W/Meetingly-linux.AppImage
+    cp \$W/Meetingly-$VERSION-amd64.deb \$W/Meetingly-linux.deb
+    chmod -R a+rX \$W; rm -rf \$D"
+else
+  echo "no successful Desktop builds run: published Windows only"
+fi
 for f in Meetingly-Setup.exe Meetingly.exe latest.yml Meetingly-mac-arm64.dmg Meetingly-mac-x64.dmg latest-mac.yml Meetingly-linux.AppImage Meetingly-linux.deb latest-linux.yml; do
   printf "%-26s %s\n" "$f" "$(curl -sI "https://meetinglyai.com/download/$f" | grep -iE '^HTTP|^content-length' | tr -d '\r' | tr '\n' ' ')"
 done

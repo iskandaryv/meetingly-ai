@@ -63,7 +63,9 @@ jobs:
       - name: Install the old version
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
-            "../old/Meetingly Setup ${OLD}.exe" /S
+            # Through PowerShell: Git Bash would rewrite "/S" into a path and the installer would open its window.
+            powershell -NoProfile -Command "Start-Process -Wait -FilePath (Resolve-Path \"../old/Meetingly Setup ${OLD}.exe\") -ArgumentList /S"
+            ls "$LOCALAPPDATA/Programs/Meetingly" | head -5
             echo "APP=$LOCALAPPDATA/Programs/Meetingly/Meetingly.exe" >> "$GITHUB_ENV"
           else
             ditto -x -k "../old/Meetingly-${OLD}-arm64.zip" /Applications

@@ -385,12 +385,46 @@ async function ownKeySmoke(windows: WindowManager, chat: ChatService, settings: 
     steps.answered = text.startsWith("**Kafka") && answered?.auth === "Bearer sk-smoke-123" && answered.model === "smoke-model" && answered.task === undefined
     await sleep(600)
     await shot("4-answer")
+    if (dir) await ollamaShot(run, settings, windows, shot)
     return { ok: Object.values(steps).every(Boolean) && Object.keys(steps).length === 7, steps, requests: seen.map((s) => s.path) }
   } catch (err) {
     return { ok: false, steps, error: (err as Error).message }
   } finally {
     settings.update({ ownKey: null })
     server.close()
+  }
+}
+
+/**
+ * For the store and README images: the form as an Ollama user fills it, with the model list coming from a
+ * stand-in on Ollama's own port (skipped when something already listens there). Not part of the check.
+ */
+async function ollamaShot(run: (js: string) => Promise<unknown>, settings: SettingsStore, windows: WindowManager, shot: (name: string) => Promise<void>): Promise<void> {
+  const ollama = http.createServer((req, res) => {
+    res.writeHead(200, { "Content-Type": "application/json" })
+    res.end(req.url === "/v1/models" ? JSON.stringify({ data: ["gpt-oss:20b", "llama3.2", "qwen3:8b"].map((id) => ({ id })) }) : "{}")
+  })
+  const listening = await new Promise<boolean>((resolve) => {
+    ollama.once("error", () => resolve(false))
+    ollama.listen(11434, "127.0.0.1", () => resolve(true))
+  })
+  if (!listening) return
+  try {
+    settings.update({ ownKey: null })
+    windows.send("chat", "chat:cleared", undefined)
+    windows.send("chat", "plan:state", { status: "signed-out" })
+    await sleep(500)
+    await run(`(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.includes("OpenRouter") && x.textContent.length > 20); if (b) b.click() })()`)
+    await sleep(400)
+    await run(`[...document.querySelectorAll("form button")].find((b) => b.textContent === "Ollama")?.click()`)
+    await sleep(800)
+    await run(`(() => { const el = document.getElementById("own-model");
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(el, "llama3.2");
+      el.dispatchEvent(new Event("input", { bubbles: true })) })()`)
+    await sleep(400)
+    await shot("5-ollama")
+  } finally {
+    ollama.close()
   }
 }
 

@@ -18,7 +18,7 @@ BATCH = 60
 SYSTEM = """You translate the interface of Meetingly, a desktop AI assistant for live meetings and job interviews, into {name}.
 Rules:
 - Translate each English string as it would appear in polished {name} software: short, natural, the usual tone of that language's apps.
-- Keep every {{placeholder}} exactly as written (same name, same braces), and keep "Meetingly", "Pro", "Stripe", "Enot", "SBP", "UTC", "API", "OpenAI", "OpenRouter", "Ollama", keyboard keys (Ctrl, Alt, Shift, Enter, Esc) and emoji unchanged.
+- Keep every {{placeholder}} exactly as written (same name, same braces), and keep "Meetingly", "Pro", "Stripe", "Enot", "SBP", "UTC", "API", "OpenAI", "OpenRouter", "Ollama", "GitHub", "Apache-2.0", "AppImage", "Cluely", "Final Round AI", "Parakeet AI", "LockedIn AI", keyboard keys (Ctrl, Alt, Shift, Enter, Esc) and emoji unchanged.
 - Keep punctuation style: an ellipsis (…) stays an ellipsis, a trailing period stays.
 - Some strings contain HTML: keep every tag and attribute exactly as written and in the same order; translate only the text between tags.
 - Reply with one JSON object mapping every English string exactly as given to its translation. No comments."""

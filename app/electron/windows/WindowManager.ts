@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events"
 import type { EventChannel, EventMap } from "../../shared/ipc"
 import type { PanelTab, WindowKind, WindowsState } from "../../shared/types"
 import { GAP, MAIN_TOP_MARGIN, MOVE_STEP, PANEL_OVERLAP, WINDOW_SPECS } from "./config"
+import { attachContextMenu } from "../copy"
 
 const KINDS: WindowKind[] = ["main", "chat", "dashboard"]
 
@@ -280,6 +281,7 @@ export class WindowManager extends EventEmitter {
     // Never navigate away or open popups from the renderer.
     win.webContents.setWindowOpenHandler(() => ({ action: "deny" }))
     win.webContents.on("will-navigate", (e) => e.preventDefault())
+    attachContextMenu(win.webContents)
 
     const devUrl = process.env.VITE_DEV_SERVER_URL
     if (devUrl) void win.loadURL(`${devUrl}#/${kind}`)

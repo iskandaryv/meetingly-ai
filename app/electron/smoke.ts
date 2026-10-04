@@ -1,4 +1,4 @@
-import { app } from "electron"
+import { app, BrowserWindow, clipboard } from "electron"
 import { spawn } from "node:child_process"
 import fs from "node:fs"
 import type { AsrModel } from "./services/asrModel"
@@ -11,6 +11,7 @@ import type { RecordingSession } from "./services/session"
 import type { SettingsStore } from "./services/settings"
 import type { WindowManager } from "./windows/WindowManager"
 import { SUGGESTIONS_WIDTH } from "./windows/config"
+import { copySelection } from "./copy"
 
 const KINDS: WindowKind[] = ["main", "chat", "dashboard"]
 
@@ -37,6 +38,8 @@ interface SmokeDeps {
  *             direct answers, small talk must be skipped (nothing shown in chat).
  *   "shots"   capture the toolbar and both panel tabs (with sample answers) as PNGs into
  *             IGPT_SMOKE_SHOTS. capturePage works even with content protection on.
+ *   "copy"    selecting an answer in the panel and pressing Ctrl+C copies it (the Ctrl+C shortcut must not
+ *             swallow the copy); nothing selected means the copy path declines. Restores the clipboard.
  *   "asr"     on-device transcription: stream IGPT_SMOKE_WAV (16 kHz mono, played on the IGPT_SMOKE_SIDE
  *             channel, default "them") through the
  *             speech worker in real time and report partials, finals and latency.
@@ -120,6 +123,9 @@ export async function runSmokeTest(mode: string, { windows, chat, session, setti
   let answersProbe: Record<string, unknown> & { ok: boolean } | undefined
   if (mode === "answers") answersProbe = await answersSmoke(chat, settings)
 
+  let copyProbe: Record<string, unknown> & { ok: boolean } | undefined
+  if (mode === "copy") copyProbe = await copySmoke(windows)
+
   let asrProbe: Record<string, unknown> & { ok: boolean } | undefined
   if (mode === "asr") asrProbe = await asrSmoke(asrModel, process.env.IGPT_SMOKE_WAV ?? "", process.env.IGPT_SMOKE_LANG ?? "en-US")
 
@@ -132,6 +138,7 @@ export async function runSmokeTest(mode: string, { windows, chat, session, setti
       Object.values(listenProbe).every((p) => p.ok) &&
       (cloudProbe?.ok ?? true) &&
       (asrProbe?.ok ?? true) &&
+      (copyProbe?.ok ?? true) &&
       (answersProbe?.ok ?? true),
     loaded: [...loaded],
     windows: Object.fromEntries(
@@ -144,11 +151,80 @@ export async function runSmokeTest(mode: string, { windows, chat, session, setti
     listen: mode === "listen" ? listenProbe : undefined,
     cloud: cloudProbe,
     asr: asrProbe,
+    copy: copyProbe,
     answers: answersProbe,
     errors
   }
   console.log(`SMOKE_REPORT ${JSON.stringify(report)}`)
   if (mode !== "visual") app.exit(report.ok ? 0 : 1)
+}
+
+/**
+ * Copying from the panel. The first checks call the copy path directly; the last one presses a real Ctrl+C
+ * (SendKeys), which goes through the global shortcut exactly as when the user types it.
+ */
+async function copySmoke(windows: WindowManager): Promise<Record<string, unknown> & { ok: boolean }> {
+  const saved = await clipboard.readText()
+  const steps: Record<string, unknown> = {}
+  const answer = "Sharding splits one database"
+  try {
+    windows.showPanel("answers")
+    await sleep(1200)
+    windows.send("chat", "chat:message", {
+      id: "c1",
+      role: "assistant",
+      kind: "auto",
+      text: "**Sharding splits one database into many by key.**\n- Pick a stable shard key\n- Route queries by key",
+      timestamp: Date.now()
+    })
+    await sleep(600)
+    const panel = windows.get("chat")
+    if (!panel) return { ok: false, steps, error: "no panel" }
+    panel.focus()
+    await sleep(300)
+    await clipboard.writeText("before")
+    await panel.webContents.executeJavaScript("window.getSelection().removeAllRanges(); true")
+    steps.noSelectionCopies = await copySelection(panel)
+    const select =
+      "(() => { const el = [...document.querySelectorAll('.md')].pop(); const r = document.createRange(); r.selectNodeContents(el); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); return s.toString() })()"
+    steps.selected = String(await panel.webContents.executeJavaScript(select)).slice(0, 60)
+    const focused = BrowserWindow.getFocusedWindow()
+    steps.focusedWindow = focused ? windows.kindOf(focused.webContents) : null
+    steps.direct = await copySelection(panel)
+    await sleep(200)
+    steps.clipboardAfterDirect = (await clipboard.readText()).slice(0, 60)
+    const directOk = steps.direct === true && (await clipboard.readText()).includes(answer)
+
+    // The real key press, through Windows and the global shortcut.
+    let keyOk: boolean | undefined
+    if (process.platform === "win32") {
+      await clipboard.writeText("before")
+      await panel.webContents.executeJavaScript(select)
+      steps.focusedBeforeKey = panel.isFocused()
+      await sendKeys("^c")
+      await sleep(800)
+      steps.clipboardAfterKey = (await clipboard.readText()).slice(0, 60)
+      steps.panelVisibleAfterKey = panel.isVisible()
+      keyOk = (await clipboard.readText()).includes(answer) && panel.isVisible()
+    }
+    // A smoke run started in the background may not get OS focus; then the key press can't reach the panel.
+    const keyCounts = steps.focusedBeforeKey === true
+    return { ok: steps.noSelectionCopies === false && directOk && (!keyCounts || keyOk !== false), keyPress: keyCounts ? keyOk : "skipped: no OS focus", steps }
+  } catch (err) {
+    return { ok: false, steps, error: (err as Error).message }
+  } finally {
+    await clipboard.writeText(saved)
+  }
+}
+
+/** Types keys into whatever has focus (Windows), as a person would. */
+function sendKeys(keys: string): Promise<void> {
+  return new Promise((resolve) => {
+    const script = `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('${keys}')`
+    const child = spawn("powershell", ["-NoProfile", "-NonInteractive", "-Command", script], { stdio: "ignore", windowsHide: true })
+    child.on("error", () => resolve())
+    child.on("exit", () => resolve())
+  })
 }
 
 const TEST_PHRASE = "The purple elephant is testing system audio capture."

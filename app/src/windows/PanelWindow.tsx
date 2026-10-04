@@ -19,6 +19,7 @@ import { useAudioCapture, useLiveTranscript, type Interim, type TranscriptLine }
 import { useEvent, usePlanState, useSessionState, useSettings, useSuggestions } from "@/lib/hooks"
 import type { AudioLevels } from "@/lib/audio"
 import { cn, copyText } from "@/lib/utils"
+import { markdownToPlain } from "@/lib/plain-text"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/fields"
 import { Markdown } from "@/components/Markdown"
@@ -357,7 +358,7 @@ function Message({ message }: { message: ChatMessage }) {
     return <p className="selectable ml-10 rounded-lg bg-white/[0.08] px-3 py-1.5 text-[12.5px] text-white/90">{message.text}</p>
   }
   const copy = async () => {
-    if (await copyText(message.text)) {
+    if (await copyText(markdownToPlain(message.text))) {
       setCopied(true)
       setTimeout(() => setCopied(false), 1200)
     }

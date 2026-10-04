@@ -4,6 +4,8 @@ import type { ChatService } from "./services/chat"
 import type { RecordingSession } from "./services/session"
 import type { SettingsStore } from "./services/settings"
 import type { WindowManager } from "./windows/WindowManager"
+import { copyFocusedSelection } from "./copy"
+import { isCopyChord } from "./copy-menu"
 
 interface Deps {
   settings: SettingsStore
@@ -56,7 +58,11 @@ export class ShortcutManager {
       if (!accelerator) continue
       let ok = false
       try {
-        ok = globalShortcut.register(accelerator, this.actions[action])
+        const run = this.actions[action]
+        // Bound to Ctrl+C: selected text in a Meetingly window is copied instead (Windows gives the key to
+        // the shortcut, never to the window).
+        const handler = isCopyChord(accelerator) ? () => void copyFocusedSelection().then((copied) => copied || run()) : run
+        ok = globalShortcut.register(accelerator, handler)
       } catch {
         ok = false
       }

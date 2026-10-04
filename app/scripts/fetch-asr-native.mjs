@@ -28,7 +28,8 @@ for (const [dir, asset] of Object.entries(TARGETS)) {
   execSync(`tar xzf a.tgz`, { cwd: tmp })
   const inner = fs.readdirSync(tmp).find((n) => n !== "a.tgz")
   fs.mkdirSync(path.dirname(dest), { recursive: true })
-  fs.renameSync(path.join(tmp, inner), dest)
+  // A copy, not a rename: the temp folder may be on another drive (GitHub's Windows machines).
+  fs.cpSync(path.join(tmp, inner), dest, { recursive: true, verbatimSymlinks: true })
   fs.rmSync(tmp, { recursive: true, force: true })
   console.log(`${dir}: ${asset} ${VERSION}`)
 }

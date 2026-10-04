@@ -13,6 +13,7 @@ import {
   type QuickActionId,
   type SuggestionsState
 } from "@shared/types"
+import { t } from "@shared/i18n"
 import { api } from "@/lib/api"
 import { useAudioCapture, useLiveTranscript, type Interim, type TranscriptLine } from "@/lib/capture"
 import { useEvent, usePlanState, useSessionState, useSettings, useSuggestions } from "@/lib/hooks"
@@ -48,9 +49,9 @@ export function PanelWindow() {
     return () => window.removeEventListener("keydown", onKey)
   }, [])
 
-  const choose = (t: PanelTab) => {
-    setTab(t)
-    void api.invoke("panel:set-tab", t)
+  const choose = (next: PanelTab) => {
+    setTab(next)
+    void api.invoke("panel:set-tab", next)
   }
   const handsFree = settings ? settings.autoAnswer !== "off" : true
   const rail = suggestionsVisible(settings, session.status)
@@ -60,9 +61,9 @@ export function PanelWindow() {
       <div className="glass flex h-full w-full flex-col overflow-hidden">
         <header className="drag flex h-9 shrink-0 items-center gap-1 border-b border-white/10 pl-1 pr-1">
           <div className="no-drag flex items-center rounded-md bg-white/[0.04] p-0.5">
-            <TabButton active={tab === "answers"} onClick={() => choose("answers")}>Answers</TabButton>
+            <TabButton active={tab === "answers"} onClick={() => choose("answers")}>{t("Answers")}</TabButton>
             <TabButton active={tab === "transcript"} onClick={() => choose("transcript")}>
-              Transcript
+              {t("Transcript")}
               {session.status === "recording" && <span className="ml-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />}
             </TabButton>
           </div>
@@ -73,7 +74,7 @@ export function PanelWindow() {
                 size="icon-sm"
                 className="h-7 w-7"
                 onClick={() => void update({ suggestions: !settings.suggestions })}
-                title={rail ? "Hide suggested questions" : "Show suggested questions"}
+                title={rail ? t("Hide suggested questions") : t("Show suggested questions")}
               >
                 <PanelLeft className="h-3.5 w-3.5" />
               </Button>
@@ -82,18 +83,18 @@ export function PanelWindow() {
               <button
                 type="button"
                 onClick={() => update({ autoAnswer: handsFree ? "off" : "questions" })}
-                title={handsFree ? "Questions heard in the meeting are answered automatically. Click to turn off." : "Click to answer questions from the meeting automatically."}
+                title={handsFree ? t("Questions heard in the meeting are answered automatically. Click to turn off.") : t("Click to answer questions from the meeting automatically.")}
                 className={cn(
                   "h-6 rounded-full px-2 text-[11px] font-medium transition-colors",
                   handsFree ? "bg-sky-500/80 text-white hover:bg-sky-400/80" : "text-white/55 hover:bg-white/10 hover:text-white"
                 )}
               >
-                {handsFree ? "Auto-answer on" : "Auto-answer off"}
+                {handsFree ? t("Auto-answer on") : t("Auto-answer off")}
               </button>
             ) : (
               <Levels levels={capture.levels} />
             )}
-            <Button variant="ghost" size="icon-sm" className="h-7 w-7" onClick={() => api.invoke("windows:hide", "chat")} title="Close (Esc)">
+            <Button variant="ghost" size="icon-sm" className="h-7 w-7" onClick={() => api.invoke("windows:hide", "chat")} title={t("Close (Esc)")}>
               <X className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -153,12 +154,12 @@ function Suggestions({ state, plan }: { state: SuggestionsState; plan: PlanState
   return (
     <aside className="flex w-[200px] shrink-0 flex-col border-r border-white/10 bg-white/[0.02]">
       <div className="flex h-7 shrink-0 items-center gap-1 pl-2.5 pr-1">
-        <span className="flex-1 text-[10.5px] font-medium uppercase tracking-wide text-white/35">Suggested</span>
+        <span className="flex-1 text-[10.5px] font-medium uppercase tracking-wide text-white/35">{t("Suggested")}</span>
         <button
           type="button"
           onClick={() => void api.invoke("suggestions:refresh").catch(() => {})}
           disabled={state.updating}
-          title="Refresh from the conversation"
+          title={t("Refresh from the conversation")}
           className="rounded p-1 text-white/35 transition-colors hover:bg-white/10 hover:text-white/80 disabled:hover:bg-transparent"
         >
           <RefreshCw className={cn("h-3 w-3", state.updating && "animate-spin")} />
@@ -173,10 +174,12 @@ function Suggestions({ state, plan }: { state: SuggestionsState; plan: PlanState
         {state.items.length === 0 ? (
           <p className="px-1.5 py-1 text-[11px] leading-snug text-white/35">
             {plan.used && plan.limits && plan.used.listening >= plan.limits.listening
-              ? `Paused for today: ${plan.plan === "pro" ? "the daily limit is used" : "upgrade to Pro for more"}.`
+              ? plan.plan === "pro"
+                ? t("Paused for today: the daily limit is used.")
+                : t("Paused for today: upgrade to Pro for more.")
               : state.updating
-                ? "Reading the conversation…"
-                : "Questions show up here as the conversation goes."}
+                ? t("Reading the conversation…")
+                : t("Questions show up here as the conversation goes.")}
           </p>
         ) : (
           state.items.map((s) => (
@@ -203,7 +206,7 @@ function Suggestions({ state, plan }: { state: SuggestionsState; plan: PlanState
             className="flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-[11.5px] text-white/60 transition-colors hover:bg-white/[0.07] hover:text-white disabled:opacity-45"
           >
             <span className="text-white/40">{ACTION_ICONS[a.id]}</span>
-            {a.label}
+            {t(a.label)}
           </button>
         ))}
       </div>
@@ -255,7 +258,7 @@ function Answers({ listening, handsFree, plan }: { listening: boolean; handsFree
       <div ref={listRef} className="scroll min-h-0 flex-1 space-y-1.5 px-2.5 py-2">
         {history.length === 0 && !stream && (
           <p className="px-4 py-6 text-center text-[11.5px] leading-relaxed text-white/45">
-            {handsFree ? "Ask anything, or press Listen: questions from the meeting are answered here." : "Ask anything. Auto-answer is off."}
+            {handsFree ? t("Ask anything, or press Listen: questions from the meeting are answered here.") : t("Ask anything. Auto-answer is off.")}
           </p>
         )}
         {history.map((m) => <Message key={m.id} message={m} />)}
@@ -265,17 +268,17 @@ function Answers({ listening, handsFree, plan }: { listening: boolean; handsFree
             <span className="ml-0.5 inline-block h-3.5 w-[2px] animate-pulse bg-white/70 align-middle" />
           </div>
         )}
-        {busy && !stream && <p className="animate-pulse px-1 text-[11px] text-white/45">Thinking…</p>}
+        {busy && !stream && <p className="animate-pulse px-1 text-[11px] text-white/45">{t("Thinking…")}</p>}
       </div>
 
       {listening && heard && (
         <div className="flex items-center gap-1.5 border-t border-white/10 px-2 py-1">
           <span className="min-w-0 flex-1 truncate text-[11px] text-white/50" title={heard}>
-            <span className="mr-1 text-white/35">Heard</span>
+            <span className="mr-1 text-white/35">{t("Heard")}</span>
             {heard}
           </span>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" disabled={busy} onClick={() => void api.invoke("chat:answer-last")} title="Answer the last thing heard">
-            <MessageSquareReply className="h-3 w-3" /> Answer
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" disabled={busy} onClick={() => void api.invoke("chat:answer-last")} title={t("Answer the last thing heard")}>
+            <MessageSquareReply className="h-3 w-3" /> {t("Answer")}
           </Button>
         </div>
       )}
@@ -289,7 +292,7 @@ function Answers({ listening, handsFree, plan }: { listening: boolean; handsFree
           send(input)
         }}
       >
-        <Button type="button" variant="ghost" size="icon-sm" title="Analyze my screen" disabled={busy} onClick={() => void api.invoke("chat:screenshot").catch(() => {})}>
+        <Button type="button" variant="ghost" size="icon-sm" title={t("Analyze my screen")} disabled={busy} onClick={() => void api.invoke("chat:screenshot").catch(() => {})}>
           <Camera className="h-3.5 w-3.5" />
         </Button>
         <input
@@ -297,13 +300,13 @@ function Answers({ listening, handsFree, plan }: { listening: boolean; handsFree
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={busy}
-          placeholder={busy ? "Waiting for reply…" : "Type a message"}
+          placeholder={busy ? t("Waiting for reply…") : t("Type a message")}
           className="h-7 min-w-0 flex-1 rounded-md border border-white/[0.12] bg-white/5 px-2.5 text-[13px] text-white placeholder:text-white/35 focus:border-white/35 focus:outline-none"
         />
-        <Button type="button" variant="ghost" size="icon-sm" onClick={() => api.invoke("chat:clear")} title="Clear conversation" disabled={history.length === 0}>
+        <Button type="button" variant="ghost" size="icon-sm" onClick={() => api.invoke("chat:clear")} title={t("Clear conversation")} disabled={history.length === 0}>
           <Eraser className="h-3.5 w-3.5" />
         </Button>
-        <Button type="submit" variant="primary" size="icon-sm" title="Send (Enter)" disabled={busy || !input.trim()}>
+        <Button type="submit" variant="primary" size="icon-sm" title={t("Send (Enter)")} disabled={busy || !input.trim()}>
           <SendHorizontal className="h-3.5 w-3.5" />
         </Button>
       </form>
@@ -316,9 +319,9 @@ function PlanBar({ plan }: { plan: PlanState }) {
   if (plan.status === "signed-out") {
     return (
       <div className="flex items-center gap-2 border-t border-white/10 bg-sky-500/10 px-2.5 py-1.5">
-        <span className="min-w-0 flex-1 text-[11.5px] leading-snug text-sky-100">Create a free account to get AI answers: 100 a day, no card.</span>
+        <span className="min-w-0 flex-1 text-[11.5px] leading-snug text-sky-100">{t("Create a free account to get AI answers: 100 a day, no card.")}</span>
         <Button variant="primary" size="sm" className="h-6 px-2.5 text-[11px]" onClick={() => void api.invoke("cloud:link-start").catch(() => {})}>
-          Sign up free
+          {t("Sign up free")}
         </Button>
       </div>
     )
@@ -328,10 +331,10 @@ function PlanBar({ plan }: { plan: PlanState }) {
   return (
     <div className="flex items-center gap-1.5 border-t border-white/10 px-2.5 py-1 text-[11px] text-white/45">
       <span className={cn("min-w-0 flex-1 truncate", left === 0 && "text-amber-200")}>
-        {left === 0 ? "No answers left today. They come back at midnight UTC." : `${left} of ${plan.limits.answers} answers left today`}
+        {left === 0 ? t("No answers left today. They come back at midnight UTC.") : t("{left} of {total} answers left today", { left, total: plan.limits.answers })}
       </span>
       <button type="button" className="font-medium text-sky-300 hover:text-sky-200" onClick={() => void api.invoke("plan:upgrade").catch(() => {})}>
-        Upgrade
+        {t("Upgrade")}
       </button>
     </div>
   )
@@ -346,7 +349,7 @@ function Message({ message }: { message: ChatMessage }) {
     if (message.kind === "auto") {
       return (
         <p className="selectable px-1 pt-1 text-[11.5px] leading-snug text-white/55">
-          <span className="mr-1.5 text-[10.5px] font-medium text-white/35">Heard</span>
+          <span className="mr-1.5 text-[10.5px] font-medium text-white/35">{t("Heard")}</span>
           {message.text}
         </p>
       )
@@ -361,13 +364,13 @@ function Message({ message }: { message: ChatMessage }) {
   }
   return (
     <div className={cn("group relative", message.kind === "error" ? "rounded-lg bg-rose-500/15 px-3 py-2 text-rose-200" : ANSWER)}>
-      {message.kind === "screenshot" && <div className="mb-0.5 flex items-center gap-1 text-[10.5px] text-sky-200/50"><Camera className="h-3 w-3" /> Screen</div>}
+      {message.kind === "screenshot" && <div className="mb-0.5 flex items-center gap-1 text-[10.5px] text-sky-200/50"><Camera className="h-3 w-3" /> {t("Screen")}</div>}
       {message.kind === "error" ? <p className="selectable text-[12.5px]">{message.text}</p> : <Markdown text={message.text} />}
       {message.kind !== "error" && (
         <button
           type="button"
           onClick={copy}
-          title="Copy"
+          title={t("Copy")}
           className="absolute right-1 top-1 rounded p-1 text-white/40 opacity-0 transition-opacity hover:bg-white/10 hover:text-white group-hover:opacity-100"
         >
           {copied ? <Check className="h-3 w-3 text-emerald-300" /> : <Copy className="h-3 w-3" />}
@@ -381,6 +384,12 @@ interface Turn {
   side: "you" | "them" | "other"
   label: string
   texts: string[]
+}
+
+/** Speaker labels stay English as data (the model and saved meetings read them); translate them on screen. */
+function speakerText(label: string): string {
+  const numbered = label.match(/^Speaker (\d+)$/)
+  return numbered ? t("Speaker {n}", { n: numbered[1] }) : t(label)
 }
 
 /** Consecutive lines from the same side become one turn, like a chat. */
@@ -414,7 +423,7 @@ function Transcript(props: {
   }, [lines.length, live])
 
   const turns = toTurns(lines)
-  const text = turns.map((t) => (t.label ? `${t.label}: ${t.texts.join(" ")}` : t.texts.join(" "))).join("\n")
+  const text = turns.map((turn) => (turn.label ? `${speakerText(turn.label)}: ${turn.texts.join(" ")}` : turn.texts.join(" "))).join("\n")
   const copy = async () => {
     if (await copyText(text)) {
       setCopied(true)
@@ -427,26 +436,26 @@ function Transcript(props: {
       {notice && <div className="mx-2 mt-1.5 rounded-md border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-200">{notice}</div>}
       {status === "idle" ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 p-4 text-center">
-          <p className="text-[11.5px] text-white/50">The live transcript shows here while listening.</p>
+          <p className="text-[11.5px] text-white/50">{t("The live transcript shows here while listening.")}</p>
           <Button variant="primary" size="sm" onClick={() => void api.invoke("session:start").catch(() => {})}>
-            <Mic className="h-3.5 w-3.5" /> Start listening
+            <Mic className="h-3.5 w-3.5" /> {t("Start listening")}
           </Button>
         </div>
       ) : (
         <div ref={ref} className="scroll selectable min-h-0 flex-1 space-y-2 px-2.5 py-2 text-[12.5px] leading-relaxed">
-          {turns.map((t, i) => <TurnView key={i} turn={t} />)}
+          {turns.map((turn, i) => <TurnView key={i} turn={turn} />)}
           {(["them", "other", "you"] as const).map((side) => {
             const words = interim[side]
             return words ? <TurnView key={`live-${side}`} turn={{ side, label: "", texts: [words] }} live /> : null
           })}
-          {!text && !live && <p className="text-white/40">{connected ? "Listening…" : "Starting…"}</p>}
+          {!text && !live && <p className="text-white/40">{connected ? t("Listening…") : t("Starting…")}</p>}
         </div>
       )}
       <div className="flex items-center gap-1 border-t border-white/10 p-1.5">
-        <Select value={source} onChange={(e) => onSource(e.target.value as AudioSource)} className="h-7 flex-1 bg-black/30 px-2 py-0 text-[11px]" title="What to transcribe">
-          {(Object.keys(AUDIO_SOURCE_LABELS) as AudioSource[]).map((s) => <option key={s} value={s}>{AUDIO_SOURCE_LABELS[s]}</option>)}
+        <Select value={source} onChange={(e) => onSource(e.target.value as AudioSource)} className="h-7 flex-1 bg-black/30 px-2 py-0 text-[11px]" title={t("What to transcribe")}>
+          {(Object.keys(AUDIO_SOURCE_LABELS) as AudioSource[]).map((s) => <option key={s} value={s}>{t(AUDIO_SOURCE_LABELS[s])}</option>)}
         </Select>
-        <Button variant="ghost" size="icon-sm" onClick={copy} disabled={!text} title="Copy transcript">
+        <Button variant="ghost" size="icon-sm" onClick={copy} disabled={!text} title={t("Copy transcript")}>
           {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
         </Button>
       </div>
@@ -459,7 +468,7 @@ function TurnView({ turn, live }: { turn: Turn; live?: boolean }) {
   const mine = turn.side === "you"
   return (
     <div className={cn("flex flex-col", mine ? "items-end" : "items-start")}>
-      {turn.label && <span className="mb-0.5 px-1 text-[10.5px] font-medium text-white/40">{turn.label}</span>}
+      {turn.label && <span className="mb-0.5 px-1 text-[10.5px] font-medium text-white/40">{speakerText(turn.label)}</span>}
       <div
         className={cn(
           "max-w-[88%] space-y-1 rounded-lg px-2.5 py-1.5",
@@ -467,7 +476,7 @@ function TurnView({ turn, live }: { turn: Turn; live?: boolean }) {
           live && "italic opacity-70"
         )}
       >
-        {turn.texts.map((t, i) => <p key={i}>{t}</p>)}
+        {turn.texts.map((line, i) => <p key={i}>{line}</p>)}
       </div>
     </div>
   )
@@ -477,8 +486,8 @@ function TurnView({ turn, live }: { turn: Turn; live?: boolean }) {
 function Levels({ levels }: { levels: AudioLevels }) {
   return (
     <div className="mr-1 flex items-center gap-2">
-      <Meter icon={<Mic className="h-3 w-3" />} level={levels.microphone} title="Microphone" />
-      <Meter icon={<Volume2 className="h-3 w-3" />} level={levels.system} title="System audio" />
+      <Meter icon={<Mic className="h-3 w-3" />} level={levels.microphone} title={t("Microphone")} />
+      <Meter icon={<Volume2 className="h-3 w-3" />} level={levels.system} title={t("System audio")} />
     </div>
   )
 }
@@ -487,7 +496,7 @@ function Meter({ icon, level, title }: { icon: React.ReactNode; level: number | 
   const active = level !== null
   const pct = Math.round((level ?? 0) * 100)
   return (
-    <div className={cn("flex items-center gap-1", active ? "text-white/70" : "text-white/25")} title={active ? `${title}: ${pct}%` : `${title}: not captured`}>
+    <div className={cn("flex items-center gap-1", active ? "text-white/70" : "text-white/25")} title={active ? `${title}: ${pct}%` : t("{title}: not captured", { title })}>
       {icon}
       <div className="h-1 w-9 overflow-hidden rounded-full bg-white/10">
         <div className={cn("h-full rounded-full transition-[width] duration-100", pct > 70 ? "bg-rose-400" : "bg-emerald-400")} style={{ width: `${active ? Math.max(pct, 2) : 0}%` }} />

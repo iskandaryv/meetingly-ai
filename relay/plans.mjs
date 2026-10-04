@@ -58,15 +58,15 @@ export function checkBudget(planName, used, task) {
   const plan = PLANS[planName]
   const spec = taskSpec(task)
   const upgrade = planName === "free" ? " Upgrade to Pro for more." : planName === "guest" ? " Update Meetingly and sign in to keep going." : ""
-  if ((used.tokens ?? 0) >= plan.tokens) return { code: "daily_limit", message: `Today's usage limit is reached. It resets at midnight UTC.${upgrade}` }
+  if ((used.tokens ?? 0) >= plan.tokens) return { code: "daily_limit", limit: plan.tokens, message: `Today's usage limit is reached. It resets at midnight UTC.${upgrade}` }
   const over = (field) => (used[field] ?? 0) >= plan[field]
   if (spec.bucket === "answers" && over("answers")) {
-    return { code: "answers_limit", message: planName === "pro" ? "You've reached today's fair-use limit of answers. It resets at midnight UTC." : `You've used today's ${plan.answers} free answers.${upgrade}` }
+    return { code: "answers_limit", limit: plan.answers, message: planName === "pro" ? "You've reached today's fair-use limit of answers. It resets at midnight UTC." : `You've used today's ${plan.answers} free answers.${upgrade}` }
   }
   if ((spec.bucket === "listening" || spec.alsoNeeds === "listening") && over("listening")) {
-    return { code: "listening_limit", message: `Live suggestions and auto-answer are paused: today's ${HOURS(plan.listening)} hours are used up. Questions you ask still work.${upgrade}` }
+    return { code: "listening_limit", limit: plan.listening, hours: Number(HOURS(plan.listening)), message: `Live suggestions and auto-answer are paused: today's ${HOURS(plan.listening)} hours are used up. Questions you ask still work.${upgrade}` }
   }
-  if (spec.bucket === "vision" && over("vision")) return { code: "vision_limit", message: `You've used today's ${plan.vision} screen analyses.${upgrade}` }
-  if (spec.bucket === "reports" && over("reports")) return { code: "reports_limit", message: `You've used today's ${plan.reports} meeting reports.${upgrade}` }
+  if (spec.bucket === "vision" && over("vision")) return { code: "vision_limit", limit: plan.vision, message: `You've used today's ${plan.vision} screen analyses.${upgrade}` }
+  if (spec.bucket === "reports" && over("reports")) return { code: "reports_limit", limit: plan.reports, message: `You've used today's ${plan.reports} meeting reports.${upgrade}` }
   return null
 }

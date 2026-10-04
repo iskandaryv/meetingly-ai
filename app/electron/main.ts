@@ -11,6 +11,7 @@ import { ReportGenerator } from "./services/reports"
 import { RecordingSession } from "./services/session"
 import { AsrModel } from "./services/asrModel"
 import { SettingsStore } from "./services/settings"
+import { setLocale } from "../shared/i18n"
 import { SuggestionService } from "./services/suggestions"
 import { PlanService } from "./services/plan"
 import { ShortcutManager } from "./shortcuts"
@@ -42,8 +43,10 @@ function bootstrap(): void {
 
   const settings = new SettingsStore(path.join(userData, "settings.json"), {
     version: app.getVersion(),
-    platform: process.platform
+    platform: process.platform,
+    locale: app.getLocale()
   })
+  setLocale(settings.uiLocale())
   const llm = new Llm(settings)
   const meetings = new MeetingStore(path.join(userData, "meetings.json"))
   const reports = new ReportGenerator({ llm, meetings, settings })
@@ -75,6 +78,7 @@ function bootstrap(): void {
   let lastShortcuts = JSON.stringify(settings.get().shortcuts)
   const applySettings = () => {
     const s = settings.get()
+    setLocale(settings.uiLocale())
     windows.setStealth(s.stealth)
     if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: s.autoLaunch })
     const serialized = JSON.stringify(s.shortcuts)

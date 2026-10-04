@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events"
 import { app, utilityProcess, type UtilityProcess } from "electron"
 import type { TranscriptEvent } from "../../shared/types"
 import type { AsrModel } from "./asrModel"
+import { t } from "../../shared/i18n"
 
 const READY_TIMEOUT_MS = 60000
 
@@ -56,7 +57,7 @@ export class LocalAsrSocket extends EventEmitter {
 
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
-        reject(new Error("The speech model took too long to start."))
+        reject(new Error(t("The speech model took too long to start.")))
         child.kill()
       }, READY_TIMEOUT_MS)
 
@@ -100,7 +101,7 @@ export class LocalAsrSocket extends EventEmitter {
         const wasReady = this.ready
         this.ready = false
         this.child = null
-        if (!wasReady) reject(new Error(`The speech engine stopped unexpectedly (code ${code}).`))
+        if (!wasReady) reject(new Error(t("The speech engine stopped unexpectedly (code {code}).", { code: String(code) })))
         this.emit("close", code, "speech worker exited", this.closedByUs)
       })
 

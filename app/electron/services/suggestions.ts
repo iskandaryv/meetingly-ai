@@ -4,6 +4,7 @@ import type { ChatService } from "./chat"
 import { describeRelayError, type Llm, type LlmMessage } from "./llm"
 import type { RecordingSession } from "./session"
 import type { SettingsStore } from "./settings"
+import { t } from "../../shared/i18n"
 
 interface Deps {
   settings: Pick<SettingsStore, "get" | "activePrompt">
@@ -111,7 +112,7 @@ export class SuggestionService extends EventEmitter {
     if (this.deps.chat.isBusy) return false
     const action = QUICK_ACTIONS.find((a) => a.id === id)
     if (action) {
-      void this.deps.chat.send(action.label, { prompt: action.prompt })
+      void this.deps.chat.send(t(action.label), { prompt: action.prompt })
       return true
     }
     const item = this.items.find((s) => s.id === id)

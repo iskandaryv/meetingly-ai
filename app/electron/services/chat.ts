@@ -4,6 +4,7 @@ import type { Capture } from "./capture"
 import { describeRelayError, type Llm, type LlmMessage } from "./llm"
 import type { RecordingSession } from "./session"
 import type { SettingsStore } from "./settings"
+import { t } from "../../shared/i18n"
 
 interface Deps {
   settings: SettingsStore
@@ -94,7 +95,7 @@ export class ChatService extends EventEmitter {
   }
 
   async screenshot(prompt?: string): Promise<ScreenshotResult> {
-    if (this.busy) throw new Error("Chat is busy")
+    if (this.busy) throw new Error(t("Wait for the current answer to finish."))
     this.supersedeProbe()
     this.setBusy(true)
     const restore = this.deps.hideForCapture?.()
@@ -102,7 +103,7 @@ export class ChatService extends EventEmitter {
       const shot = await this.deps.capture()
       restore?.()
       const { text, tokens } = await this.deps.llm.vision(shot.base64, prompt?.trim() || SCREENSHOT_PROMPT, this.systemPrompt())
-      this.push({ role: "assistant", kind: "screenshot", text: text || "(no description)" })
+      this.push({ role: "assistant", kind: "screenshot", text: text || t("(no description)") })
       return { text, tokens, dimensions: `${shot.width}x${shot.height}` }
     } catch (err) {
       restore?.()
@@ -200,7 +201,7 @@ export class ChatService extends EventEmitter {
           return null
         }
       }
-      return this.push({ id, role: "assistant", kind, text: reply || "(empty reply)" })
+      return this.push({ id, role: "assistant", kind, text: reply || t("(empty reply)") })
     } catch (err) {
       if (committed) this.push({ id, role: "assistant", kind: "error", text: errorText(err) })
       else console.warn("[auto-answer] failed:", errorText(err))

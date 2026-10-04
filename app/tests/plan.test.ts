@@ -63,11 +63,18 @@ describe("PlanService", () => {
 })
 
 describe("describeRelayError", () => {
-  it("shows the relay's own words for limits and sign-in", () => {
-    const err = Object.assign(new Error("429 x"), { status: 429, error: { code: "answers_limit", message: "You've used today's 100 free answers. Upgrade to Pro for more." } })
+  it("words limit and sign-in errors from their code and numbers, so they can be translated", () => {
+    const err = Object.assign(new Error("429 x"), { status: 429, error: { code: "answers_limit", plan: "free", limit: 100, message: "(relay English)" } })
     expect(describeRelayError(err)).toBe("You've used today's 100 free answers. Upgrade to Pro for more.")
-    const signIn = Object.assign(new Error("401 x"), { status: 401, error: { code: "account_required", message: "Create a free Meetingly account to use AI answers." } })
+    const pro = Object.assign(new Error("429 x"), { status: 429, error: { code: "answers_limit", plan: "pro", limit: 1500, message: "(relay English)" } })
+    expect(describeRelayError(pro)).toMatch(/fair-use limit/)
+    const signIn = Object.assign(new Error("401 x"), { status: 401, error: { code: "account_required", message: "(relay English)" } })
     expect(describeRelayError(signIn)).toMatch(/free Meetingly account/)
+  })
+
+  it("unknown codes from a newer relay fall back to its own words", () => {
+    const err = Object.assign(new Error("429 x"), { status: 429, error: { code: "something_new", message: "A brand new limit." } })
+    expect(describeRelayError(err)).toBe("A brand new limit.")
   })
 
   it("keeps the generic wording for errors without a code", () => {

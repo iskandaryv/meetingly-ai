@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Activity, Command, Settings as SettingsIcon } from "lucide-react"
+import { t } from "@shared/i18n"
 import { cn } from "@/lib/utils"
 import { Panel } from "@/components/Panel"
 import { MeetingsPage } from "@/components/meetings/MeetingsPage"
@@ -33,7 +34,7 @@ export function DashboardWindow() {
                 )}
               >
                 {p.icon}
-                {p.label}
+                {t(p.label)}
               </button>
             ))}
           </nav>

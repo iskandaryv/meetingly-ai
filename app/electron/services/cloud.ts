@@ -6,6 +6,7 @@ import { CLOUD_SETTING_KEYS, cloudUrl, type CloudAccount, type CloudState } from
 import type { Meeting, Prompt, Settings } from "../../shared/types"
 import type { MeetingStore } from "./meetings"
 import type { SettingsStore } from "./settings"
+import { t } from "../../shared/i18n"
 
 // PocketBase realtime rides on EventSource, which Electron's main process lacks.
 if (!(globalThis as { EventSource?: unknown }).EventSource) (globalThis as { EventSource?: unknown }).EventSource = EventSource
@@ -112,7 +113,7 @@ export class CloudSync extends EventEmitter {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ deviceId, name: os.hostname(), platform: process.platform, appVersion: this.deps.appVersion })
     })
-    if (!res.ok) throw new Error(`Account service unavailable (HTTP ${res.status})`)
+    if (!res.ok) throw new Error(t("Account service unavailable (HTTP {status})", { status: res.status }))
     const { code, url } = (await res.json()) as { code: string; url: string }
 
     this.setStatus("linking")
@@ -169,7 +170,7 @@ export class CloudSync extends EventEmitter {
     if (!link) return
     if (Date.now() > link.deadline) {
       this.stopLinking()
-      this.error = "The code expired before the browser confirmed it."
+      this.error = t("The code expired before the browser confirmed it.")
       this.setStatus(this.deps.settings.get().cloud ? "offline" : "off")
       return
     }
@@ -181,7 +182,7 @@ export class CloudSync extends EventEmitter {
       if (body.pending) return
       this.stopLinking()
       if (body.expired || !body.token || !body.user) {
-        this.error = "The code expired. Start again."
+        this.error = t("The code expired. Start again.")
         this.setStatus(this.deps.settings.get().cloud ? "offline" : "off")
         return
       }
@@ -212,7 +213,7 @@ export class CloudSync extends EventEmitter {
       this.deps.settings.update({ cloud: { ...account, token: auth.token, email: String(auth.record.email ?? account.email) } }, "cloud")
       const me = await pb.send<{ linked: boolean }>(`/api/igpt/me?deviceId=${this.deps.settings.deviceId()}`, { method: "GET" })
       if (!me.linked) {
-        this.error = "This device was disconnected from the account in the web dashboard."
+        this.error = t("This device was disconnected from the account in the web dashboard.")
         this.pb = null
         this.deps.settings.update({ cloud: null }, "cloud")
         this.setStatus("off")
@@ -226,7 +227,7 @@ export class CloudSync extends EventEmitter {
     } catch (err) {
       const status = (err as { status?: number }).status
       if (status === 401 || status === 403 || status === 404) {
-        this.error = "Signed out on the server. Connect the account again."
+        this.error = t("Signed out on the server. Connect the account again.")
         this.pb = null
         this.deps.settings.update({ cloud: null }, "cloud")
         this.setStatus("off")

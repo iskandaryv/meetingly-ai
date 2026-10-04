@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { ArrowLeft, Check, CheckCircle2, Clock, Copy, HelpCircle, Lightbulb, RefreshCw, Tag, Target, Trash2 } from "lucide-react"
 import type { Meeting } from "@shared/types"
+import { t } from "@shared/i18n"
 import { api } from "@/lib/api"
 import { formatDate, formatDuration } from "@/lib/format"
 import { useEvent } from "@/lib/hooks"
@@ -39,17 +40,17 @@ export function MeetingDetails({ meetingId, onBack }: Props) {
   }
 
   const remove = async () => {
-    if (!window.confirm("Delete this meeting and its report?")) return
+    if (!window.confirm(t("Delete this meeting and its report?"))) return
     await api.invoke("meetings:delete", meetingId)
     onBack()
   }
 
-  if (meeting === undefined) return <p className="py-8 text-center text-xs text-white/50">Loading…</p>
+  if (meeting === undefined) return <p className="py-8 text-center text-xs text-white/50">{t("Loading…")}</p>
   if (meeting === null) {
     return (
       <div className="space-y-3">
-        <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4" /> Back</Button>
-        <p className="text-sm text-rose-300">Meeting not found.</p>
+        <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4" /> {t("Back")}</Button>
+        <p className="text-sm text-rose-300">{t("Meeting not found.")}</p>
       </div>
     )
   }
@@ -60,16 +61,16 @@ export function MeetingDetails({ meetingId, onBack }: Props) {
     `${formatDate(meeting.startTime)} · ${formatDuration(meeting.duration)}`,
     "",
     s?.overview ?? "",
-    ...(s && s.keyPoints.length ? ["", "Key points:", ...s.keyPoints.map((k) => `• ${k}`)] : []),
-    ...(s && s.actionItems.length ? ["", "Action items:", ...s.actionItems.map((k) => `• ${k}`)] : []),
-    ...(s && s.nextSteps.length ? ["", "Next steps:", ...s.nextSteps.map((k) => `• ${k}`)] : [])
+    ...(s && s.keyPoints.length ? ["", t("Key points:"), ...s.keyPoints.map((k) => `• ${k}`)] : []),
+    ...(s && s.actionItems.length ? ["", t("Action items:"), ...s.actionItems.map((k) => `• ${k}`)] : []),
+    ...(s && s.nextSteps.length ? ["", t("Next steps:"), ...s.nextSteps.map((k) => `• ${k}`)] : [])
   ].join("\n")
 
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2">
-          <Button variant="ghost" size="icon-sm" onClick={onBack} title="Back"><ArrowLeft className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon-sm" onClick={onBack} title={t("Back")}><ArrowLeft className="h-4 w-4" /></Button>
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold text-white">{meeting.title}</h2>
             <p className="flex items-center gap-2 text-xs text-white/55">
@@ -78,13 +79,13 @@ export function MeetingDetails({ meetingId, onBack }: Props) {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={() => copy(shareText, "all")} disabled={!s} title="Copy report">
-            {copied === "all" ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />} Copy report
+          <Button variant="ghost" size="sm" onClick={() => copy(shareText, "all")} disabled={!s} title={t("Copy report")}>
+            {copied === "all" ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />} {t("Copy report")}
           </Button>
-          <Button variant="ghost" size="sm" onClick={regenerate} disabled={busy} title="Regenerate report">
-            <RefreshCw className={busy ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} /> Regenerate
+          <Button variant="ghost" size="sm" onClick={regenerate} disabled={busy} title={t("Regenerate report")}>
+            <RefreshCw className={busy ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} /> {t("Regenerate")}
           </Button>
-          <Button variant="ghost" size="icon-sm" className="text-rose-300/80 hover:text-rose-300" onClick={remove} title="Delete meeting">
+          <Button variant="ghost" size="icon-sm" className="text-rose-300/80 hover:text-rose-300" onClick={remove} title={t("Delete meeting")}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -92,32 +93,32 @@ export function MeetingDetails({ meetingId, onBack }: Props) {
 
       {s ? (
         <>
-          <Section title="Summary" icon={<Lightbulb className="h-4 w-4" />}>
-            <p className="selectable text-sm leading-relaxed text-white/85">{s.overview || "No overview produced."}</p>
+          <Section title={t("Summary")} icon={<Lightbulb className="h-4 w-4" />}>
+            <p className="selectable text-sm leading-relaxed text-white/85">{s.overview || t("No overview produced.")}</p>
           </Section>
-          <ListSection title="Key points" icon={<Lightbulb className="h-4 w-4" />} items={s.keyPoints} />
-          <ListSection title="Decisions" icon={<CheckCircle2 className="h-4 w-4" />} items={s.decisions} />
-          <ListSection title="Action items" icon={<CheckCircle2 className="h-4 w-4 text-emerald-300" />} items={s.actionItems} />
-          <ListSection title="Next steps" icon={<Target className="h-4 w-4 text-sky-300" />} items={s.nextSteps} />
-          <ListSection title="Follow-up questions" icon={<HelpCircle className="h-4 w-4" />} items={s.followUpQuestions} />
+          <ListSection title={t("Key points")} icon={<Lightbulb className="h-4 w-4" />} items={s.keyPoints} />
+          <ListSection title={t("Decisions")} icon={<CheckCircle2 className="h-4 w-4" />} items={s.decisions} />
+          <ListSection title={t("Action items")} icon={<CheckCircle2 className="h-4 w-4 text-emerald-300" />} items={s.actionItems} />
+          <ListSection title={t("Next steps")} icon={<Target className="h-4 w-4 text-sky-300" />} items={s.nextSteps} />
+          <ListSection title={t("Follow-up questions")} icon={<HelpCircle className="h-4 w-4" />} items={s.followUpQuestions} />
           {s.topics.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 text-xs text-white/60">
               <Tag className="h-3.5 w-3.5" />
-              {s.topics.map((t) => <span key={t} className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5">{t}</span>)}
+              {s.topics.map((topic) => <span key={topic} className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5">{topic}</span>)}
             </div>
           )}
         </>
       ) : (
         <div className="rounded-lg border border-white/10 bg-white/5 p-6 text-center text-sm text-white/60">
-          {meeting.status === "processing" ? "The report is being generated…" : "No report yet. Check your connection, then regenerate."}
+          {meeting.status === "processing" ? t("The report is being generated…") : t("No report yet. Check your connection, then regenerate.")}
         </div>
       )}
 
       <Section
-        title="Transcript"
+        title={t("Transcript")}
         icon={<Clock className="h-4 w-4" />}
         action={
-          <Button variant="ghost" size="icon-sm" onClick={() => copy(meeting.fullTranscriptText, "t")} title="Copy transcript">
+          <Button variant="ghost" size="icon-sm" onClick={() => copy(meeting.fullTranscriptText, "t")} title={t("Copy transcript")}>
             {copied === "t" ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
           </Button>
         }

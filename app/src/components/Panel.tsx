@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { X } from "lucide-react"
 import { Button } from "./ui/button"
+import { t } from "@shared/i18n"
 import { cn } from "@/lib/utils"
 
 interface PanelProps {
@@ -24,7 +25,7 @@ export function Panel({ title, aside, onClose, children, className, bodyClassNam
         <div className="flex items-center gap-2">
           {aside}
           {onClose && (
-            <Button variant="ghost" size="icon-sm" onClick={onClose} title="Close">
+            <Button variant="ghost" size="icon-sm" onClick={onClose} title={t("Close")}>
               <X className="h-4 w-4" />
             </Button>
           )}

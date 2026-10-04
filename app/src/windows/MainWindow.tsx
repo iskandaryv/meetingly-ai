@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Camera, Captions, Check, EyeOff, LayoutDashboard, MessageSquare, Mic, Pause, Play, Power, X } from "lucide-react"
 import { DEFAULT_SHORTCUTS } from "@shared/types"
+import { t } from "@shared/i18n"
 import { api, shortcutLabel } from "@/lib/api"
 import { useElapsed, useFitWindow, useSessionState, useSettings, useWindowsState } from "@/lib/hooks"
 import { Button } from "@/components/ui/button"
@@ -51,16 +52,16 @@ export function MainWindow() {
   return (
     <div ref={ref} className="inline-block p-1">
       <div className="glass drag flex h-10 items-center gap-0.5 px-1.5">
-        <Button variant="ghost" size="icon" onClick={() => api.invoke("windows:toggle-all")} title={`Hide all windows (${shortcutLabel(KEYS.toggleAll)})`}>
+        <Button variant="ghost" size="icon" onClick={() => api.invoke("windows:toggle-all")} title={t("Hide all windows ({shortcut})", { shortcut: shortcutLabel(KEYS.toggleAll) })}>
           <EyeOff className="h-4 w-4" />
         </Button>
 
         <Divider />
 
         {session.status === "idle" ? (
-          <Button variant="ghost" size="md" onClick={listen} title={`Start listening (${shortcutLabel(KEYS.listen)})`}>
+          <Button variant="ghost" size="md" onClick={listen} title={t("Start listening ({shortcut})", { shortcut: shortcutLabel(KEYS.listen) })}>
             <Mic className="h-4 w-4" />
-            Listen
+            {t("Listen")}
           </Button>
         ) : (
           <div className="flex items-center gap-1">
@@ -70,26 +71,26 @@ export function MainWindow() {
               size="md"
               className={cn("gap-1.5 text-xs tabular-nums", live ? "text-rose-300" : "text-white/70")}
               onClick={() => api.invoke("panel:toggle", "transcript")}
-              title={showing("transcript") ? "Hide the live transcript" : "Show the live transcript"}
+              title={showing("transcript") ? t("Hide the live transcript") : t("Show the live transcript")}
             >
               <Dot className={cn(live && "animate-pulse bg-rose-400", paused && "bg-amber-400", connecting && "animate-pulse bg-sky-400")} />
               {elapsed}
               <Captions className="h-4 w-4 opacity-80" />
             </Button>
             {live && (
-              <Button variant="ghost" size="icon" onClick={() => run(() => api.invoke("session:pause"))} title="Pause">
+              <Button variant="ghost" size="icon" onClick={() => run(() => api.invoke("session:pause"))} title={t("Pause")}>
                 <Pause className="h-4 w-4" />
               </Button>
             )}
             {paused && (
-              <Button variant="ghost" size="icon" onClick={() => run(() => api.invoke("session:resume"))} title="Resume">
+              <Button variant="ghost" size="icon" onClick={() => run(() => api.invoke("session:resume"))} title={t("Resume")}>
                 <Play className="h-4 w-4" />
               </Button>
             )}
-            <Button variant="ghost" size="icon" className="text-emerald-300 hover:text-emerald-200" onClick={finish} title="Finish and save meeting">
+            <Button variant="ghost" size="icon" className="text-emerald-300 hover:text-emerald-200" onClick={finish} title={t("Finish and save meeting")}>
               <Check className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="text-white/50" onClick={() => run(() => api.invoke("session:cancel"))} title="Discard session">
+            <Button variant="ghost" size="icon" className="text-white/50" onClick={() => run(() => api.invoke("session:cancel"))} title={t("Discard session")}>
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -97,24 +98,24 @@ export function MainWindow() {
 
         <Divider />
 
-        <Button variant={showing("answers") ? "secondary" : "ghost"} size="icon" onClick={() => api.invoke("panel:toggle", "answers")} title={`Answers and chat (${shortcutLabel(KEYS.chat)})`}>
+        <Button variant={showing("answers") ? "secondary" : "ghost"} size="icon" onClick={() => api.invoke("panel:toggle", "answers")} title={t("Answers and chat ({shortcut})", { shortcut: shortcutLabel(KEYS.chat) })}>
           <MessageSquare className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={screenshot} title={`Analyze screen (${shortcutLabel(KEYS.screenshot)})`}>
+        <Button variant="ghost" size="icon" onClick={screenshot} title={t("Analyze screen ({shortcut})", { shortcut: shortcutLabel(KEYS.screenshot) })}>
           <Camera className="h-4 w-4" />
         </Button>
         <Button
           variant={windows.dashboard ? "secondary" : "ghost"}
           size="icon"
           onClick={() => api.invoke("windows:toggle", "dashboard")}
-          title={`Dashboard (${shortcutLabel(KEYS.dashboard)})`}
+          title={t("Dashboard ({shortcut})", { shortcut: shortcutLabel(KEYS.dashboard) })}
         >
           <LayoutDashboard className="h-4 w-4" />
         </Button>
 
         <Divider />
 
-        <Button variant="ghost" size="icon" className="text-rose-300/80 hover:text-rose-300" onClick={() => api.invoke("app:quit")} title="Quit Meetingly">
+        <Button variant="ghost" size="icon" className="text-rose-300/80 hover:text-rose-300" onClick={() => api.invoke("app:quit")} title={t("Quit Meetingly")}>
           <Power className="h-4 w-4" />
         </Button>
       </div>

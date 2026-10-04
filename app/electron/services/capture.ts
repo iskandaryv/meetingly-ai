@@ -1,4 +1,5 @@
 import { desktopCapturer, screen } from "electron"
+import { t } from "../../shared/i18n"
 
 export interface Capture {
   base64: string
@@ -27,7 +28,7 @@ export async function captureScreen(): Promise<Capture> {
     }
   })
   const primary = sources.find((s) => s.display_id === String(display.id)) ?? sources[0]
-  if (!primary || primary.thumbnail.isEmpty()) throw new Error("Screen capture returned an empty image")
+  if (!primary || primary.thumbnail.isEmpty()) throw new Error(t("Screen capture returned an empty image"))
 
   const size = primary.thumbnail.getSize()
   const ratio = Math.min(1, MAX_WIDTH / size.width, MAX_HEIGHT / size.height)

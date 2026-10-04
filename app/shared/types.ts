@@ -184,6 +184,8 @@ export interface Settings {
   answerLength: AnswerLength
   /** Show suggested questions on the left of the panel while listening. */
   suggestions: boolean
+  /** Language of the app's own interface; "auto" follows the system. */
+  uiLanguage: LanguageCode | "auto"
   stealth: boolean
   autoLaunch: boolean
   prompts: Prompt[]
@@ -254,6 +256,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoAnswer: "questions",
   answerLength: "auto",
   suggestions: true,
+  uiLanguage: "auto",
   stealth: true,
   autoLaunch: false,
   prompts: [DEFAULT_PROMPT],
@@ -266,6 +269,8 @@ export const DEFAULT_SETTINGS: Settings = {
 export interface SettingsView extends Settings {
   version: string
   platform: string
+  /** The interface language actually in use (uiLanguage resolved against the system language). */
+  uiLocale: LanguageCode
   /** Shortcuts that could not be registered because another app owns them. */
   shortcutConflicts: ShortcutAction[]
 }

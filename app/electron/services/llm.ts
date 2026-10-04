@@ -3,6 +3,7 @@ import { APP_TOKEN, relayHttpUrl } from "../../shared/relay"
 import { getLanguage, type LanguageCode } from "../../shared/types"
 import { relayIdentity } from "./relayAuth"
 import type { SettingsStore } from "./settings"
+import { t } from "../../shared/i18n"
 
 export interface LlmMessage {
   role: "system" | "user" | "assistant"
@@ -92,14 +93,52 @@ export class Llm {
 /** Turn relay / network failures into something a person can act on. */
 export function describeRelayError(err: unknown): string {
   const status = (err as { status?: number })?.status
-  // Limits, sign-in and plan errors come with a code and words meant for the user: show them as they are.
-  const relay = (err as { error?: { code?: string; message?: string } })?.error
-  if (relay?.code && relay.message) return relay.message
+  // Limits, sign-in and plan errors come with a code; word them in the interface language.
+  const relay = (err as { error?: RelayError })?.error
+  if (relay?.code && relay.message) return relayMessage(relay)
   const message = err instanceof Error ? err.message : String(err)
-  if (status === 401) return "This build of Meetingly is no longer accepted by the server. Please update the app."
-  if (status === 429) return /transcription/i.test(message) ? "Daily transcription limit reached. Try again tomorrow." : "Daily limit reached. Try again tomorrow."
-  if (status === 402) return "The service is temporarily out of credits. Try again later."
-  if (status && status >= 500) return "The Meetingly server is having trouble. Try again in a minute."
-  if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|fetch failed|network|Connection error/i.test(message)) return "Cannot reach the Meetingly server. Check your internet connection."
+  if (status === 401) return t("This build of Meetingly is no longer accepted by the server. Please update the app.")
+  if (status === 429) return /transcription/i.test(message) ? t("Daily transcription limit reached. Try again tomorrow.") : t("Daily limit reached. Try again tomorrow.")
+  if (status === 402) return t("The service is temporarily out of credits. Try again later.")
+  if (status && status >= 500) return t("The Meetingly server is having trouble. Try again in a minute.")
+  if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|fetch failed|network|Connection error/i.test(message)) return t("Cannot reach the Meetingly server. Check your internet connection.")
   return message
+}
+
+interface RelayError {
+  code: string
+  message: string
+  plan?: string | null
+  limit?: number
+  hours?: number
+}
+
+/** The relay's limit and sign-in errors in the interface language (its own English words otherwise). */
+function relayMessage(e: RelayError): string {
+  const upgrade = e.plan === "free" ? ` ${t("Upgrade to Pro for more.")}` : e.plan === "guest" ? ` ${t("Update Meetingly and sign in to keep going.")}` : ""
+  const n = e.limit ?? 0
+  switch (e.code) {
+    case "account_required":
+      return t("Create a free Meetingly account to use AI answers: Dashboard → Settings → Connect account.")
+    case "account_unavailable":
+      return t("The account service is unavailable. Try again in a minute.")
+    case "answers_limit":
+      return e.plan === "pro" ? t("You've reached today's fair-use limit of answers. It resets at midnight UTC.") : t("You've used today's {n} free answers.", { n }) + upgrade
+    case "listening_limit":
+      return t("Live suggestions and auto-answer are paused: today's {hours} hours are used up. Questions you ask still work.", { hours: e.hours ?? "" }) + upgrade
+    case "vision_limit":
+      return t("You've used today's {n} screen analyses.", { n }) + upgrade
+    case "reports_limit":
+      return t("You've used today's {n} meeting reports.", { n }) + upgrade
+    case "daily_limit":
+      return t("Today's usage limit is reached. It resets at midnight UTC.") + upgrade
+    case "busy":
+      return t("Another request is still running. Try again in a moment.")
+    case "rate_limit":
+      return t("Too many requests at once. Slow down a little.")
+    case "network_limit":
+      return t("Too many free answers from this network today. It resets at midnight UTC.")
+    default:
+      return e.message
+  }
 }

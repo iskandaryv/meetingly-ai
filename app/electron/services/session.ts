@@ -16,6 +16,7 @@ import { LocalAsrSocket } from "./localAsr"
 import type { MeetingStore } from "./meetings"
 import type { ReportGenerator } from "./reports"
 import type { SettingsStore } from "./settings"
+import { t } from "../../shared/i18n"
 
 interface Deps {
   settings: SettingsStore
@@ -183,7 +184,7 @@ export class RecordingSession extends EventEmitter {
     socket.on("transcript", (event: TranscriptEvent) => this.onTranscript(event))
     socket.on("error", (err: Error) => console.warn(local ? "[asr]" : "[deepgram]", err.message))
     socket.on("progress", (percent: number) => {
-      this.notice = `Downloading the speech model, ${percent}%. This happens once.`
+      this.notice = t("Downloading the speech model, {percent}%. This happens once.", { percent })
       this.emitState()
     })
     socket.on("close", (_code: number, _reason: string, byUs: boolean) => {
@@ -200,12 +201,12 @@ export class RecordingSession extends EventEmitter {
   private scheduleReconnect(): void {
     if (this.reconnectTimer) return
     if (this.reconnects >= MAX_RECONNECTS) {
-      this.setStatus("paused", "Connection lost. Press resume to reconnect.")
+      this.setStatus("paused", t("Connection lost. Press resume to reconnect."))
       return
     }
     this.reconnects += 1
     const delay = Math.min(30000, 1000 * 2 ** (this.reconnects - 1))
-    this.notice = `Connection lost, reconnecting (${this.reconnects}/${MAX_RECONNECTS})…`
+    this.notice = t("Connection lost, reconnecting ({n}/{max})…", { n: this.reconnects, max: MAX_RECONNECTS })
     this.emitState()
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectTimer = null
@@ -298,7 +299,7 @@ export function downmix(stereo: ArrayBuffer): ArrayBuffer {
   return out.buffer
 }
 
-export function titleFromTranscript(text: string, fallback = "Untitled meeting"): string {
+export function titleFromTranscript(text: string, fallback = t("Untitled meeting")): string {
   const clean = text.trim()
   if (!clean) return fallback
   const first = clean.split(/[.!?]/)[0].trim()

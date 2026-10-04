@@ -2,6 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { createHash } from "node:crypto"
 import { EventEmitter } from "node:events"
+import { t } from "../../shared/i18n"
 
 /**
  * The on-device speech model: NVIDIA Nemotron 3.5 ASR Streaming 0.6B, 5-bit
@@ -65,7 +66,7 @@ export class AsrModel extends EventEmitter {
         console.warn("[asr-model] download failed from", url, "-", lastError.message)
       }
     }
-    throw new Error(`Could not download the speech model: ${lastError?.message ?? "unknown error"}`)
+    throw new Error(t("Could not download the speech model: {error}", { error: lastError?.message ?? t("unknown error") }))
   }
 
   private async fetchFrom(url: string): Promise<void> {

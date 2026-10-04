@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events"
 import WebSocket from "ws"
 import { APP_TOKEN, relayWsUrl } from "../../shared/relay"
 import type { TranscriptEvent } from "../../shared/types"
+import { t } from "../../shared/i18n"
 
 export interface DeepgramOptions {
   /** Per-install id sent to the relay for quotas. */
@@ -58,7 +59,7 @@ export class DeepgramSocket extends EventEmitter {
 
     return new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
-        reject(new Error("Deepgram connection timed out"))
+        reject(new Error(t("The transcription server did not answer in time.")))
         ws.terminate()
       }, OPEN_TIMEOUT_MS)
 
@@ -86,10 +87,10 @@ export class DeepgramSocket extends EventEmitter {
         clearTimeout(timer)
         const err = new Error(
           res.statusCode === 401
-            ? "This build of Meetingly is no longer accepted by the server. Please update the app."
+            ? t("This build of Meetingly is no longer accepted by the server. Please update the app.")
             : res.statusCode === 429
-              ? "Daily transcription limit reached. Try again tomorrow."
-              : `Transcription server refused the connection (HTTP ${res.statusCode})`
+              ? t("Daily transcription limit reached. Try again tomorrow.")
+              : t("Transcription server refused the connection (HTTP {status})", { status: res.statusCode ?? "" })
         )
         this.emit("error", err)
         reject(err)
@@ -157,7 +158,7 @@ export function parseDeepgramMessage(raw: string): TranscriptEvent | null {
 
 function describeSocketError(err: Error & { code?: string }): Error {
   if (["ENOTFOUND", "EAI_AGAIN", "ECONNREFUSED", "ETIMEDOUT"].includes(err.code ?? "")) {
-    return new Error("Cannot reach the Meetingly server. Check your internet connection.")
+    return new Error(t("Cannot reach the Meetingly server. Check your internet connection."))
   }
   return err
 }

@@ -14,6 +14,8 @@ import {
   type SettingsView,
   type ShortcutAction
 } from "../../shared/types"
+import type { LanguageCode } from "../../shared/types"
+import { resolveLocale } from "../../shared/i18n"
 
 /**
  * Persistent JSON settings. One file, one object, atomic writes.
@@ -24,7 +26,7 @@ export class SettingsStore extends EventEmitter {
 
   constructor(
     private readonly file: string,
-    private readonly meta: { version: string; platform: string } = { version: "0.0.0", platform: process.platform }
+    private readonly meta: { version: string; platform: string; locale?: string } = { version: "0.0.0", platform: process.platform }
   ) {
     super()
     this.data = this.load()
@@ -56,6 +58,11 @@ export class SettingsStore extends EventEmitter {
     return this.data.deviceId
   }
 
+  /** The interface language in use: the user's choice, or the system language when Meetingly speaks it. */
+  uiLocale(): LanguageCode {
+    return resolveLocale(this.data.uiLanguage, this.meta.locale ?? "en")
+  }
+
   /** This build's version (sent to the relay, which treats builds before accounts as guests). */
   appVersion(): string {
     return this.meta.version
@@ -79,6 +86,7 @@ export class SettingsStore extends EventEmitter {
       cloud: settings.cloud ? { ...settings.cloud, token: "" } : null,
       version: this.meta.version,
       platform: this.meta.platform,
+      uiLocale: this.uiLocale(),
       shortcutConflicts: [...this.shortcutConflicts]
     }
   }
@@ -137,6 +145,7 @@ export function normalize(s: Settings): Settings {
     outputLanguage: LANGUAGES.some((l) => l.code === s.outputLanguage) ? s.outputLanguage : "en",
     audioLanguage: LANGUAGES.some((l) => l.code === s.audioLanguage) ? s.audioLanguage : "en",
     transcriptionEngine: s.transcriptionEngine === "cloud" ? "cloud" : "local",
-    suggestions: s.suggestions !== false
+    suggestions: s.suggestions !== false,
+    uiLanguage: s.uiLanguage === "auto" || LANGUAGES.some((l) => l.code === s.uiLanguage) ? s.uiLanguage ?? "auto" : "auto"
   }
 }

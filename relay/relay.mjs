@@ -166,7 +166,7 @@ async function chatCompletions(req, res, ip) {
   if (used.requests >= REQUESTS_PER_DAY) return limited(res, "daily_limit", "Today's usage limit is reached. It resets at midnight UTC.", who.plan)
   if (quotas.inFlight(who.key) >= plan.concurrent) return limited(res, "busy", "Another request is still running. Try again in a moment.", who.plan)
   const over = checkBudget(who.plan, used, task)
-  if (over) return limited(res, over.code, over.message, who.plan)
+  if (over) return limited(res, over.code, over.message, who.plan, { limit: over.limit, hours: over.hours })
   if (spec.bucket === "answers" && who.plan !== "pro" && quotas.used(`ipa:${ip}`).answers >= IP_ANSWERS_PER_DAY) {
     return limited(res, "network_limit", "Too many free answers from this network today. It resets at midnight UTC.", who.plan)
   }
@@ -298,9 +298,9 @@ function proxyListen(client, url, who) {
 }
 
 /** 429 with a code the app maps to a clear message; never retried by the client SDK. */
-function limited(res, code, message, plan) {
+function limited(res, code, message, plan, extra = {}) {
   res.writeHead(429, { "Content-Type": "application/json", "Cache-Control": "no-store", "x-should-retry": "false" })
-  res.end(JSON.stringify({ error: { message, code, plan: plan ?? null, resetAt: quotas.resetAt() } }))
+  res.end(JSON.stringify({ error: { message, code, plan: plan ?? null, resetAt: quotas.resetAt(), ...extra } }))
 }
 
 // ---------------------------------------------------------------------------

@@ -18,8 +18,8 @@ export function useSettings(): [SettingsView | null, (patch: Partial<SettingsVie
   }, [])
   useEvent("settings:changed", setSettings)
   const update = useCallback(async (patch: Partial<SettingsView>) => {
-    const { version, platform, shortcutConflicts, cloud, ...rest } = patch
-    void version, platform, shortcutConflicts, cloud
+    const { version, platform, shortcutConflicts, cloud, ownKey, ...rest } = patch
+    void version, platform, shortcutConflicts, cloud, ownKey
     setSettings(await api.invoke("settings:update", rest))
   }, [])
   return [settings, update]

@@ -8,6 +8,7 @@ import type {
   Meeting,
   ScreenshotResult,
   SessionState,
+  OwnKeyInput,
   Settings,
   SettingsView,
   PlanState,
@@ -83,6 +84,12 @@ export interface InvokeMap {
   /** Open the account's plan page in the browser (signed in when the account is linked). */
   "plan:upgrade": () => void
 
+  /** The models an OpenAI-compatible endpoint offers (empty key: the saved one, or none). */
+  "ownkey:models": (input: OwnKeyInput) => string[]
+  /** Check the endpoint, key and model with one tiny request, then use them for every AI request. */
+  "ownkey:save": (input: OwnKeyInput) => SettingsView
+  "ownkey:clear": () => SettingsView
+
 }
 
 /** Main -> renderer push events. */
@@ -148,6 +155,9 @@ export const INVOKE_CHANNELS: InvokeChannel[] = [
   "plan:state",
   "plan:refresh",
   "plan:upgrade",
+  "ownkey:models",
+  "ownkey:save",
+  "ownkey:clear"
 ]
 
 export const EVENT_CHANNELS: EventChannel[] = [

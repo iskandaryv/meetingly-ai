@@ -1,4 +1,4 @@
-import { app, BrowserWindow, desktopCapturer, session as electronSession, shell } from "electron"
+import { app, BrowserWindow, desktopCapturer, safeStorage, session as electronSession, shell } from "electron"
 import path from "node:path"
 import { registerIpc } from "./ipc"
 import { Logger, type LogLevel } from "./services/logger"
@@ -14,6 +14,7 @@ import { SettingsStore } from "./services/settings"
 import { setLocale } from "../shared/i18n"
 import { SuggestionService } from "./services/suggestions"
 import { PlanService } from "./services/plan"
+import { OwnKeyService, type SecretBox } from "./services/ownKey"
 import { ShortcutManager } from "./shortcuts"
 import { createTray } from "./tray"
 import { WindowManager } from "./windows/WindowManager"
@@ -47,7 +48,8 @@ function bootstrap(): void {
     locale: app.getLocale()
   })
   setLocale(settings.uiLocale())
-  const llm = new Llm(settings)
+  const box = keychainBox()
+  const llm = new Llm(settings, undefined, box)
   const meetings = new MeetingStore(path.join(userData, "meetings.json"))
   const reports = new ReportGenerator({ llm, meetings, settings })
   const asrModel = new AsrModel(process.env.MEETINGLY_MODEL_DIR || path.join(userData, "models"))
@@ -73,6 +75,7 @@ function bootstrap(): void {
   const shortcuts = new ShortcutManager({ settings, windows, session, chat, openWeb: () => void cloud.openWeb() })
   cloud.on("state", (s) => logger.info("cloud", `status ${s.status}`, { email: s.email, error: s.error }))
   const plan = new PlanService({ settings })
+  const ownKey = new OwnKeyService({ settings, box })
   plan.on("state", (s) => logger.info("plan", `${s.status} ${s.plan ?? ""}`, { answers: s.used?.answers, limit: s.limits?.answers }))
 
   let lastShortcuts = JSON.stringify(settings.get().shortcuts)
@@ -91,7 +94,7 @@ function bootstrap(): void {
   app.whenReady().then(() => {
     if (process.platform === "darwin") app.dock?.hide()
     installSystemAudioHandler()
-    registerIpc({ settings, windows, session, chat, suggestions, meetings, reports, logger, cloud, plan })
+    registerIpc({ settings, windows, session, chat, suggestions, meetings, reports, logger, cloud, plan, ownKey })
     instrument({ logger, settings, session, chat, windows })
     applySettings()
     settings.onChange(applySettings)
@@ -152,6 +155,25 @@ function bootstrap(): void {
     shortcuts.unregister()
     session.cancel()
   })
+}
+
+/**
+ * The own API key, encrypted with the OS keychain (DPAPI, Keychain, libsecret). Stored values start with "enc:";
+ * without a keychain the key is stored as typed, like any other setting.
+ */
+function keychainBox(): SecretBox {
+  return {
+    encrypt: (plain) => (safeStorage.isEncryptionAvailable() ? `enc:${safeStorage.encryptString(plain).toString("base64")}` : plain),
+    decrypt: (stored) => {
+      if (!stored.startsWith("enc:")) return stored
+      try {
+        return safeStorage.decryptString(Buffer.from(stored.slice(4), "base64"))
+      } catch {
+        // Copied from another computer or user: the keychain can't open it. Re-entering the key fixes it.
+        return ""
+      }
+    }
+  }
 }
 
 /** Everything already written with console.* lands in the log file too. */

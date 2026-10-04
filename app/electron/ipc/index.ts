@@ -3,6 +3,7 @@ import type { InvokeChannel, InvokeMap } from "../../shared/ipc"
 import type { ChatService } from "../services/chat"
 import type { CloudSync } from "../services/cloud"
 import type { PlanService } from "../services/plan"
+import type { OwnKeyService } from "../services/ownKey"
 import type { Logger } from "../services/logger"
 import type { MeetingStore } from "../services/meetings"
 import type { ReportGenerator } from "../services/reports"
@@ -24,6 +25,7 @@ export interface IpcDeps {
   logger: Logger
   cloud: CloudSync
   plan: PlanService
+  ownKey: OwnKeyService
 }
 
 type Handler<K extends InvokeChannel> = (
@@ -45,12 +47,14 @@ function handle<K extends InvokeChannel>(channel: K, fn: Handler<K>): void {
 }
 
 export function registerIpc(deps: IpcDeps): void {
-  const { settings, windows, session, chat, suggestions, meetings, logger, cloud, plan } = deps
+  const { settings, windows, session, chat, suggestions, meetings, logger, cloud, plan, ownKey } = deps
 
   // Settings
   handle("settings:get", () => settings.view())
   handle("settings:update", (_e, patch) => {
-    settings.update(patch)
+    // The own key changes only through ownkey:*, which checks it first.
+    const { ownKey: _ownKey, ...rest } = patch
+    settings.update(rest)
     return settings.view()
   })
 
@@ -120,6 +124,17 @@ export function registerIpc(deps: IpcDeps): void {
   handle("plan:refresh", () => plan.refresh())
   handle("plan:upgrade", () => cloud.openWeb("billing"))
 
+  // Your own API key
+  handle("ownkey:models", (_e, input) => ownKey.models(input))
+  handle("ownkey:save", async (_e, input) => {
+    await ownKey.save(input)
+    return settings.view()
+  })
+  handle("ownkey:clear", () => {
+    ownKey.clear()
+    return settings.view()
+  })
+
   /** The panel is wider while the suggestions rail shows (during a session, setting on). */
   const fitPanel = () => windows.setPanelExtra(suggestionsVisible(settings.get(), session.state().status) ? SUGGESTIONS_WIDTH : 0)
 
@@ -153,11 +168,11 @@ export function registerIpc(deps: IpcDeps): void {
   chat.on("message", (message) => {
     if (message.role === "assistant") plan.refreshSoon()
   })
-  let linkedToken = settings.get().cloud?.token ?? ""
+  const identity = (s: ReturnType<SettingsStore["get"]>) => `${s.cloud?.token ?? ""}|${s.ownKey ? "own" : ""}`
+  let lastIdentity = identity(settings.get())
   settings.onChange((s) => {
-    const token = s.cloud?.token ?? ""
-    if (token !== linkedToken) {
-      linkedToken = token
+    if (identity(s) !== lastIdentity) {
+      lastIdentity = identity(s)
       plan.refreshSoon(500)
     }
   })

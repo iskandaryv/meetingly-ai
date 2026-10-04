@@ -1,6 +1,8 @@
 import { app, BrowserWindow, clipboard } from "electron"
 import { spawn } from "node:child_process"
 import fs from "node:fs"
+import http from "node:http"
+import type { AddressInfo } from "node:net"
 import type { AsrModel } from "./services/asrModel"
 import { LocalAsrSocket } from "./services/localAsr"
 import type { AudioSource, WindowKind } from "../shared/types"
@@ -38,8 +40,10 @@ interface SmokeDeps {
  *             direct answers, small talk must be skipped (nothing shown in chat).
  *   "shots"   capture the toolbar and both panel tabs (with sample answers) as PNGs into
  *             IGPT_SMOKE_SHOTS. capturePage works even with content protection on.
+ *   "demo"    frames of answers streaming in the panel, for the README animation (see demoFrames).
  *   "copy"    selecting an answer in the panel and pressing Ctrl+C copies it (the Ctrl+C shortcut must not
  *             swallow the copy); nothing selected means the copy path declines. Restores the clipboard.
+ *   "ownkey"  the "use your own API key" flow in the real panel against a fake local endpoint (see ownKeySmoke).
  *   "asr"     on-device transcription: stream IGPT_SMOKE_WAV (16 kHz mono, played on the IGPT_SMOKE_SIDE
  *             channel, default "them") through the
  *             speech worker in real time and report partials, finals and latency.
@@ -119,12 +123,16 @@ export async function runSmokeTest(mode: string, { windows, chat, session, setti
   if (mode === "cloud") cloudProbe = await cloudSmoke({ cloud, settings, meetings })
 
   if (mode === "shots") await shots(windows, process.env.IGPT_SMOKE_SHOTS || app.getPath("temp"))
+  if (mode === "demo") await demoFrames(windows, process.env.IGPT_SMOKE_SHOTS || app.getPath("temp"))
 
   let answersProbe: Record<string, unknown> & { ok: boolean } | undefined
   if (mode === "answers") answersProbe = await answersSmoke(chat, settings)
 
   let copyProbe: Record<string, unknown> & { ok: boolean } | undefined
   if (mode === "copy") copyProbe = await copySmoke(windows)
+
+  let ownKeyProbe: Record<string, unknown> & { ok: boolean } | undefined
+  if (mode === "ownkey") ownKeyProbe = await ownKeySmoke(windows, chat, settings)
 
   let asrProbe: Record<string, unknown> & { ok: boolean } | undefined
   if (mode === "asr") asrProbe = await asrSmoke(asrModel, process.env.IGPT_SMOKE_WAV ?? "", process.env.IGPT_SMOKE_LANG ?? "en-US")
@@ -139,6 +147,7 @@ export async function runSmokeTest(mode: string, { windows, chat, session, setti
       (cloudProbe?.ok ?? true) &&
       (asrProbe?.ok ?? true) &&
       (copyProbe?.ok ?? true) &&
+      (ownKeyProbe?.ok ?? true) &&
       (answersProbe?.ok ?? true),
     loaded: [...loaded],
     windows: Object.fromEntries(
@@ -152,6 +161,7 @@ export async function runSmokeTest(mode: string, { windows, chat, session, setti
     cloud: cloudProbe,
     asr: asrProbe,
     copy: copyProbe,
+    ownKey: ownKeyProbe,
     answers: answersProbe,
     errors
   }
@@ -293,6 +303,154 @@ async function shots(windows: WindowManager, dir: string): Promise<void> {
   }
   await sleep(600)
   await save("transcript")
+}
+
+/**
+ * The own-key flow in the real panel, against a fake OpenAI-compatible server on localhost: the signed-out
+ * bar offers it, the form fills, Save checks the endpoint and switches the app over, and a chat message is
+ * answered by that endpoint with the user's key. PNGs of each step go to IGPT_SMOKE_SHOTS when set.
+ */
+async function ownKeySmoke(windows: WindowManager, chat: ChatService, settings: SettingsStore): Promise<Record<string, unknown> & { ok: boolean }> {
+  const seen: { path: string; auth?: string; model?: unknown; task?: string }[] = []
+  const server = http.createServer((req, res) => {
+    let raw = ""
+    req.on("data", (c) => (raw += c))
+    req.on("end", () => {
+      const body = raw ? (JSON.parse(raw) as Record<string, unknown>) : {}
+      seen.push({ path: req.url ?? "", auth: req.headers.authorization, model: body.model, task: req.headers["x-meetingly-task"] as string | undefined })
+      if (req.url === "/v1/models") {
+        res.writeHead(200, { "Content-Type": "application/json" })
+        return res.end(JSON.stringify({ data: [{ id: "smoke-model" }, { id: "smoke-model-mini" }] }))
+      }
+      const text = "**Kafka is a distributed log for streaming events.**\n- Topics split into partitions\n- Consumers read at their own pace"
+      if (body.stream) {
+        const chunk = (choices: object[], extra: object = {}) =>
+          `data: ${JSON.stringify({ id: "1", object: "chat.completion.chunk", created: 0, model: body.model, choices, ...extra })}\n\n`
+        res.writeHead(200, { "Content-Type": "text/event-stream" })
+        return res.end(chunk([{ index: 0, delta: { content: text }, finish_reason: null }]) + chunk([], { usage: { total_tokens: 9 } }) + "data: [DONE]\n\n")
+      }
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ id: "1", object: "chat.completion", created: 0, model: body.model, choices: [{ index: 0, message: { role: "assistant", content: text }, finish_reason: "stop" }], usage: { total_tokens: 9 } }))
+    })
+  })
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/v1`
+  const dir = process.env.IGPT_SMOKE_SHOTS
+  const shot = async (name: string) => {
+    const win = windows.get("chat")
+    if (dir && win) fs.writeFileSync(`${dir}/ownkey-${name}.png`, (await win.webContents.capturePage()).toPNG())
+  }
+  const panel = windows.get("chat")
+  const run = (js: string) => panel!.webContents.executeJavaScript(js) as Promise<unknown>
+  const steps: Record<string, boolean> = {}
+  try {
+    settings.update({ ownKey: null })
+    windows.showPanel("answers")
+    await sleep(500)
+    windows.send("chat", "plan:state", { status: "signed-out" })
+    await sleep(500)
+    await shot("1-signed-out")
+    // The link names the providers, which stay untranslated in every language.
+    steps.offered = (await run(`(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.includes("OpenRouter") && x.textContent.length > 20); if (b) b.click(); return Boolean(b) })()`)) === true
+    await sleep(500)
+    const fill = (id: string, value: string) =>
+      run(`(() => { const el = document.getElementById(${JSON.stringify(id)}); if (!el) return false;
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(el, ${JSON.stringify(value)});
+        el.dispatchEvent(new Event("input", { bubbles: true })); el.dispatchEvent(new FocusEvent("blur")); el.dispatchEvent(new FocusEvent("focusout", { bubbles: true })); return true })()`)
+    steps.filled = (await fill("own-url", base)) === true && (await fill("own-key", "sk-smoke-123")) === true && (await fill("own-model", "smoke-model")) === true
+    await sleep(800)
+    steps.listedModels = (await run(`document.querySelectorAll("#own-models option").length`)) === 2
+    await shot("2-form")
+    await run(`document.querySelector("form button[type=submit]").click()`)
+    for (let i = 0; i < 20 && !settings.get().ownKey; i++) await sleep(250)
+    const saved = settings.get().ownKey
+    steps.saved = Boolean(saved && saved.model === "smoke-model" && saved.baseUrl === base && saved.key && saved.key !== "sk-smoke-123")
+    steps.checked = seen.some((s) => s.path === "/v1/chat/completions" && s.auth === "Bearer sk-smoke-123")
+    await sleep(1200)
+    steps.bar = (await run(`document.body.innerText.includes("smoke-model")`)) === true
+    await shot("3-in-use")
+    const before = seen.length
+    const reply = new Promise<string>((resolve) => {
+      const onMessage = (m: { role: string; kind?: string; text: string }) => {
+        if (m.role === "assistant") {
+          chat.off("message", onMessage)
+          resolve(m.kind === "error" ? `error: ${m.text}` : m.text)
+        }
+      }
+      chat.on("message", onMessage)
+    })
+    await chat.send("What is Kafka?")
+    const text = await Promise.race([reply, sleep(20000).then(() => "timeout")])
+    const answered = seen.slice(before).find((s) => s.path === "/v1/chat/completions")
+    steps.answered = text.startsWith("**Kafka") && answered?.auth === "Bearer sk-smoke-123" && answered.model === "smoke-model" && answered.task === undefined
+    await sleep(600)
+    await shot("4-answer")
+    return { ok: Object.values(steps).every(Boolean) && Object.keys(steps).length === 7, steps, requests: seen.map((s) => s.path) }
+  } catch (err) {
+    return { ok: false, steps, error: (err as Error).message }
+  } finally {
+    settings.update({ ownKey: null })
+    server.close()
+  }
+}
+
+/**
+ * Frames for the README demo: the panel during an interview, an answer streaming in after each question.
+ * Writes demo-NNN.png (panel) + demo-main.png (toolbar) with their bounds into IGPT_SMOKE_SHOTS, plus
+ * frames.json with each frame's duration; scripts outside the app turn them into an animation.
+ */
+async function demoFrames(windows: WindowManager, dir: string): Promise<void> {
+  const now = Date.now()
+  const frames: { file: string; ms: number }[] = []
+  const panel = () => windows.get("chat")!
+  const grab = async (ms: number) => {
+    const file = `demo-${String(frames.length).padStart(3, "0")}.png`
+    fs.writeFileSync(`${dir}/${file}`, (await panel().webContents.capturePage()).toPNG())
+    frames.push({ file, ms })
+  }
+  windows.setPanelExtra(SUGGESTIONS_WIDTH)
+  windows.showPanel("answers")
+  await sleep(1500)
+  windows.send("chat", "chat:cleared", undefined)
+  windows.send("chat", "session:state", { status: "paused", startedAt: now, notice: null, connected: true, audioSource: "both", audioDeviceId: "" })
+  // The toolbar shows a call in progress; only the panel captures audio, and it stays paused.
+  windows.send("main", "session:state", { status: "recording", startedAt: now - 754_000, notice: null, connected: true, audioSource: "both", audioDeviceId: "" })
+  const scenes = [
+    {
+      topic: "Scaling the payments database",
+      suggestions: ["How do you choose a shard key?", "Replication vs sharding: what's the difference?", "What would you do if latency doubled overnight?"],
+      question: "How would you scale the database as traffic grows?",
+      answer: "**I'd scale it in stages: find the bottleneck, fix queries and indexes, then add read replicas and shard by key.**\n- Profile the load first\n- Indexes and query plans\n- Read replicas for reads\n- Shard by merchant ID"
+    },
+    {
+      topic: "Scaling the payments database",
+      suggestions: ["How do you keep shards balanced?", "How would you migrate without downtime?", "What metrics would you alert on?"],
+      question: "And what would you do first if latency doubled overnight?",
+      answer: "**First I'd check what changed: deploys, traffic and slow queries, then roll back if a release lines up.**\n- Compare p95 before and after\n- Slow-query log and lock waits\n- Roll back, then dig in"
+    }
+  ]
+  await grab(700)
+  for (const [i, scene] of scenes.entries()) {
+    windows.send("chat", "suggestions:state", { topic: scene.topic, items: scene.suggestions.map((text, n) => ({ id: `q${i}${n}`, text })), updating: false })
+    windows.send("chat", "chat:message", { id: `u${i}`, role: "user", kind: "auto", text: scene.question, timestamp: now })
+    windows.send("chat", "chat:busy", true)
+    await sleep(250)
+    await grab(500)
+    const id = `a${i}`
+    const words = scene.answer.split(/(?<= )/)
+    for (let w = 0; w < words.length; w += 2) {
+      windows.send("chat", "chat:chunk", { id, text: words.slice(w, w + 2).join("") })
+      await sleep(60)
+      await grab(70)
+    }
+    windows.send("chat", "chat:message", { id, role: "assistant", kind: "auto", text: scene.answer, timestamp: now })
+    windows.send("chat", "chat:busy", false)
+    await sleep(250)
+    await grab(i === scenes.length - 1 ? 3200 : 2400)
+  }
+  const main = windows.get("main")
+  if (main) fs.writeFileSync(`${dir}/demo-main.png`, (await main.webContents.capturePage()).toPNG())
+  fs.writeFileSync(`${dir}/frames.json`, JSON.stringify({ frames, chat: panel().getBounds(), main: main?.getBounds() }, null, 1))
 }
 
 /** Real model round-trips through ChatService.autoAnswer (relay, current default prompt). */

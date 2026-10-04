@@ -5,7 +5,7 @@ name: Desktop builds
 # artifacts of the latest successful run and publishes them next to the Windows installers.
 #
 # macOS builds are ad-hoc signed: they run, but Gatekeeper asks the user to allow the app once
-# (System Settings → Privacy & Security → Open Anyway), and auto-update needs a Developer ID.
+# (System Settings → Privacy & Security → Open Anyway). Updates still install themselves (electron/mac-updater.ts).
 # With an Apple Developer account, add CSC_LINK / CSC_KEY_PASSWORD and APPLE_ID /
 # APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID secrets and drop the ad-hoc identity below.
 

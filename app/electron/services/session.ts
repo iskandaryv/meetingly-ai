@@ -173,7 +173,8 @@ export class RecordingSession extends EventEmitter {
     const settings = this.deps.settings.get()
     const language = getLanguage(settings.audioLanguage)
     const deviceId = this.deps.settings.deviceId()
-    const local = settings.transcriptionEngine === "local" && Boolean(this.deps.asrModel)
+    // Cloud transcription runs through Meetingly's server, which needs an account: with only an own key, stay on-device.
+    const local = Boolean(this.deps.asrModel) && (settings.transcriptionEngine === "local" || (settings.ownKey !== null && !settings.cloud))
     const socket: TranscriptionSocket = this.deps.createSocket
       ? this.deps.createSocket(deviceId, language.deepgram)
       : local

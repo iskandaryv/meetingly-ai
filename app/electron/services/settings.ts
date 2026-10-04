@@ -85,6 +85,8 @@ export class SettingsStore extends EventEmitter {
       ...settings,
       // The device token never leaves the main process.
       cloud: settings.cloud ? { ...settings.cloud, token: "" } : null,
+      // Nor does the API key.
+      ownKey: settings.ownKey ? { baseUrl: settings.ownKey.baseUrl, model: settings.ownKey.model, hasKey: Boolean(settings.ownKey.key) } : null,
       version: this.meta.version,
       platform: this.meta.platform,
       uiLocale: this.uiLocale(),
@@ -144,6 +146,10 @@ export function normalize(s: Settings): Settings {
     activePromptId,
     shortcuts,
     cloud: s.cloud && typeof s.cloud.token === "string" && s.cloud.token ? s.cloud : null,
+    ownKey:
+      s.ownKey && typeof s.ownKey.baseUrl === "string" && /^https?:\/\//i.test(s.ownKey.baseUrl) && typeof s.ownKey.model === "string" && s.ownKey.model
+        ? { baseUrl: s.ownKey.baseUrl, model: s.ownKey.model, key: typeof s.ownKey.key === "string" ? s.ownKey.key : "" }
+        : null,
     outputLanguage: LANGUAGES.some((l) => l.code === s.outputLanguage) ? s.outputLanguage : "en",
     audioLanguage: LANGUAGES.some((l) => l.code === s.audioLanguage) ? s.audioLanguage : "en",
     transcriptionEngine: s.transcriptionEngine === "cloud" ? "cloud" : "local",

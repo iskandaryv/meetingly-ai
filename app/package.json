@@ -1,13 +1,14 @@
 {
   "name": "meetingly",
   "productName": "Meetingly",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Desktop AI meeting assistant: live transcription, hands-free answers, screenshot analysis and meeting reports.",
   "main": "dist-electron/main.js",
   "private": true,
   "license": "Apache-2.0",
-  "author": "iskandaryv <iskandaryv@mail.ru>",
+  "author": "Meetingly <support@aiprimetech.io>",
   "homepage": "https://meetinglyai.com",
+  "repository": "github:iskandaryv/meetingly-ai",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -97,7 +98,7 @@
       "icon": "build/icon-1024.png",
       "artifactName": "Meetingly-${version}-${arch}.${ext}",
       "category": "Office",
-      "maintainer": "iskandaryv@mail.ru",
+      "maintainer": "Meetingly <support@aiprimetech.io>",
       "extraResources": [
         {
           "from": "vendor/transcribe/linux-${arch}",

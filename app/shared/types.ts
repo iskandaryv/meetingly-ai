@@ -196,7 +196,38 @@ export interface Settings {
   shortcuts: Shortcuts
   /** Linked account for sync; null when the app runs standalone. */
   cloud: import("./cloud").CloudAccount | null
+  /** The user's own OpenAI-compatible endpoint; when set, AI requests go there instead of the relay. Never synced. */
+  ownKey: OwnKey | null
 }
+
+export interface OwnKey {
+  /** Base URL of an OpenAI-compatible API, e.g. https://api.openai.com/v1. */
+  baseUrl: string
+  model: string
+  /** Encrypted at rest when the OS keychain is available; empty for endpoints without keys (Ollama). */
+  key: string
+}
+
+/** What the renderer sees: never the key itself, only whether one is saved. */
+export interface OwnKeyView {
+  baseUrl: string
+  model: string
+  hasKey: boolean
+}
+
+/** What the own-key form sends. An empty key keeps the saved one (editing only the model), or means none (Ollama). */
+export interface OwnKeyInput {
+  baseUrl: string
+  key: string
+  model?: string
+}
+
+/** One-click endpoints in the own-key form. Ollama runs models on this computer and needs no key. */
+export const OWN_KEY_PRESETS = [
+  { label: "OpenAI", baseUrl: "https://api.openai.com/v1" },
+  { label: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1" },
+  { label: "Ollama", baseUrl: "http://localhost:11434/v1" }
+] as const
 
 export const DEFAULT_SYSTEM_PROMPT = `You are a real-time assistant for meetings and interviews. Give the actual answer to what was asked, the way a knowledgeable person would say it out loud.
 
@@ -264,11 +295,13 @@ export const DEFAULT_SETTINGS: Settings = {
   prompts: [DEFAULT_PROMPT],
   activePromptId: DEFAULT_PROMPT.id,
   shortcuts: DEFAULT_SHORTCUTS,
-  cloud: null
+  cloud: null,
+  ownKey: null
 }
 
 /** Settings as seen by the renderer, plus resolved facts about the environment. */
-export interface SettingsView extends Settings {
+export interface SettingsView extends Omit<Settings, "ownKey"> {
+  ownKey: OwnKeyView | null
   version: string
   platform: string
   /** The interface language in use: the system language when Meetingly speaks it, else English. */
@@ -425,8 +458,11 @@ export interface PlanUsage {
 
 /** The account's plan and today's usage, as the relay counts it. */
 export interface PlanState {
-  /** signed-out: no account linked (or its sign-in expired); offline: the relay could not be reached. */
-  status: "unknown" | "signed-out" | "ok" | "offline"
+  /**
+   * signed-out: no account linked (or its sign-in expired); offline: the relay could not be reached;
+   * own-key: answers go to the user's own endpoint, so the relay's plan doesn't apply.
+   */
+  status: "unknown" | "signed-out" | "ok" | "offline" | "own-key"
   plan?: PlanName
   used?: PlanUsage
   limits?: PlanUsage

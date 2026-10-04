@@ -53,6 +53,11 @@ export class PlanService extends EventEmitter {
   }
 
   async refresh(): Promise<PlanState> {
+    // With the user's own key, answers never touch the relay: no plan, no counts.
+    if (this.deps.settings.get().ownKey) {
+      this.set({ status: "own-key" })
+      return this.state
+    }
     const fetchImpl = this.deps.fetch ?? fetch
     try {
       const res = await fetchImpl(`${relayHttpUrl(this.deps.relayUrl ?? process.env.IGPT_RELAY_URL ?? undefined)}/v1/usage`, {
@@ -64,11 +69,11 @@ export class PlanService extends EventEmitter {
         this.set({ status: "ok", plan: body.plan, used: body.used, limits: body.limits, resetAt: body.resetAt })
       } else if (res.status === 401) {
         this.set({ status: "signed-out" })
-      } else if (this.state.status === "unknown") {
+      } else if (this.state.status === "unknown" || this.state.status === "own-key") {
         this.set({ status: "offline" })
       }
     } catch {
-      if (this.state.status === "unknown") this.set({ status: "offline" })
+      if (this.state.status === "unknown" || this.state.status === "own-key") this.set({ status: "offline" })
     }
     return this.state
   }

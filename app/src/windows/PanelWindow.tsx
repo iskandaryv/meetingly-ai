@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react"
-import { Camera, Check, CircleHelp, Copy, Eraser, ListChecks, MessageSquareQuote, MessageSquareReply, Mic, PanelLeft, RefreshCw, SendHorizontal, Volume2, X } from "lucide-react"
+import { Camera, Check, CircleHelp, Copy, Eraser, KeyRound, ListChecks, MessageSquareQuote, MessageSquareReply, Mic, PanelLeft, RefreshCw, SendHorizontal, Volume2, X } from "lucide-react"
 import {
   AUDIO_SOURCE_LABELS,
+  OWN_KEY_PRESETS,
   QUICK_ACTIONS,
   segmentLabel,
   suggestionsVisible,
   type AudioSource,
   type ChatChunk,
   type ChatMessage,
+  type OwnKeyView,
   type PanelTab,
   type PlanState,
   type QuickActionId,
@@ -327,13 +329,21 @@ function Answers({ listening, handsFree, plan }: { listening: boolean; handsFree
   )
 }
 
-/** Without an account: the sign-up prompt. On the free plan: today's answers left. Nothing on Pro. */
 /**
  * The account line under the answers. Signed out: sign up or sign in happens in the browser, which links
- * this computer (the code shown here must match the one on the page). Signed in on Free: answers left today.
+ * this computer (the code shown here must match the one on the page), or use your own API key instead.
+ * Signed in on Free: answers left today. Nothing on Pro.
  */
 function PlanBar({ plan }: { plan: PlanState }) {
   const cloud = useCloudState()
+  const [settings] = useSettings()
+  const [ownKeyForm, setOwnKeyForm] = useState(false)
+  const ownKeyLink = (label: string, className?: string) => (
+    <button type="button" className={cn("font-medium text-sky-300 hover:text-sky-200", className)} onClick={() => setOwnKeyForm(true)}>
+      {label}
+    </button>
+  )
+  if (ownKeyForm) return <OwnKeyForm current={settings?.ownKey ?? null} onClose={() => setOwnKeyForm(false)} />
   if (cloud.status === "linking" && cloud.code) {
     return (
       <div className="flex items-center gap-2 border-t border-white/10 bg-sky-500/10 px-2.5 py-1.5 text-[11.5px] text-sky-100">
@@ -346,6 +356,20 @@ function PlanBar({ plan }: { plan: PlanState }) {
         <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => void api.invoke("cloud:link-cancel")}>
           {t("Cancel")}
         </Button>
+      </div>
+    )
+  }
+  if (plan.status === "own-key" && settings?.ownKey) {
+    return (
+      <div className="flex items-center gap-1.5 border-t border-white/10 px-2.5 py-1 text-[11px] text-white/45">
+        <KeyRound className="h-3 w-3 shrink-0" />
+        <span className="min-w-0 flex-1 truncate" title={settings.ownKey.baseUrl}>
+          {t("Your own key: {model} at {host}", { model: settings.ownKey.model, host: hostOf(settings.ownKey.baseUrl) })}
+        </span>
+        {ownKeyLink(t("Change"))}
+        <button type="button" className="font-medium text-white/55 hover:text-white" onClick={() => void api.invoke("ownkey:clear").catch(() => {})}>
+          {t("Stop using")}
+        </button>
       </div>
     )
   }
@@ -362,6 +386,7 @@ function PlanBar({ plan }: { plan: PlanState }) {
           </Button>
         </div>
         {cloud.error && <p className="mt-1 text-[11px] text-amber-200">{cloud.error}</p>}
+        <p className="mt-0.5 text-[11px]">{ownKeyLink(t("Or use your own API key (OpenAI, OpenRouter, Ollama…)"), "font-normal text-sky-100/70 underline-offset-2 hover:text-sky-100 hover:underline")}</p>
       </div>
     )
   }
@@ -372,10 +397,134 @@ function PlanBar({ plan }: { plan: PlanState }) {
       <span className={cn("min-w-0 flex-1 truncate", left === 0 && "text-amber-200")}>
         {left === 0 ? t("No answers left today. They come back at midnight UTC.") : t("{left} of {total} answers left today", { left, total: plan.limits.answers })}
       </span>
+      {left === 0 && ownKeyLink(t("Use your own key"), "text-white/60 hover:text-white")}
       <button type="button" className="font-medium text-sky-300 hover:text-sky-200" onClick={() => void api.invoke("plan:upgrade").catch(() => {})}>
         {t("Upgrade")}
       </button>
     </div>
+  )
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host
+  } catch {
+    return url
+  }
+}
+
+/** IPC rejections arrive as "Error invoking remote method '…': Error: <message>". */
+function invokeError(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err)
+  return message.replace(/^Error invoking remote method '[^']+': (Error: )?/, "")
+}
+
+/**
+ * Answers from your own OpenAI-compatible endpoint instead of Meetingly's server: no account, no limits.
+ * The model list loads from the endpoint when it offers one; Save checks everything with one tiny request.
+ */
+function OwnKeyForm({ current, onClose }: { current: OwnKeyView | null; onClose: () => void }) {
+  const [baseUrl, setBaseUrl] = useState<string>(current?.baseUrl ?? OWN_KEY_PRESETS[0].baseUrl)
+  const [key, setKey] = useState("")
+  const [model, setModel] = useState(current?.model ?? "")
+  const [models, setModels] = useState<string[]>([])
+  const [modelsNote, setModelsNote] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const keepsSavedKey = Boolean(current?.hasKey && current.baseUrl === baseUrl.trim().replace(/\/+$/, ""))
+
+  const loadModels = async (url = baseUrl, apiKey = key) => {
+    if (!/^https?:\/\/\S+/i.test(url.trim())) return
+    setModelsNote(null)
+    try {
+      const list = await api.invoke("ownkey:models", { baseUrl: url, key: apiKey })
+      setModels(list)
+      setModelsNote(list.length ? null : t("This endpoint lists no models: type the model name."))
+    } catch {
+      setModels([])
+      setModelsNote(t("Couldn't load the model list: type the model name."))
+    }
+  }
+  useEffect(() => {
+    if (current) void loadModels()
+  }, [])
+
+  const save = async () => {
+    setSaving(true)
+    setError(null)
+    try {
+      await api.invoke("ownkey:save", { baseUrl, key, model })
+      onClose()
+    } catch (err) {
+      setError(invokeError(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const field = "h-6 min-w-0 rounded border border-white/[0.12] bg-white/5 px-2 text-[11.5px] text-white placeholder:text-white/30 focus:border-white/35 focus:outline-none"
+  return (
+    <form
+      className="border-t border-white/10 bg-white/[0.03] px-2.5 py-2 text-[11.5px] text-white/70"
+      onSubmit={(e) => {
+        e.preventDefault()
+        void save()
+      }}
+    >
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <KeyRound className="h-3 w-3 text-white/50" />
+        <span className="font-medium text-white/90">{t("Use your own API key")}</span>
+        <span className="ml-auto flex gap-1">
+          {OWN_KEY_PRESETS.map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              className={cn("rounded px-1.5 py-0.5 text-[10.5px]", baseUrl === p.baseUrl ? "bg-white/15 text-white" : "text-white/50 hover:bg-white/10 hover:text-white")}
+              onClick={() => {
+                setBaseUrl(p.baseUrl)
+                setModels([])
+                void loadModels(p.baseUrl)
+              }}
+            >
+              {p.label}
+            </button>
+          ))}
+        </span>
+      </div>
+      <div className="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1">
+        <label htmlFor="own-url" className="text-white/50">{t("API address")}</label>
+        <input id="own-url" className={field} value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} onBlur={() => void loadModels()} spellCheck={false} />
+        <label htmlFor="own-key" className="text-white/50">{t("API key")}</label>
+        <input
+          id="own-key"
+          type="password"
+          className={field}
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+          onBlur={() => void loadModels()}
+          placeholder={keepsSavedKey ? t("Saved. Leave empty to keep it.") : t("Not needed for Ollama")}
+          autoComplete="off"
+        />
+        <label htmlFor="own-model" className="text-white/50">{t("Model")}</label>
+        <input id="own-model" className={field} value={model} onChange={(e) => setModel(e.target.value)} list="own-models" placeholder={t("Pick or type a model")} spellCheck={false} />
+        <datalist id="own-models">
+          {models.map((m) => (
+            <option key={m} value={m} />
+          ))}
+        </datalist>
+      </div>
+      {modelsNote && <p className="mt-1 text-[11px] text-white/40">{modelsNote}</p>}
+      {error && <p className="selectable mt-1 text-[11px] text-rose-300">{error}</p>}
+      <div className="mt-1.5 flex items-center gap-1">
+        <span className="min-w-0 flex-1 text-[10.5px] leading-snug text-white/35">{t("Answers go straight to this provider. The key stays on this computer.")}</span>
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={onClose}>
+          {t("Cancel")}
+        </Button>
+        <Button type="submit" variant="primary" size="sm" className="h-6 px-2.5 text-[11px]" disabled={saving || !model.trim() || !baseUrl.trim()}>
+          {saving ? t("Checking…") : t("Save")}
+        </Button>
+      </div>
+    </form>
   )
 }
 

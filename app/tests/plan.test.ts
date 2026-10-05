@@ -64,10 +64,12 @@ describe("PlanService", () => {
 
 describe("describeRelayError", () => {
   it("words limit and sign-in errors from their code and numbers, so they can be translated", () => {
-    const err = Object.assign(new Error("429 x"), { status: 429, error: { code: "answers_limit", plan: "free", limit: 100, message: "(relay English)" } })
-    expect(describeRelayError(err)).toBe("You've used today's 100 free answers. Upgrade to Pro for more.")
-    const pro = Object.assign(new Error("429 x"), { status: 429, error: { code: "answers_limit", plan: "pro", limit: 1500, message: "(relay English)" } })
-    expect(describeRelayError(pro)).toMatch(/fair-use limit/)
+    const err = Object.assign(new Error("429 x"), { status: 429, error: { code: "answers_limit", plan: "free", limit: 50, message: "(relay English)" } })
+    expect(describeRelayError(err)).toBe("You've used today's 50 free answers. Upgrade for more.")
+    const pro = Object.assign(new Error("429 x"), { status: 429, error: { code: "answers_limit", plan: "pro", limit: 300, message: "(relay English)" } })
+    expect(describeRelayError(pro)).toBe("You've used today's 300 answers. Upgrade to Unlimited for more.")
+    const unlimited = Object.assign(new Error("429 x"), { status: 429, error: { code: "answers_limit", plan: "unlimited", limit: 2000, message: "(relay English)" } })
+    expect(describeRelayError(unlimited)).toMatch(/fair-use limit/)
     const signIn = Object.assign(new Error("401 x"), { status: 401, error: { code: "account_required", message: "(relay English)" } })
     expect(describeRelayError(signIn)).toMatch(/free Meetingly account/)
   })

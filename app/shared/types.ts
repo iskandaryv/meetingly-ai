@@ -72,7 +72,7 @@ export type TranscriptionEngine = "local" | "cloud"
 
 export const TRANSCRIPTION_ENGINE_LABELS: Record<TranscriptionEngine, string> = {
   local: "On this computer (private, free)",
-  cloud: "Cloud (Deepgram)"
+  cloud: "Cloud (Unlimited plan)"
 }
 
 export type AutoAnswerMode = "off" | "questions" | "always"
@@ -447,7 +447,7 @@ export interface Meeting {
 }
 
 /** Plans the relay knows. "guest" is the allowance for builds from before accounts. */
-export type PlanName = "guest" | "free" | "pro"
+export type PlanName = "guest" | "free" | "pro" | "unlimited"
 
 export interface PlanUsage {
   answers: number

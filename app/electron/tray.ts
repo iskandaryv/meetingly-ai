@@ -10,6 +10,8 @@ interface TrayActions {
   /** The web dashboard (signed in): the overview, or a page such as the guide. */
   openWeb: (page?: "guide") => void
   openLogs: () => void
+  /** The panel with the "use your own API key" form. */
+  ownKey: () => void
 }
 
 export function createTray(windows: WindowManager, settings: SettingsStore, actions: TrayActions): Tray {
@@ -33,6 +35,7 @@ export function createTray(windows: WindowManager, settings: SettingsStore, acti
         { type: "separator" },
         { label: t("Open web dashboard"), click: () => actions.openWeb() },
         { label: t("Guide"), click: () => actions.openWeb("guide") },
+        { label: t("Use your own API key…"), click: () => actions.ownKey() },
         { label: t("Open the log folder"), click: () => actions.openLogs() },
         { type: "separator" },
         { label: t("Quit Meetingly"), click: () => app.quit() }

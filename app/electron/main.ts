@@ -1,6 +1,6 @@
 import { app, BrowserWindow, desktopCapturer, safeStorage, session as electronSession, shell } from "electron"
 import path from "node:path"
-import { registerIpc } from "./ipc"
+import { openOwnKeyForm, registerIpc } from "./ipc"
 import { Logger, type LogLevel } from "./services/logger"
 import { captureScreen } from "./services/capture"
 import { ChatService } from "./services/chat"
@@ -53,7 +53,8 @@ function bootstrap(): void {
   const meetings = new MeetingStore(path.join(userData, "meetings.json"))
   const reports = new ReportGenerator({ llm, meetings, settings })
   const asrModel = new AsrModel(process.env.MEETINGLY_MODEL_DIR || path.join(userData, "models"))
-  const session = new RecordingSession({ settings, meetings, reports, asrModel })
+  // Cloud transcription is part of Unlimited; every other plan transcribes on this computer.
+  const session = new RecordingSession({ settings, meetings, reports, asrModel, cloudTranscription: () => plan.getState().plan === "unlimited" })
   const windows = new WindowManager(path.join(__dirname, "preload.js"))
   const chat = new ChatService({
     settings,
@@ -104,7 +105,7 @@ function bootstrap(): void {
     void cloud.start().catch((err) => logger.warn("cloud", "start failed", err))
     if (!process.env.IGPT_SMOKE) plan.start()
     windows.createMain()
-    createTray(windows, settings, { openWeb: (page) => void cloud.openWeb(page), openLogs: () => shell.showItemInFolder(logger.file) })
+    createTray(windows, settings, { openWeb: (page) => void cloud.openWeb(page), openLogs: () => shell.showItemInFolder(logger.file), ownKey: () => openOwnKeyForm(windows) })
     shortcuts.register()
     if (!process.env.IGPT_SMOKE) {
       startAutoUpdates({

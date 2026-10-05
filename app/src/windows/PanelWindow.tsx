@@ -189,9 +189,9 @@ function Suggestions({ state, plan }: { state: SuggestionsState; plan: PlanState
         {state.items.length === 0 ? (
           <p className="px-1.5 py-1 text-[11px] leading-snug text-white/35">
             {plan.used && plan.limits && plan.used.listening >= plan.limits.listening
-              ? plan.plan === "pro"
+              ? plan.plan === "unlimited"
                 ? t("Paused for today: the daily limit is used.")
-                : t("Paused for today: upgrade to Pro for more.")
+                : t("Paused for today: upgrade for more.")
               : state.updating
                 ? t("Reading the conversation…")
                 : t("Questions show up here as the conversation goes.")}
@@ -331,18 +331,21 @@ function Answers({ listening, handsFree, plan }: { listening: boolean; handsFree
 
 /**
  * The account line under the answers. Signed out: sign up or sign in happens in the browser, which links
- * this computer (the code shown here must match the one on the page), or use your own API key instead.
- * Signed in on Free: answers left today. Nothing on Pro.
+ * this computer (the code shown here must match the one on the page). Free and Pro: answers left today.
+ * Nothing on Unlimited. The own-key form opens from the tray menu ("Use your own API key…").
  */
 function PlanBar({ plan }: { plan: PlanState }) {
   const cloud = useCloudState()
   const [settings] = useSettings()
   const [ownKeyForm, setOwnKeyForm] = useState(false)
-  const ownKeyLink = (label: string, className?: string) => (
-    <button type="button" className={cn("font-medium text-sky-300 hover:text-sky-200", className)} onClick={() => setOwnKeyForm(true)}>
-      {label}
-    </button>
-  )
+  // Opened from the tray; the pending flag covers a panel that wasn't loaded yet when the tray asked.
+  useEffect(() => {
+    void api.invoke("ownkey:pending").then((pending) => pending && setOwnKeyForm(true))
+  }, [])
+  useEvent("ownkey:open", () => {
+    setOwnKeyForm(true)
+    void api.invoke("ownkey:pending")
+  })
   if (ownKeyForm) return <OwnKeyForm current={settings?.ownKey ?? null} onClose={() => setOwnKeyForm(false)} />
   if (cloud.status === "linking" && cloud.code) {
     return (
@@ -366,7 +369,9 @@ function PlanBar({ plan }: { plan: PlanState }) {
         <span className="min-w-0 flex-1 truncate" title={settings.ownKey.baseUrl}>
           {t("Your own key: {model} at {host}", { model: settings.ownKey.model, host: hostOf(settings.ownKey.baseUrl) })}
         </span>
-        {ownKeyLink(t("Change"))}
+        <button type="button" className="font-medium text-sky-300 hover:text-sky-200" onClick={() => setOwnKeyForm(true)}>
+          {t("Change")}
+        </button>
         <button type="button" className="font-medium text-white/55 hover:text-white" onClick={() => void api.invoke("ownkey:clear").catch(() => {})}>
           {t("Stop using")}
         </button>
@@ -377,7 +382,7 @@ function PlanBar({ plan }: { plan: PlanState }) {
     return (
       <div className="border-t border-white/10 bg-sky-500/10 px-2.5 py-1.5">
         <div className="flex items-center gap-2">
-          <span className="min-w-0 flex-1 text-[11.5px] leading-snug text-sky-100">{t("Create a free account to get AI answers: 100 a day, no card.")}</span>
+          <span className="min-w-0 flex-1 text-[11.5px] leading-snug text-sky-100">{t("Create a free account to get AI answers: 50 a day, no card.")}</span>
           <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px] text-sky-100" onClick={() => void api.invoke("cloud:link-start").catch(() => {})}>
             {t("Sign in")}
           </Button>
@@ -386,18 +391,16 @@ function PlanBar({ plan }: { plan: PlanState }) {
           </Button>
         </div>
         {cloud.error && <p className="mt-1 text-[11px] text-amber-200">{cloud.error}</p>}
-        <p className="mt-0.5 text-[11px]">{ownKeyLink(t("Or use your own API key (OpenAI, OpenRouter, Ollama…)"), "font-normal text-sky-100/70 underline-offset-2 hover:text-sky-100 hover:underline")}</p>
       </div>
     )
   }
-  if (plan.status !== "ok" || plan.plan === "pro" || !plan.used || !plan.limits) return null
+  if (plan.status !== "ok" || plan.plan === "unlimited" || !plan.used || !plan.limits) return null
   const left = Math.max(0, plan.limits.answers - plan.used.answers)
   return (
     <div className="flex items-center gap-1.5 border-t border-white/10 px-2.5 py-1 text-[11px] text-white/45">
       <span className={cn("min-w-0 flex-1 truncate", left === 0 && "text-amber-200")}>
         {left === 0 ? t("No answers left today. They come back at midnight UTC.") : t("{left} of {total} answers left today", { left, total: plan.limits.answers })}
       </span>
-      {left === 0 && ownKeyLink(t("Use your own key"), "text-white/60 hover:text-white")}
       <button type="button" className="font-medium text-sky-300 hover:text-sky-200" onClick={() => void api.invoke("plan:upgrade").catch(() => {})}>
         {t("Upgrade")}
       </button>

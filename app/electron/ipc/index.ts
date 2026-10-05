@@ -46,6 +46,15 @@ function handle<K extends InvokeChannel>(channel: K, fn: Handler<K>): void {
   })
 }
 
+let ownKeyFormPending = false
+
+/** The tray's "Use your own API key…": the panel on Answers with the own-key form open. */
+export function openOwnKeyForm(windows: WindowManager): void {
+  ownKeyFormPending = true
+  windows.showPanel("answers")
+  windows.send("chat", "ownkey:open", undefined)
+}
+
 export function registerIpc(deps: IpcDeps): void {
   const { settings, windows, session, chat, suggestions, meetings, logger, cloud, plan, ownKey } = deps
 
@@ -129,6 +138,11 @@ export function registerIpc(deps: IpcDeps): void {
   handle("ownkey:save", async (_e, input) => {
     await ownKey.save(input)
     return settings.view()
+  })
+  handle("ownkey:pending", () => {
+    const pending = ownKeyFormPending
+    ownKeyFormPending = false
+    return pending
   })
   handle("ownkey:clear", () => {
     ownKey.clear()

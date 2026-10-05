@@ -89,6 +89,8 @@ export interface InvokeMap {
   /** Check the endpoint, key and model with one tiny request, then use them for every AI request. */
   "ownkey:save": (input: OwnKeyInput) => SettingsView
   "ownkey:clear": () => SettingsView
+  /** True once after the tray asked for the own-key form (the panel takes it when it loads). */
+  "ownkey:pending": () => boolean
 
 }
 
@@ -109,6 +111,8 @@ export interface EventMap {
   "cloud:state": CloudState
   "plan:state": PlanState
   "update:state": UpdateState
+  /** The tray asked for the own-key form. */
+  "ownkey:open": undefined
 }
 
 export type InvokeChannel = keyof InvokeMap
@@ -157,7 +161,8 @@ export const INVOKE_CHANNELS: InvokeChannel[] = [
   "plan:upgrade",
   "ownkey:models",
   "ownkey:save",
-  "ownkey:clear"
+  "ownkey:clear",
+  "ownkey:pending"
 ]
 
 export const EVENT_CHANNELS: EventChannel[] = [
@@ -175,7 +180,8 @@ export const EVENT_CHANNELS: EventChannel[] = [
   "meetings:changed",
   "cloud:state",
   "plan:state",
-  "update:state"
+  "update:state",
+  "ownkey:open"
 ]
 
 /** Shape exposed on `window.api` by the preload script. */

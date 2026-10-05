@@ -14,6 +14,7 @@ import type { SettingsStore } from "./services/settings"
 import type { WindowManager } from "./windows/WindowManager"
 import { SUGGESTIONS_WIDTH } from "./windows/config"
 import { copySelection } from "./copy"
+import { openOwnKeyForm } from "./ipc"
 
 const KINDS: WindowKind[] = ["main", "chat"]
 
@@ -306,9 +307,9 @@ async function shots(windows: WindowManager, dir: string): Promise<void> {
 }
 
 /**
- * The own-key flow in the real panel, against a fake OpenAI-compatible server on localhost: the signed-out
- * bar offers it, the form fills, Save checks the endpoint and switches the app over, and a chat message is
- * answered by that endpoint with the user's key. PNGs of each step go to IGPT_SMOKE_SHOTS when set.
+ * The own-key flow in the real panel, against a fake OpenAI-compatible server on localhost: the tray's
+ * "Use your own API key…" opens the form, it fills, Save checks the endpoint and switches the app over, and a
+ * chat message is answered by that endpoint with the user's key. PNGs of each step go to IGPT_SMOKE_SHOTS.
  */
 async function ownKeySmoke(windows: WindowManager, chat: ChatService, settings: SettingsStore): Promise<Record<string, unknown> & { ok: boolean }> {
   const seen: { path: string; auth?: string; model?: unknown; task?: string }[] = []
@@ -350,9 +351,11 @@ async function ownKeySmoke(windows: WindowManager, chat: ChatService, settings: 
     windows.send("chat", "plan:state", { status: "signed-out" })
     await sleep(500)
     await shot("1-signed-out")
-    // The link names the providers, which stay untranslated in every language.
-    steps.offered = (await run(`(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.includes("OpenRouter") && x.textContent.length > 20); if (b) b.click(); return Boolean(b) })()`)) === true
-    await sleep(500)
+    // Not offered on the signed-out bar any more: only the tray opens it.
+    const offeredOnBar = (await run(`[...document.querySelectorAll("button")].some((x) => x.textContent.includes("OpenRouter"))`)) === true
+    openOwnKeyForm(windows)
+    await sleep(600)
+    steps.offered = !offeredOnBar && (await run(`Boolean(document.getElementById("own-url"))`)) === true
     const fill = (id: string, value: string) =>
       run(`(() => { const el = document.getElementById(${JSON.stringify(id)}); if (!el) return false;
         Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(el, ${JSON.stringify(value)});
@@ -414,8 +417,8 @@ async function ollamaShot(run: (js: string) => Promise<unknown>, settings: Setti
     windows.send("chat", "chat:cleared", undefined)
     windows.send("chat", "plan:state", { status: "signed-out" })
     await sleep(500)
-    await run(`(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.includes("OpenRouter") && x.textContent.length > 20); if (b) b.click() })()`)
-    await sleep(400)
+    openOwnKeyForm(windows)
+    await sleep(600)
     await run(`[...document.querySelectorAll("form button")].find((b) => b.textContent === "Ollama")?.click()`)
     await sleep(800)
     await run(`(() => { const el = document.getElementById("own-model");

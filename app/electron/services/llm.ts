@@ -155,7 +155,14 @@ interface RelayError {
 
 /** The relay's limit and sign-in errors in the interface language (its own English words otherwise). */
 function relayMessage(e: RelayError): string {
-  const upgrade = e.plan === "free" ? ` ${t("Upgrade to Pro for more.")}` : e.plan === "guest" ? ` ${t("Update Meetingly and sign in to keep going.")}` : ""
+  const upgrade =
+    e.plan === "free"
+      ? ` ${t("Upgrade for more.")}`
+      : e.plan === "pro"
+        ? ` ${t("Upgrade to Unlimited for more.")}`
+        : e.plan === "guest"
+          ? ` ${t("Update Meetingly and sign in to keep going.")}`
+          : ""
   const n = e.limit ?? 0
   switch (e.code) {
     case "account_required":
@@ -163,7 +170,8 @@ function relayMessage(e: RelayError): string {
     case "account_unavailable":
       return t("The account service is unavailable. Try again in a minute.")
     case "answers_limit":
-      return e.plan === "pro" ? t("You've reached today's fair-use limit of answers. It resets at midnight UTC.") : t("You've used today's {n} free answers.", { n }) + upgrade
+      if (e.plan === "unlimited") return t("You've reached today's fair-use limit of answers. It resets at midnight UTC.")
+      return (e.plan === "pro" ? t("You've used today's {n} answers.", { n }) : t("You've used today's {n} free answers.", { n })) + upgrade
     case "listening_limit":
       return t("Live suggestions and auto-answer are paused: today's {hours} hours are used up. Questions you ask still work.", { hours: e.hours ?? "" }) + upgrade
     case "vision_limit":

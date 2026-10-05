@@ -24,6 +24,8 @@ interface Deps {
   reports: ReportGenerator
   /** The on-device model; without it the session always uses the cloud. */
   asrModel?: AsrModel
+  /** Whether the account's plan includes cloud transcription (Unlimited); otherwise the setting is ignored. */
+  cloudTranscription?: () => boolean
   /** Injectable for tests. */
   createSocket?: (deviceId: string, language: string) => TranscriptionSocket
 }
@@ -173,8 +175,10 @@ export class RecordingSession extends EventEmitter {
     const settings = this.deps.settings.get()
     const language = getLanguage(settings.audioLanguage)
     const deviceId = this.deps.settings.deviceId()
-    // Cloud transcription runs through Meetingly's server, which needs an account: with only an own key, stay on-device.
-    const local = Boolean(this.deps.asrModel) && (settings.transcriptionEngine === "local" || (settings.ownKey !== null && !settings.cloud))
+    // Cloud transcription runs through Meetingly's server and is part of Unlimited: on any other plan (or with
+    // only an own key) the session stays on this computer, whatever the setting says.
+    const cloudAllowed = (this.deps.cloudTranscription?.() ?? true) && !(settings.ownKey !== null && !settings.cloud)
+    const local = Boolean(this.deps.asrModel) && (settings.transcriptionEngine === "local" || !cloudAllowed)
     const socket: TranscriptionSocket = this.deps.createSocket
       ? this.deps.createSocket(deviceId, language.deepgram)
       : local

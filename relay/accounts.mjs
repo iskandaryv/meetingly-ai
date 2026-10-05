@@ -36,7 +36,7 @@ export class Accounts {
     let value
     if (res.status === 200) {
       const body = await res.json()
-      value = { ok: true, userId: String(body.userId), plan: body.plan === "pro" ? "pro" : "free" }
+      value = { ok: true, userId: String(body.userId), plan: body.plan === "pro" || body.plan === "unlimited" ? body.plan : "free" }
     } else if (res.status === 401 || res.status === 403 || res.status === 404) {
       value = { ok: false }
     } else {

@@ -67,3 +67,13 @@ test("per-ip rate limit is a sliding minute", () => {
   advance(61_000)
   assert.equal(q.allowRequest("1.2.3.4"), true)
 })
+
+test("per-account rate limit is its own sliding minute, sized by the plan", () => {
+  const { q, advance } = make()
+  for (let i = 0; i < 2; i++) assert.equal(q.allowKey("u:1", 2), true)
+  assert.equal(q.allowKey("u:1", 2), false)
+  assert.equal(q.allowKey("u:2", 2), true) // another account
+  assert.equal(q.allowRequest("1.2.3.4"), true) // the per-IP window is separate
+  advance(61_000)
+  assert.equal(q.allowKey("u:1", 2), true)
+})

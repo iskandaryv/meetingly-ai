@@ -14,6 +14,7 @@ export class Quotas {
     this.rpm = requestsPerMinutePerIp
     this.now = now
     this.ipHits = new Map() // ip -> timestamps within the last minute
+    this.keyHits = new Map() // account key -> timestamps within the last minute
     this.flight = new Map() // key -> requests in progress
     this.days = this.load()
     this.timer = setInterval(() => this.flush(), 60_000)
@@ -22,15 +23,24 @@ export class Quotas {
 
   /** Sliding one-minute window per IP. */
   allowRequest(ip) {
+    return this.slide(this.ipHits, ip, this.rpm)
+  }
+
+  /** Sliding one-minute window per account (the plan's requests per minute). */
+  allowKey(key, rpm) {
+    return this.slide(this.keyHits, key, rpm)
+  }
+
+  slide(map, id, limit) {
     const t = this.now()
-    const hits = (this.ipHits.get(ip) ?? []).filter((x) => t - x < 60_000)
+    const hits = (map.get(id) ?? []).filter((x) => t - x < 60_000)
     hits.push(t)
-    this.ipHits.set(ip, hits)
-    if (this.ipHits.size > 20_000) {
-      // Forget quiet IPs instead of resetting everyone.
-      for (const [k, v] of this.ipHits) if (!v.length || t - v[v.length - 1] >= 60_000) this.ipHits.delete(k)
+    map.set(id, hits)
+    if (map.size > 20_000) {
+      // Forget quiet callers instead of resetting everyone.
+      for (const [k, v] of map) if (!v.length || t - v[v.length - 1] >= 60_000) map.delete(k)
     }
-    return hits.length <= this.rpm
+    return hits.length <= limit
   }
 
   /** Today's counters for a key (zeros when unseen; reading never creates an entry). */

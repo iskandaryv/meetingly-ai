@@ -1,6 +1,6 @@
 {
   "name": "meetingly-relay",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Holds the LLM gateway and Deepgram keys and relays requests from the Meetingly desktop app.",
   "type": "module",

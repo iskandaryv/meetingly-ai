@@ -18,24 +18,27 @@ The public instance is `https://aiprimetech.io/igpt` (nginx strips the `/igpt/` 
 
 **Accounts and plans.** Every request from app 1.1.0 on carries the user's account token (`X-Meetingly-Account`);
 the relay asks the account service (`GET /api/meetingly/entitlement`, cached 5 min) for the user and plan, and
-counts per account per UTC day. Budgets are in `plans.mjs`:
+counts per account per UTC day. Budgets are in `plans.mjs`; everything is fair use:
 
-| | Guest (1.0.0, per IP, until 2026-11-04) | Free | Pro |
-|---|---|---|---|
-| answers (`answer`, real answers of `auto`) | 20 | 100 | 1,500 |
-| screen analysis (`vision`) | 3 | 10 | 200 |
-| listening (`suggest`, `auto` checks that answer nothing) | 60 | 300 | 3,000 |
-| meeting reports (`report`) | 2 | 5 | 50 |
-| tokens (ceiling over everything) | 60k | 300k | 4M |
-| requests at once | 1 | 2 | 3 |
-| Deepgram minutes | 30 | 60 | 600 |
+| | Guest (1.0.0, per IP, until 2026-11-04) | Free | Pro | Unlimited |
+|---|---|---|---|---|
+| answers (`answer`, real answers of `auto`) | 20 | 50 | 300 | 2,000 |
+| screen analysis (`vision`) | 3 | 3 | 50 | 300 |
+| listening (`suggest`, `auto` checks that answer nothing; ~20 s each) | 60 | 90 | 720 | 1,440 |
+| meeting reports (`report`) | 1 | 1 | 20 | 100 |
+| tokens (ceiling over everything) | 60k | 100k | 1.5M | 4M |
+| requests per minute | 15 | 15 | 30 | 60 |
+| requests at once | 1 | 2 | 3 | 4 |
+| cloud transcription (Deepgram) minutes | 30 | — | — | 480 |
 
-Plus 600 free answers per IP per day across accounts, `CHAT_PER_DAY` requests per account, 60 requests/min per IP.
-Limits answer 429 with `{error: {code, message, resetAt}}` and `x-should-retry: false`.
+Plus 600 free answers per IP per day across free accounts, `CHAT_PER_DAY` requests per account, `RPM_PER_IP` per IP.
+Limits answer 429 with `{error: {code, message, resetAt}}` and `x-should-retry: false`. Plans without cloud
+transcription get 403 on `/v1/listen`; the app transcribes on the computer instead.
 
 **Models are chosen here, never by the app.** The app sends `X-Meetingly-Task: answer | suggest | vision | report`;
-`DEFAULT_MODEL` serves every task, `MODEL_<TASK>` overrides one, `FALLBACK_MODEL` is tried when the first choice
-fails before sending anything. Responses carry `X-Meetingly-Model` with the model that served them. Switching
+`DEFAULT_MODEL` serves everything, `MODEL_<PLAN>` a plan, `MODEL_<TASK>` a task, `MODEL_<PLAN>_<TASK>` one task on one
+plan; `FALLBACK_MODEL[_<PLAN>]` is tried when the first choice fails before sending anything. `claude-*` models go to
+`CLAUDE_BASE_URL` when it is set. Responses carry `X-Meetingly-Model` with the model that served them. Switching
 models needs a restart, not an app release.
 
 ## Running it

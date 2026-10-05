@@ -13,7 +13,8 @@
 //
 // Deployed on Voyra behind nginx at https://aiprimetech.io/igpt/ (nginx strips the prefix).
 // Env (see relay.env.example): UPSTREAM_BASE_URL, UPSTREAM_API_KEY, DEEPGRAM_API_KEY, APP_TOKEN, HOST, PORT, TRUST_PROXY,
-//   TLS_CERT/TLS_KEY (only without nginx in front), DEFAULT_MODEL, FALLBACK_MODEL, MODEL_<TASK>, CHAT_PER_DAY, RPM_PER_IP.
+//   TLS_CERT/TLS_KEY (only without nginx in front), DEFAULT_MODEL, FALLBACK_MODEL[_<PLAN>], MODEL_<PLAN>, MODEL_<TASK>,
+//   MODEL_<PLAN>_<TASK>, CLAUDE_BASE_URL/CLAUDE_API_KEY (gateway for claude-* models), CHAT_PER_DAY, RPM_PER_IP.
 
 import fs from "node:fs"
 import http from "node:http"
@@ -22,8 +23,8 @@ import path from "node:path"
 import { WebSocket, WebSocketServer } from "ws"
 import { Accounts } from "./accounts.mjs"
 import { ReplyWatcher } from "./answers.mjs"
-import { modelConfig, modelsFor } from "./models.mjs"
-import { chargeFor, checkBudget, GUEST_UNTIL, IP_ANSWERS_PER_DAY, PLANS, taskSpec } from "./plans.mjs"
+import { modelConfig, modelsFor, upstreamFor } from "./models.mjs"
+import { chargeFor, checkBudget, GUEST_UNTIL, IP_ANSWERS_PER_DAY, PAID, planName, PLANS, taskSpec } from "./plans.mjs"
 import { Quotas } from "./quotas.mjs"
 
 const env = process.env
@@ -35,6 +36,12 @@ const APP_TOKEN = required("APP_TOKEN")
 // Any OpenAI-compatible chat/completions endpoint. Default: the claudeshop.store gateway.
 const UPSTREAM_BASE_URL = (env.UPSTREAM_BASE_URL ?? "https://claudeshop.store/v1").replace(/\/+$/, "")
 const UPSTREAM_API_KEY = (env.UPSTREAM_API_KEY ?? env.OPENROUTER_API_KEY ?? "").trim() || required("UPSTREAM_API_KEY")
+const CLAUDE_BASE_URL = (env.CLAUDE_BASE_URL ?? "").trim().replace(/\/+$/, "")
+const CLAUDE_API_KEY = (env.CLAUDE_API_KEY ?? "").trim()
+const UPSTREAMS = {
+  main: { base: UPSTREAM_BASE_URL, key: UPSTREAM_API_KEY },
+  claude: CLAUDE_BASE_URL && CLAUDE_API_KEY ? { base: CLAUDE_BASE_URL, key: CLAUDE_API_KEY } : null
+}
 const DEEPGRAM_API_KEY = required("DEEPGRAM_API_KEY")
 const MODELS = modelConfig(env)
 // Absolute requests per key per day, whatever they are: the last line against runaway clients.
@@ -62,7 +69,7 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, "http://relay")
   try {
     if (req.method === "GET" && url.pathname === "/health") {
-      return json(res, 200, { ok: true, version: VERSION, models: MODELS, plans: PLANS, guestUntil: new Date(GUEST_UNTIL).toISOString() })
+      return json(res, 200, { ok: true, version: VERSION, models: MODELS, claudeGateway: Boolean(UPSTREAMS.claude), plans: PLANS, guestUntil: new Date(GUEST_UNTIL).toISOString() })
     }
     const auth = authenticate(req, url)
     if (!auth.ok) return json(res, 401, { error: { message: auth.reason } })
@@ -91,6 +98,8 @@ server.on("upgrade", async (req, socket, head) => {
     const who = await identify(req, ip, url)
     if (who.error) return rejectUpgrade(socket, who.error.status, who.error.message)
     const plan = PLANS[who.plan]
+    // Only Unlimited includes cloud transcription; the app transcribes on the computer otherwise.
+    if (!plan.audioMinutes) return rejectUpgrade(socket, 403, "Cloud transcription is part of Unlimited. Meetingly uses on-device recognition instead.")
     if (quotas.used(who.key).audioMinutes >= plan.audioMinutes) return rejectUpgrade(socket, 429, "Daily transcription limit reached")
     wss.handleUpgrade(req, socket, head, (client) => proxyListen(client, url, who))
   } catch (err) {
@@ -129,7 +138,7 @@ async function identify(req, ip, url) {
       return { error: { status: 503, code: "account_unavailable", message: "The account service is unavailable. Try again in a minute." } }
     }
     if (!account.ok) return { error: { status: 401, code: "account_required", message: "Your sign-in has expired. Connect your account again in Dashboard → Settings." } }
-    return { key: `u:${account.userId}`, plan: account.plan }
+    return { key: `u:${account.userId}`, plan: planName(account.plan) }
   }
   if (!client && Date.now() < GUEST_UNTIL) return { key: `ip:${ip}`, plan: "guest" }
   return { error: { status: 401, code: "account_required", message: "Create a free Meetingly account to use AI answers: Dashboard → Settings → Connect account." } }
@@ -163,11 +172,12 @@ async function chatCompletions(req, res, ip) {
   // Budgets before anything goes upstream.
   const plan = PLANS[who.plan]
   const used = quotas.used(who.key)
+  if (!quotas.allowKey(who.key, plan.rpm)) return limited(res, "rate_limit", "Too many requests at once. Slow down a little.", who.plan)
   if (used.requests >= REQUESTS_PER_DAY) return limited(res, "daily_limit", "Today's usage limit is reached. It resets at midnight UTC.", who.plan)
   if (quotas.inFlight(who.key) >= plan.concurrent) return limited(res, "busy", "Another request is still running. Try again in a moment.", who.plan)
   const over = checkBudget(who.plan, used, task)
   if (over) return limited(res, over.code, over.message, who.plan, { limit: over.limit, hours: over.hours })
-  if (spec.bucket === "answers" && who.plan !== "pro" && quotas.used(`ipa:${ip}`).answers >= IP_ANSWERS_PER_DAY) {
+  if (spec.bucket === "answers" && !PAID.has(who.plan) && quotas.used(`ipa:${ip}`).answers >= IP_ANSWERS_PER_DAY) {
     return limited(res, "network_limit", "Too many free answers from this network today. It resets at midnight UTC.", who.plan)
   }
 
@@ -182,7 +192,7 @@ async function chatCompletions(req, res, ip) {
     ...(REASONING_EFFORT ? { reasoning_effort: REASONING_EFFORT } : {}),
     ...(body.stream ? { stream_options: { include_usage: true } } : {})
   }
-  const models = modelsFor(MODELS, task === "auto" ? "answer" : task)
+  const models = modelsFor(MODELS, task === "auto" ? "answer" : task, who.plan)
 
   quotas.begin(who.key)
   let watcher = null
@@ -194,9 +204,10 @@ async function chatCompletions(req, res, ip) {
     for (const [i, model] of models.entries()) {
       const last = i === models.length - 1
       try {
-        upstream = await fetch(`${UPSTREAM_BASE_URL}/chat/completions`, {
+        const up = upstreamFor(model, UPSTREAMS)
+        upstream = await fetch(`${up.base}/chat/completions`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${UPSTREAM_API_KEY}`, "Content-Type": "application/json" },
+          headers: { Authorization: `Bearer ${up.key}`, "Content-Type": "application/json" },
           body: JSON.stringify({ model, ...forwarded }),
           signal: AbortSignal.timeout(120_000)
         })
@@ -238,7 +249,7 @@ async function chatCompletions(req, res, ip) {
     if (upstreamOk && watcher) {
       const field = chargeFor(task, watcher.verdict())
       if (field) quotas.add(who.key, field)
-      if (field === "answers" && who.plan !== "pro") quotas.add(`ipa:${ip}`, "answers")
+      if (field === "answers" && !PAID.has(who.plan)) quotas.add(`ipa:${ip}`, "answers")
       quotas.add(who.key, "tokens", watcher.tokens())
     }
   }

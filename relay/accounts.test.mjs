@@ -29,6 +29,11 @@ test("an unknown plan value is treated as free", async () => {
   assert.equal((await new Accounts({ fetch: svc.fetch }).resolve("tok")).plan, "free")
 })
 
+test("Unlimited comes through as its own plan", async () => {
+  const svc = fakeService([{ status: 200, body: { userId: "u1", plan: "unlimited" } }])
+  assert.equal((await new Accounts({ fetch: svc.fetch }).resolve("tok")).plan, "unlimited")
+})
+
 test("a rejected token is not ok, and is cached briefly", async () => {
   let t = 0
   const svc = fakeService([{ status: 401, body: {} }, { status: 200, body: { userId: "u1", plan: "free" } }])

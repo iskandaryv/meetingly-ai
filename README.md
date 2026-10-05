@@ -42,9 +42,21 @@ OpenAI, OpenRouter or Ollama key. An open-source alternative to Cluely.
 
 ## Two ways to use it
 
-**Free account.** Click *Sign up free* in the panel: 100 AI answers a day, no card. Instructions (your CV, the job description), settings and meeting reports live in your [web dashboard](https://account.meetinglyai.com) and sync to every computer. [Pro](https://account.meetinglyai.com/dashboard/plan) is $12.99 / month, first month free.
+**Free account.** Click *Sign up free* in the panel: 50 AI answers a day, no card. Instructions (your CV, the job description), settings and meeting reports live in your [web dashboard](https://account.meetinglyai.com) and sync to every computer.
 
-**Your own key, no account.** Click *Or use your own API key* in the panel, pick a provider, paste a key and choose a model. Answers go straight from your computer to that provider; nothing passes through Meetingly's servers, and there are no limits but your provider's.
+| | Free | Pro | Unlimited |
+|---|---|---|---|
+| Price | $0 | $19.99 / month, 7 days free | $39.99 / month |
+| AI models | Fast AI models | Latest GPT and Claude models | The newest, most powerful GPT and Claude models, first |
+| Answers | 50 a day | 300 a day | Unlimited (fair use) |
+| Screen analysis | 3 a day | 50 a day | 300 a day |
+| Live suggestions | About 30 minutes a day | About 4 hours a day | About 8 hours a day |
+| Meeting reports | 1 a day | 20 a day | 100 a day |
+| Computers | 1 | 2 | 3 |
+
+Pay by card, or with SBP or crypto, on the [plan page](https://account.meetinglyai.com/dashboard/plan). Post about Meetingly and get Pro free: see the [creator reward](https://meetinglyai.com/creators/).
+
+**Your own key, no account.** Open the Meetingly menu (the tray icon next to the clock) and choose *Use your own API key…*, pick a provider, paste a key and choose a model. Answers go straight from your computer to that provider; nothing passes through Meetingly's servers, and there are no limits but your provider's.
 
 | Provider | API address | Key |
 |---|---|---|
@@ -59,8 +71,8 @@ The key is stored on your computer, encrypted with the operating system's keycha
 
 | | **Meetingly** | Cluely | Final Round AI | Parakeet AI |
 |---|---|---|---|---|
-| Price | **Free**, Pro $12.99 / month | Free plan, Pro $19.99 / month | Pro from $25 / month | €129.90 / month, or credits |
-| Free live answers | **100 a day, every day** | "Limited AI responses" | None: live sessions need Pro | One 10-minute session |
+| Price | **Free**, Pro $19.99, Unlimited $39.99 / month | Free plan, Pro $19.99 / month | Pro from $25 / month | €129.90 / month, or credits |
+| Free live answers | **50 a day, every day** | "Limited AI responses" | None: live sessions need Pro | One 10-minute session |
 | Hidden from screen sharing | **Every plan, on by default** | Only Pro + Undetectability, $149.99 / month | Pro | Paid plans |
 | Linux | **AppImage and .deb** | — | — | In Chrome only |
 | Open source | **Apache-2.0** | — | — | — |
@@ -80,11 +92,11 @@ flowchart LR
   B --> C["Live transcript<br/>You / Them"]
   C --> D["Answer on screen"]
   C --> E["Suggested questions"]
-  D -.-> F["Meetingly relay<br/>(free / Pro)"]
+  D -.-> F["Meetingly relay<br/>(Free, Pro, Unlimited)"]
   D -.-> G["Your own endpoint<br/>(OpenAI, Ollama…)"]
 ```
 
-Your audio stays on your computer. Only the transcript text, your questions and the screenshots you choose to analyze go to the AI: through Meetingly's relay on the free and Pro plans (it holds the provider keys and picks the model for each task), or straight to your own endpoint when you use your own key.
+Your audio stays on your computer. Only the transcript text, your questions and the screenshots you choose to analyze go to the AI: through Meetingly's relay on the Free, Pro and Unlimited plans (it holds the provider keys and picks the model for each task), or straight to your own endpoint when you use your own key.
 
 ## Install notes
 
@@ -113,7 +125,7 @@ npm run dev
 
 ```
 app/      desktop app: Electron 44, React 19, Vite 8, TypeScript, Tailwind
-relay/    the small Node service behind the free and Pro plans (holds the API keys, picks the model per task)
+relay/    the small Node service behind the Free, Pro and Unlimited plans (holds the API keys, picks the model per task)
 docs/     images for this page
 ```
 

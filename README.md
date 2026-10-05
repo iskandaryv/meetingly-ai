@@ -6,9 +6,9 @@
 
 **The answer, while they're still asking.**
 
-An open-source AI assistant for live meetings and interviews. It listens to the call, transcribes it on your own<br/>
-computer and puts the answer on screen the moment a question is asked. Free with an account, or bring your own<br/>
-OpenAI, OpenRouter or Ollama key. An open-source alternative to Cluely.
+An open-source AI assistant for live meetings and interviews. It listens to the call, transcribes it on your own computer and puts the answer on screen the moment a question is asked. Free with an account, or bring your own OpenAI, OpenRouter or Ollama key. An open-source alternative to Cluely.
+
+<p align="center"><!-- languages --><b>English</b> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.pt-BR.md">Português</a> · <a href="README.ja.md">日本語</a> · <a href="README.ko.md">한국어</a></p>
 
 <a href="https://meetinglyai.com/download/Meetingly-Setup.exe"><img src="https://img.shields.io/badge/Windows-1c1a17?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows" /></a>
 &nbsp;

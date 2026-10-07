@@ -1,9 +1,9 @@
 import { useState } from "react"
-import { Camera, Captions, Check, EyeOff, LayoutDashboard, MessageSquare, Mic, Pause, Play, Power, X } from "lucide-react"
+import { Camera, Captions, Check, EyeOff, LayoutDashboard, MessageSquare, Mic, Pause, Play, Power, UserRound, X } from "lucide-react"
 import { DEFAULT_SHORTCUTS } from "@shared/types"
 import { t } from "@shared/i18n"
 import { api, shortcutLabel } from "@/lib/api"
-import { useElapsed, useEvent, useFitWindow, useSessionState, useSettings, useWindowsState } from "@/lib/hooks"
+import { useCloudState, useElapsed, useEvent, useFitWindow, useSessionState, useSettings, useWindowsState } from "@/lib/hooks"
 import type { UpdateState } from "@shared/types"
 import { Button } from "@/components/ui/button"
 import { Dot } from "@/components/ui/badge"
@@ -15,7 +15,10 @@ export function MainWindow() {
   const session = useSessionState()
   const windows = useWindowsState()
   const [settings] = useSettings()
+  const cloud = useCloudState()
   const KEYS = settings?.shortcuts ?? DEFAULT_SHORTCUTS
+  // Not linked to an account (and not on an own API key): a quiet way in, next to the other buttons.
+  const signedOut = settings !== null && !settings.ownKey && (cloud.status === "off" || cloud.status === "linking" || cloud.status === "error")
   const elapsed = useElapsed(session.startedAt)
   const [error, setError] = useState<string | null>(null)
   const [update, setUpdate] = useState<UpdateState | null>(null)
@@ -54,6 +57,12 @@ export function MainWindow() {
       await api.invoke("chat:screenshot")
     })
   const showing = (tab: "answers" | "transcript") => windows.chat && windows.panelTab === tab
+  // The panel shows the code to confirm in the browser, so it opens first.
+  const signIn = () =>
+    run(async () => {
+      await api.invoke("panel:show", "answers")
+      await api.invoke("cloud:link-start")
+    })
 
   const live = session.status === "recording"
   const paused = session.status === "paused"
@@ -61,7 +70,8 @@ export function MainWindow() {
 
   return (
     <div ref={ref} className="inline-block p-1">
-      <div className="glass drag flex h-10 items-center gap-0.5 px-1.5">
+      <div className="glass drag flex h-10 items-center gap-0.5 px-1">
+        <Grip />
         <Button variant="ghost" size="icon" onClick={() => api.invoke("windows:toggle-all")} title={t("Hide all windows ({shortcut})", { shortcut: shortcutLabel(KEYS.toggleAll) })}>
           <EyeOff className="h-4 w-4" />
         </Button>
@@ -117,17 +127,35 @@ export function MainWindow() {
         <Button variant="ghost" size="icon" onClick={() => api.invoke("cloud:open-web")} title={t("Open web dashboard ({shortcut})", { shortcut: shortcutLabel(KEYS.dashboard) })}>
           <LayoutDashboard className="h-4 w-4" />
         </Button>
+        {signedOut && (
+          <Button variant="ghost" size="icon" className="relative" onClick={signIn} title={t("Sign up free or sign in: 50 AI answers a day")}>
+            <UserRound className="h-4 w-4" />
+            <span className={cn("absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-sky-400", cloud.status === "linking" && "animate-pulse")} />
+          </Button>
+        )}
 
         <Divider />
 
         <Button variant="ghost" size="icon" className="text-rose-300/80 hover:text-rose-300" onClick={() => api.invoke("app:quit")} title={t("Quit Meetingly")}>
           <Power className="h-4 w-4" />
         </Button>
+        <Grip />
       </div>
       {(error || session.notice || updateNotice) && (
         <div className="mt-1 max-w-[520px] truncate rounded-md bg-black/80 px-3 py-1 text-xs text-amber-200">{error ?? session.notice ?? updateNotice}</div>
       )}
     </div>
+  )
+}
+
+/** A faint handle at each end of the toolbar: a spot to drag it by that is never a button. */
+function Grip() {
+  return (
+    <span aria-hidden className="grid h-6 w-3 shrink-0 grid-cols-2 content-center justify-items-center gap-y-[3px] opacity-25">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <i key={i} className="block h-[2px] w-[2px] rounded-full bg-white" />
+      ))}
+    </span>
   )
 }
 

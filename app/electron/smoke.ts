@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard } from "electron"
+import { app, BrowserWindow, clipboard, screen } from "electron"
 import { spawn } from "node:child_process"
 import fs from "node:fs"
 import http from "node:http"
@@ -44,6 +44,9 @@ interface SmokeDeps {
  *   "demo"    frames of answers streaming in the panel, for the README animation (see demoFrames).
  *   "copy"    selecting an answer in the panel and pressing Ctrl+C copies it (the Ctrl+C shortcut must not
  *             swallow the copy); nothing selected means the copy path declines. Restores the clipboard.
+ *   "hide"    hide everything with the toolbar eye button, bring it back every way a user can, use the chat button.
+ *   "hardware" the same with the real cursor and a real Ctrl+B, starting like a real launch (no panel yet). Moves
+ *             the cursor: for an unattended machine (the UI test workflow), not a desk someone is using.
  *   "ownkey"  the "use your own API key" flow in the real panel against a fake local endpoint (see ownKeySmoke).
  *   "asr"     on-device transcription: stream IGPT_SMOKE_WAV (16 kHz mono, played on the IGPT_SMOKE_SIDE
  *             channel, default "them") through the
@@ -65,8 +68,10 @@ export async function runSmokeTest(mode: string, { windows, chat, session, setti
   }
 
   attach("main")
+  // "hardware" starts like a real launch: only the toolbar exists; the panel is created the first time it opens.
+  const fresh = mode === "hardware"
   for (const kind of KINDS) {
-    if (kind !== "main") {
+    if (kind !== "main" && !fresh) {
       windows.show(kind)
       attach(kind)
     }
@@ -132,6 +137,10 @@ export async function runSmokeTest(mode: string, { windows, chat, session, setti
   let copyProbe: Record<string, unknown> & { ok: boolean } | undefined
   if (mode === "copy") copyProbe = await copySmoke(windows)
 
+  let hideProbe: Record<string, unknown> & { ok: boolean } | undefined
+  if (mode === "hide") hideProbe = await hideSmoke(windows)
+  if (mode === "hardware") hideProbe = await hardwareSmoke(windows)
+
   let ownKeyProbe: Record<string, unknown> & { ok: boolean } | undefined
   if (mode === "ownkey") ownKeyProbe = await ownKeySmoke(windows, chat, settings)
 
@@ -142,13 +151,14 @@ export async function runSmokeTest(mode: string, { windows, chat, session, setti
     mode,
     ok:
       errors.length === 0 &&
-      loaded.size === KINDS.length &&
+      loaded.size === (fresh ? 1 : KINDS.length) &&
       (chatProbe?.ok ?? true) &&
       Object.values(listenProbe).every((p) => p.ok) &&
       (cloudProbe?.ok ?? true) &&
       (asrProbe?.ok ?? true) &&
       (copyProbe?.ok ?? true) &&
       (ownKeyProbe?.ok ?? true) &&
+      (hideProbe?.ok ?? true) &&
       (answersProbe?.ok ?? true),
     loaded: [...loaded],
     windows: Object.fromEntries(
@@ -163,6 +173,7 @@ export async function runSmokeTest(mode: string, { windows, chat, session, setti
     asr: asrProbe,
     copy: copyProbe,
     ownKey: ownKeyProbe,
+    hide: hideProbe,
     answers: answersProbe,
     errors
   }
@@ -304,6 +315,203 @@ async function shots(windows: WindowManager, dir: string): Promise<void> {
   }
   await sleep(600)
   await save("transcript")
+}
+
+/**
+ * Hide everything with the toolbar's eye button, bring it back each way a user can (Ctrl+B, the tray's
+ * "Show toolbar", launching the app again), then use the toolbar's chat button. After every round the
+ * windows must be where they belong, on top, and both renderers must answer quickly.
+ */
+async function hideSmoke(windows: WindowManager): Promise<Record<string, unknown> & { ok: boolean }> {
+  const main = () => windows.get("main")!
+  const panel = () => windows.get("chat")
+  const click = (title: string) =>
+    main().webContents.executeJavaScript(`(() => { const b = [...document.querySelectorAll("button")].find((x) => (x.title || "").startsWith(${JSON.stringify(title)})); if (b) b.click(); return Boolean(b) })()`) as Promise<boolean>
+  const ping = async (kind: "main" | "chat") => {
+    const win = kind === "main" ? main() : panel()
+    if (!win) return -1
+    const t0 = Date.now()
+    await Promise.race([win.webContents.executeJavaScript("new Promise((r) => requestAnimationFrame(() => r(1)))"), sleep(3000)])
+    return Date.now() - t0
+  }
+  // On screen: shown and inside a display (a hidden toolbar on Windows is parked off-screen, still shown).
+  const onScreen = () => main().isVisible() && screen.getAllDisplays().some((d) => { const b = main().getBounds(); const a = d.bounds; return b.x >= a.x && b.y >= a.y && b.x < a.x + a.width && b.y < a.y + a.height })
+  const snap = async (label: string) => ({
+    label,
+    main: windows.isVisible("main"),
+    mainOnScreen: onScreen(),
+    chat: panel()?.isVisible() ?? false,
+    mainOnTop: main().isAlwaysOnTop(),
+    chatOnTop: panel()?.isAlwaysOnTop() ?? null,
+    mainMs: await ping("main"),
+    chatMs: await ping("chat"),
+    windows: BrowserWindow.getAllWindows().length,
+    toggleState: windows.state()
+  })
+  const rounds: Record<string, unknown>[] = []
+  const problems: string[] = []
+  const reopen: [string, () => void][] = [
+    ["Ctrl+B (toggle all)", () => windows.toggleAll()],
+    ["tray: Show toolbar", () => windows.centerMain()],
+    ["launch again (second instance)", () => windows.centerMain()],
+    ["Ctrl+B again", () => windows.toggleAll()]
+  ]
+  windows.showPanel("answers")
+  await sleep(1200)
+  for (const [route, open] of reopen) {
+    for (const withPanel of [true, false]) {
+      if (withPanel && !windows.isVisible("chat")) windows.showPanel("answers")
+      if (!withPanel && windows.isVisible("chat")) windows.hide("chat")
+      await sleep(300)
+      if (!(await click("Hide all windows"))) problems.push("eye button not found")
+      await sleep(500)
+      const hidden = await snap(`${route}, panel ${withPanel ? "open" : "closed"}: hidden`)
+      if (hidden.main || hidden.chat || hidden.mainOnScreen) problems.push(`${hidden.label}: something still visible`)
+      open()
+      await sleep(700)
+      const back = await snap(`${route}: back`)
+      if (!back.main || !back.mainOnScreen) problems.push(`${route}: toolbar didn't come back`)
+      if (back.chat !== withPanel) problems.push(`${route}: panel ${withPanel ? "didn't come back" : "came back uninvited"}`)
+      // Then the chat button, twice: it must close and open the panel (or open and close it).
+      const first = back.chat
+      await click("Answers and chat")
+      await sleep(500)
+      const afterOne = await snap(`${route}: chat button once`)
+      await click("Answers and chat")
+      await sleep(500)
+      const afterTwo = await snap(`${route}: chat button twice`)
+      if (afterOne.chat === first) problems.push(`${route}: first chat click did nothing (panel ${first ? "stayed open" : "stayed closed"})`)
+      if (afterTwo.chat !== first) problems.push(`${route}: second chat click did nothing`)
+      for (const s of [back, afterOne, afterTwo]) {
+        if (s.main && !s.mainOnTop) problems.push(`${s.label}: toolbar lost always-on-top`)
+        if (s.chat && s.chatOnTop === false) problems.push(`${s.label}: panel lost always-on-top`)
+        if (s.mainMs > 500 || s.chatMs > 500) problems.push(`${s.label}: slow renderer (${s.mainMs} / ${s.chatMs} ms)`)
+      }
+      rounds.push(hidden, back, afterOne, afterTwo)
+    }
+  }
+  return { ok: problems.length === 0, problems, rounds: rounds.map((r) => JSON.stringify(r)) }
+}
+
+/**
+ * Hardware input, as a person does it: the real cursor clicks the eye button, a real Ctrl+B keypress brings the
+ * windows back, then the real cursor clicks the chat button. Each step starts from a known state, so one failure
+ * doesn't cascade, and records which mouse events reached the toolbar page (a dead button shows a release without
+ * a press). Clicks only land while our toolbar is on screen at that spot; the cursor goes back afterwards.
+ * Meant for a machine nobody is using at the time (CI): it moves the real cursor.
+ */
+async function hardwareSmoke(windows: WindowManager): Promise<Record<string, unknown> & { ok: boolean }> {
+  if (process.platform !== "win32") return { ok: true, skipped: "Windows only" }
+  const ps = (script: string) =>
+    new Promise<string>((resolve) => {
+      const p = spawn("powershell.exe", ["-NoProfile", "-Command", script])
+      let out = ""
+      p.stdout.on("data", (d) => (out += d))
+      p.on("close", () => resolve(out.trim()))
+    })
+  const NATIVE = `Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class H { [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y); [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p); [DllImport("user32.dll")] public static extern void mouse_event(int f, int x, int y, int d, int e); [DllImport("user32.dll")] public static extern void keybd_event(byte k, byte s, int f, int e); public struct POINT { public int X; public int Y; } }';`
+  const main = () => windows.get("main")!
+  const where = async (title: string) => {
+    if (!windows.isVisible("main")) return null
+    const win = main()
+    const b = win.getBounds()
+    const scale = screen.getDisplayMatching(b).scaleFactor
+    const r = (await win.webContents.executeJavaScript(
+      `(() => { const b = [...document.querySelectorAll("button")].find((x) => (x.title || "").startsWith(${JSON.stringify(title)})); if (!b) return null; const r = b.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } })()`
+    )) as { x: number; y: number } | null
+    return r ? { x: Math.round((b.x + r.x) * scale), y: Math.round((b.y + r.y) * scale) } : null
+  }
+  const events: string[] = []
+  const click = async (title: string) => {
+    const p = await where(title)
+    if (!p) {
+      events.push(`${title}: toolbar not on screen, not clicked`)
+      return false
+    }
+    await main().webContents.executeJavaScript(
+      `window.__ev = []; if (!window.__hooked) { window.__hooked = true; for (const t of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) addEventListener(t, () => window.__ev.push(t), true) }`
+    )
+    await ps(`${NATIVE} [H]::SetCursorPos(${p.x}, ${p.y}) | Out-Null; Start-Sleep -Milliseconds 150; [H]::mouse_event(2, 0, 0, 0, 0); Start-Sleep -Milliseconds 80; [H]::mouse_event(4, 0, 0, 0, 0)`)
+    await sleep(200)
+    events.push(`${title}: toolbar page got [${((await main().webContents.executeJavaScript("window.__ev")) as string[]).join(", ")}]`)
+    return true
+  }
+  const ctrlB = () => ps(`${NATIVE} [H]::keybd_event(0x11, 0, 0, 0); Start-Sleep -Milliseconds 40; [H]::keybd_event(0x42, 0, 0, 0); Start-Sleep -Milliseconds 60; [H]::keybd_event(0x42, 0, 2, 0); [H]::keybd_event(0x11, 0, 2, 0)`)
+  const saved = await ps(`${NATIVE} $p = New-Object H+POINT; [H]::GetCursorPos([ref]$p) | Out-Null; "$($p.X) $($p.Y)"`)
+  const steps: string[] = []
+  const problems: string[] = []
+  const check = (label: string, ok: boolean) => {
+    steps.push(`${ok ? "ok  " : "FAIL"} ${label}`)
+    if (!ok) problems.push(label)
+  }
+  /** Toolbar showing, panel closed, whatever happened before. */
+  const reset = async () => {
+    if (!windows.isVisible("main")) windows.showAll()
+    if (windows.isVisible("chat")) windows.hide("chat")
+    await sleep(600)
+  }
+  // HW_PLAN picks what happens before the chat button is clicked, to find what breaks the toolbar:
+  //   click-key  the eye button (real click), then a real Ctrl+B: what users do (default)
+  //   click-api  the eye button, then shown again by code      api-key   hidden by code, then a real Ctrl+B
+  //   api-api    hidden and shown by code                      move-key  real Ctrl+Down, Ctrl+Up (moves, no hiding)
+  //   shift-key  a real Shift press, nothing else
+  const plan = process.env.HW_PLAN || "click-key"
+  const realKey = (vk: number) => ps(`${NATIVE} [H]::keybd_event(${vk}, 0, 0, 0); Start-Sleep -Milliseconds 60; [H]::keybd_event(${vk}, 0, 2, 0)`)
+  const ctrlKey = (vk: number) => ps(`${NATIVE} [H]::keybd_event(0x11, 0, 0, 0); Start-Sleep -Milliseconds 40; [H]::keybd_event(${vk}, 0, 0, 0); Start-Sleep -Milliseconds 60; [H]::keybd_event(${vk}, 0, 2, 0); [H]::keybd_event(0x11, 0, 2, 0)`)
+  steps.push(`plan: ${plan}`)
+  try {
+    await sleep(800)
+    if (process.env.HW_CONTROL !== "0") {
+      // Control: real clicks on the chat button before anything else happened.
+      await click("Answers and chat")
+      await sleep(1000)
+      check("control: the chat button opens the panel", windows.isVisible("chat"))
+      await click("Answers and chat")
+      await sleep(1000)
+      check("control: the chat button closes the panel", !windows.isVisible("chat"))
+    }
+    for (let round = 1; round <= Number(process.env.HW_ROUNDS || 3); round++) {
+      await reset()
+      if (plan === "move-key") {
+        await ctrlKey(0x28)
+        await sleep(400)
+        await ctrlKey(0x26)
+        await sleep(900)
+      } else if (plan === "shift-key") {
+        await realKey(0x10)
+        await sleep(900)
+      } else {
+        if (plan.startsWith("click")) await click("Hide all windows")
+        else windows.hideAll()
+        await sleep(800)
+        const hidden = !windows.isVisible("main")
+        check(`round ${round}: everything hidden`, hidden)
+        if (!hidden) windows.hideAll()
+        await sleep(300)
+        if (plan.endsWith("key")) await ctrlB()
+        else windows.toggleAll()
+        await sleep(900)
+        const back = windows.isVisible("main")
+        check(`round ${round}: the toolbar is back`, back)
+        if (!back) windows.showAll()
+        await sleep(300)
+      }
+      if (windows.isVisible("chat")) windows.hide("chat")
+      await sleep(400)
+      await click("Answers and chat")
+      await sleep(1000)
+      check(`round ${round}: then the chat button opens the panel`, windows.isVisible("chat"))
+      if (windows.isVisible("chat")) {
+        await click("Answers and chat")
+        await sleep(1000)
+        check(`round ${round}: and closes it again`, !windows.isVisible("chat"))
+      }
+    }
+  } finally {
+    const [x, y] = saved.split(" ").map(Number)
+    if (Number.isFinite(x) && Number.isFinite(y)) await ps(`${NATIVE} [H]::SetCursorPos(${x}, ${y}) | Out-Null`)
+  }
+  return { ok: problems.length === 0, steps, events }
 }
 
 /**

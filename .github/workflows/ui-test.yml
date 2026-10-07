@@ -1,0 +1,49 @@
+name: UI test
+
+# Real mouse and keyboard on a clean Windows desktop nobody else is using: click the toolbar's eye button (hide all),
+# press Ctrl+B (show again), then click the chat button; it must open and close the panel every time.
+# "v1.2.0" runs the same test on the window code that shipped in 1.2.0, where the toolbar stopped responding after
+# hide and unhide; it is expected to fail, which shows the test catches that bug. Actions → UI test → Run workflow,
+# or a push to fix/**.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["fix/**"]
+
+jobs:
+  toolbar:
+    name: Toolbar after hide and Ctrl+B (${{ matrix.code }}, ${{ matrix.plan }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { code: v1.2.0, plan: click-key }
+          - { code: current, plan: click-key }
+          - { code: current, plan: api-api }
+    runs-on: windows-latest
+    continue-on-error: ${{ matrix.code == 'v1.2.0' }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - name: Use the window code of 1.2.0
+        if: matrix.code == 'v1.2.0'
+        run: |
+          git show v1.2.0:app/electron/windows/WindowManager.ts > electron/windows/WindowManager.ts
+          git show v1.2.0:app/electron/windows/config.ts > electron/windows/config.ts
+      - name: Real clicks and Ctrl+B
+        env:
+          HW_ROUNDS: "3"
+          HW_PLAN: ${{ matrix.plan }}
+        run: node scripts/smoke.mjs hardware

@@ -114,7 +114,7 @@ export class WindowManager extends EventEmitter {
     })
     win.on("moved", () => this.layoutChildren())
     win.on("resized", () => this.layoutChildren())
-    win.once("ready-to-show", () => win.show())
+    win.once("ready-to-show", () => showWindow(win, "main"))
     return win
   }
 
@@ -221,7 +221,10 @@ export class WindowManager extends EventEmitter {
     const visible = KINDS.filter((k) => this.isVisible(k))
     for (const k of visible) this.get(k)?.hide()
     return () => {
-      for (const k of visible) this.get(k)?.show()
+      for (const k of visible) {
+        const win = this.get(k)
+        if (win) showWindow(win, k)
+      }
     }
   }
 
@@ -311,8 +314,7 @@ export class WindowManager extends EventEmitter {
       const pos = this.positionFor(kind)
       win.setPosition(pos.x, pos.y)
     }
-    win.show()
-    if (WINDOW_SPECS[kind].focusable) win.focus()
+    showWindow(win, kind)
     if (kind !== "main") this.layoutChildren()
     this.emitState()
   }
@@ -370,6 +372,19 @@ export class WindowManager extends EventEmitter {
 
   private emitState(): void {
     this.emit("state", this.state())
+  }
+}
+
+/**
+ * Show a window the way its kind expects. The toolbar appears without being activated, so Ctrl+B or Ctrl+Space never
+ * take keyboard focus from the meeting app (Electron's show() activates the window); a focusable panel takes focus.
+ */
+function showWindow(win: BrowserWindow, kind: WindowKind): void {
+  if (kind !== "main" && WINDOW_SPECS[kind].focusable) {
+    win.show()
+    win.focus()
+  } else {
+    win.showInactive()
   }
 }
 

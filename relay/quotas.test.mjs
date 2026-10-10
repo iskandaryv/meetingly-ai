@@ -77,3 +77,28 @@ test("per-account rate limit is its own sliding minute, sized by the plan", () =
   advance(61_000)
   assert.equal(q.allowKey("u:1", 2), true)
 })
+
+test("limit refusals are counted per caller and go out with the day's snapshot (not the per-network totals)", () => {
+  const { q } = make()
+  q.add("u:1", "answers")
+  q.noteLimit("u:1", "answers_limit")
+  q.noteLimit("u:1", "answers_limit")
+  q.add("ipa:1.2.3.4", "answers")
+  const snap = q.snapshot()
+  assert.deepEqual(Object.keys(snap.keys), ["u:1"])
+  assert.equal(snap.keys["u:1"].answers, 1)
+  assert.deepEqual(snap.keys["u:1"].limits, { answers_limit: 2 })
+  assert.equal(q.used("u:1").answers, 1) // limits don't leak into the counters the app sees
+})
+
+test("a new day hands the finished one over before dropping it", () => {
+  let t = Date.UTC(2026, 9, 10, 23, 59)
+  const handed = []
+  const q = new Quotas({ file: null, requestsPerMinutePerIp: 3, now: () => t, onRollover: (day, keys) => handed.push([day, keys]) })
+  q.add("u:1", "answers", 4)
+  q.add("ipa:9.9.9.9", "answers")
+  t += 120_000
+  q.add("u:1", "answers")
+  assert.deepEqual(handed, [["2026-10-10", { "u:1": { answers: 4 } }]])
+  assert.equal(q.used("u:1").answers, 1)
+})

@@ -54,9 +54,30 @@ const VERSION = JSON.parse(fs.readFileSync(new URL("./package.json", import.meta
 
 const quotas = new Quotas({
   file: env.USAGE_FILE ?? "/var/lib/meetingly-relay/usage.json",
-  requestsPerMinutePerIp: Number(env.RPM_PER_IP ?? 60)
+  requestsPerMinutePerIp: Number(env.RPM_PER_IP ?? 60),
+  onRollover: (day, keys) => void pushUsage({ day, keys })
 })
 const accounts = new Accounts()
+
+// The day's counters go to the account service every few minutes (and the finished day at midnight), where the
+// owner's admin panel keeps the history. INTERNAL_TOKEN must match /etc/meetingly-cloud.env; without it, nothing is sent.
+const ACCOUNT_URL = (env.ACCOUNT_URL ?? "http://127.0.0.1:8091").replace(/\/+$/, "")
+const INTERNAL_TOKEN = (env.INTERNAL_TOKEN ?? "").trim()
+async function pushUsage(snapshot) {
+  if (!INTERNAL_TOKEN || !Object.keys(snapshot.keys).length) return
+  try {
+    const res = await fetch(`${ACCOUNT_URL}/api/internal/usage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Internal-Token": INTERNAL_TOKEN },
+      body: JSON.stringify(snapshot),
+      signal: AbortSignal.timeout(10_000)
+    })
+    if (!res.ok) console.warn(`[relay] usage push: HTTP ${res.status}`)
+  } catch (err) {
+    console.warn("[relay] usage push failed:", err.message)
+  }
+}
+setInterval(() => void pushUsage(quotas.snapshot()), 5 * 60_000).unref()
 
 const ALLOWED_LISTEN_PARAMS = new Set([
   "language", "encoding", "sample_rate", "channels", "interim_results", "punctuate",
@@ -99,8 +120,12 @@ server.on("upgrade", async (req, socket, head) => {
     if (who.error) return rejectUpgrade(socket, who.error.status, who.error.message)
     const plan = PLANS[who.plan]
     // Only Unlimited includes cloud transcription; the app transcribes on the computer otherwise.
+    if (!plan.audioMinutes) quotas.noteLimit(who.key, "cloud_transcription_plan")
     if (!plan.audioMinutes) return rejectUpgrade(socket, 403, "Cloud transcription is part of Unlimited. Meetingly uses on-device recognition instead.")
-    if (quotas.used(who.key).audioMinutes >= plan.audioMinutes) return rejectUpgrade(socket, 429, "Daily transcription limit reached")
+    if (quotas.used(who.key).audioMinutes >= plan.audioMinutes) {
+      quotas.noteLimit(who.key, "audio_limit")
+      return rejectUpgrade(socket, 429, "Daily transcription limit reached")
+    }
     wss.handleUpgrade(req, socket, head, (client) => proxyListen(client, url, who))
   } catch (err) {
     console.error("[relay] listen upgrade:", err.message)
@@ -172,13 +197,13 @@ async function chatCompletions(req, res, ip) {
   // Budgets before anything goes upstream.
   const plan = PLANS[who.plan]
   const used = quotas.used(who.key)
-  if (!quotas.allowKey(who.key, plan.rpm)) return limited(res, "rate_limit", "Too many requests at once. Slow down a little.", who.plan)
-  if (used.requests >= REQUESTS_PER_DAY) return limited(res, "daily_limit", "Today's usage limit is reached. It resets at midnight UTC.", who.plan)
-  if (quotas.inFlight(who.key) >= plan.concurrent) return limited(res, "busy", "Another request is still running. Try again in a moment.", who.plan)
+  if (!quotas.allowKey(who.key, plan.rpm)) return limited(res, "rate_limit", "Too many requests at once. Slow down a little.", who.plan, {}, who.key)
+  if (used.requests >= REQUESTS_PER_DAY) return limited(res, "daily_limit", "Today's usage limit is reached. It resets at midnight UTC.", who.plan, {}, who.key)
+  if (quotas.inFlight(who.key) >= plan.concurrent) return limited(res, "busy", "Another request is still running. Try again in a moment.", who.plan, {}, who.key)
   const over = checkBudget(who.plan, used, task)
-  if (over) return limited(res, over.code, over.message, who.plan, { limit: over.limit, hours: over.hours })
+  if (over) return limited(res, over.code, over.message, who.plan, { limit: over.limit, hours: over.hours }, who.key)
   if (spec.bucket === "answers" && !PAID.has(who.plan) && quotas.used(`ipa:${ip}`).answers >= IP_ANSWERS_PER_DAY) {
-    return limited(res, "network_limit", "Too many free answers from this network today. It resets at midnight UTC.", who.plan)
+    return limited(res, "network_limit", "Too many free answers from this network today. It resets at midnight UTC.", who.plan, {}, who.key)
   }
 
   // Only a fixed set of fields goes upstream. Reasoning models (gpt-5.x) reject `temperature` and prefer
@@ -309,7 +334,9 @@ function proxyListen(client, url, who) {
 }
 
 /** 429 with a code the app maps to a clear message; never retried by the client SDK. */
-function limited(res, code, message, plan, extra = {}) {
+/** A 429 the app words for the user; refusals of a known caller are counted for the owner's abuse view. */
+function limited(res, code, message, plan, extra = {}, key = null) {
+  if (key) quotas.noteLimit(key, code)
   res.writeHead(429, { "Content-Type": "application/json", "Cache-Control": "no-store", "x-should-retry": "false" })
   res.end(JSON.stringify({ error: { message, code, plan: plan ?? null, resetAt: quotas.resetAt(), ...extra } }))
 }

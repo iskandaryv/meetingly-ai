@@ -9,8 +9,10 @@ const FIELDS = ["requests", "answers", "vision", "listening", "reports", "tokens
  * memory and are flushed to a JSON file once a minute so restarts do not reset the day.
  */
 export class Quotas {
-  constructor({ file, requestsPerMinutePerIp, now = () => Date.now() }) {
+  /** onRollover(day, counters) runs with the finished day's counters just before they are dropped. */
+  constructor({ file, requestsPerMinutePerIp, now = () => Date.now(), onRollover = null }) {
     this.file = file
+    this.onRollover = onRollover
     this.rpm = requestsPerMinutePerIp
     this.now = now
     this.ipHits = new Map() // ip -> timestamps within the last minute
@@ -50,6 +52,20 @@ export class Quotas {
     return Object.fromEntries(FIELDS.map((f) => [f, e?.[f] ?? 0]))
   }
 
+  /** A request refused by a limit (answers_limit, rate_limit, …), for the owner's abuse view. */
+  noteLimit(key, code) {
+    if (!key) return
+    const e = this.entry(key)
+    e.limits = e.limits ?? {}
+    e.limits[code] = (e.limits[code] ?? 0) + 1
+  }
+
+  /** Today's counters for every caller (not the per-network totals), as the account service stores them. */
+  snapshot() {
+    const day = this.dayKey()
+    return { day, keys: Object.fromEntries(Object.entries(this.days[day] ?? {}).filter(([k]) => !k.startsWith("ipa:"))) }
+  }
+
   add(key, field, amount = 1) {
     if (!(amount > 0)) return
     const e = this.entry(key)
@@ -78,7 +94,17 @@ export class Quotas {
 
   entry(key) {
     const day = this.dayKey()
-    if (!this.days[day]) this.days = { [day]: {} } // new day: drop yesterday
+    if (!this.days[day]) {
+      // New day: hand yesterday over, then drop it.
+      for (const [old, keys] of Object.entries(this.days)) {
+        try {
+          this.onRollover?.(old, Object.fromEntries(Object.entries(keys).filter(([k]) => !k.startsWith("ipa:"))))
+        } catch (err) {
+          console.warn("[quotas] rollover:", err.message)
+        }
+      }
+      this.days = { [day]: {} }
+    }
     const bucket = this.days[day]
     if (!bucket[key]) bucket[key] = {}
     return bucket[key]

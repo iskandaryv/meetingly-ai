@@ -87,15 +87,18 @@ Open-source AI-ассистент для живых встреч и интерв
 
 ```mermaid
 flowchart LR
-  A["Microphone + call audio"] --> B["Speech recognition<br/>on your computer"]
-  B --> C["Live transcript<br/>You / Them"]
-  C --> D["Answer on screen"]
-  C --> E["Suggested questions"]
-  D -.-> F["Meetingly relay<br/>(Free, Pro, Unlimited)"]
-  D -.-> G["Your own endpoint<br/>(OpenAI, Ollama…)"]
+  A["Microphone + call audio"] -->|"Local transcription (default)"| B["On-device speech model"]
+  A -->|"Cloud transcription selected (Unlimited)"| H["Meetingly relay → Deepgram"]
+  B --> C["Live transcript"]
+  H --> C
+  C -->|"Hosted answers"| F["Meetingly relay + AI provider"]
+  C -->|"Own-model answers"| G["Your endpoint: local or cloud"]
+  F --> D["Answers, suggestions and reports"]
+  G --> D
+  C -.->|"When account is connected"| S["Account sync"]
 ```
 
-Ваш звук остаётся на вашем компьютере. В AI отправляются только текст расшифровки, ваши вопросы и выбранные вами для анализа скриншоты: через relay Meetingly на тарифах Free, Pro и Unlimited (он хранит ключи провайдера и выбирает модель для каждой задачи) или напрямую в ваш endpoint, если вы используете собственный ключ.
+При выборе локальной транскрибации аудио обрабатывается на вашем компьютере. Облачная транскрибация в Unlimited отправляет аудио через relay в Deepgram. Для ответов ИИ используются текст расшифровки, вопросы и выбранные скриншоты: через наш relay и провайдера либо напрямую через ваш endpoint. Синхронизация подключённого аккаунта работает отдельно.
 
 ## Примечания по установке
 

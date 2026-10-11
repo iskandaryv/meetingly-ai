@@ -87,15 +87,18 @@ A chave fica armazenada no seu computador, criptografada com o chaveiro do siste
 
 ```mermaid
 flowchart LR
-  A["Microphone + call audio"] --> B["Speech recognition<br/>on your computer"]
-  B --> C["Live transcript<br/>You / Them"]
-  C --> D["Answer on screen"]
-  C --> E["Suggested questions"]
-  D -.-> F["Meetingly relay<br/>(Free, Pro, Unlimited)"]
-  D -.-> G["Your own endpoint<br/>(OpenAI, Ollama…)"]
+  A["Microphone + call audio"] -->|"Local transcription (default)"| B["On-device speech model"]
+  A -->|"Cloud transcription selected (Unlimited)"| H["Meetingly relay → Deepgram"]
+  B --> C["Live transcript"]
+  H --> C
+  C -->|"Hosted answers"| F["Meetingly relay + AI provider"]
+  C -->|"Own-model answers"| G["Your endpoint: local or cloud"]
+  F --> D["Answers, suggestions and reports"]
+  G --> D
+  C -.->|"When account is connected"| S["Account sync"]
 ```
 
-Seu áudio fica no seu computador. Apenas o texto da transcrição, suas perguntas e as capturas de tela que você escolher analisar vão para a AI: pelo relay do Meetingly nos planos Free, Pro e Unlimited (ele guarda as chaves do provedor e escolhe o modelo para cada tarefa), ou direto para seu próprio endpoint quando você usa sua própria chave.
+Com a transcrição local, o áudio é processado no computador. A transcrição na nuvem do Unlimited envia o áudio ao Deepgram pelo relay. As respostas de IA usam o texto relevante, as perguntas e as capturas solicitadas: pelo relay e provedor hospedados ou diretamente pelo seu endpoint. A sincronização de uma conta conectada é independente.
 
 ## Notas de instalação
 

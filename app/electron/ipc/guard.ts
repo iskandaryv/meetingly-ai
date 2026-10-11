@@ -13,5 +13,11 @@ const EDITABLE = new Set([
 /** Account identity and credentials can only change through their dedicated main-process flows. */
 export function rendererSettingsPatch(input: unknown): Partial<Settings> {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Invalid settings update")
-  return Object.fromEntries(Object.entries(input).filter(([key]) => EDITABLE.has(key))) as Partial<Settings>
+  const entries = Object.entries(input).filter(([key]) => EDITABLE.has(key))
+  for (const [key, value] of entries) {
+    if (["autoLaunch", "stealth", "suggestions"].includes(key) && typeof value !== "boolean") {
+      throw new Error(`Invalid ${key}: expected a boolean`)
+    }
+  }
+  return Object.fromEntries(entries) as Partial<Settings>
 }

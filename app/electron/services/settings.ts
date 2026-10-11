@@ -97,6 +97,11 @@ export class SettingsStore extends EventEmitter {
   private load(): Settings {
     try {
       if (fs.existsSync(this.file)) {
+        if (process.platform !== "win32") {
+          // Upgrade permissions even when a valid existing device id means no write is needed.
+          try { fs.chmodSync(this.file, 0o600); fs.chmodSync(path.dirname(this.file), 0o700) }
+          catch { console.warn("[settings] could not tighten existing settings permissions") }
+        }
         const raw = JSON.parse(fs.readFileSync(this.file, "utf8")) as Partial<Settings> & { __v?: number }
         // v2: "microphone" used to be the silent default; nobody chose it. Move to mic + system.
         if ((raw.__v ?? 1) < SETTINGS_VERSION && raw.audioSource === "microphone") raw.audioSource = "both"
@@ -155,6 +160,8 @@ export function normalize(s: Settings): Settings {
     outputLanguage: LANGUAGES.some((l) => l.code === s.outputLanguage) ? s.outputLanguage : "en",
     audioLanguage: LANGUAGES.some((l) => l.code === s.audioLanguage) ? s.audioLanguage : "en",
     transcriptionEngine: s.transcriptionEngine === "cloud" ? "cloud" : "local",
-    suggestions: s.suggestions !== false
+    suggestions: s.suggestions !== false,
+    autoLaunch: s.autoLaunch === true,
+    stealth: s.stealth !== false
   }
 }

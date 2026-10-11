@@ -87,15 +87,18 @@
 
 ```mermaid
 flowchart LR
-  A["Microphone + call audio"] --> B["Speech recognition<br/>on your computer"]
-  B --> C["Live transcript<br/>You / Them"]
-  C --> D["Answer on screen"]
-  C --> E["Suggested questions"]
-  D -.-> F["Meetingly relay<br/>(Free, Pro, Unlimited)"]
-  D -.-> G["Your own endpoint<br/>(OpenAI, Ollama…)"]
+  A["Microphone + call audio"] -->|"Local transcription (default)"| B["On-device speech model"]
+  A -->|"Cloud transcription selected (Unlimited)"| H["Meetingly relay → Deepgram"]
+  B --> C["Live transcript"]
+  H --> C
+  C -->|"Hosted answers"| F["Meetingly relay + AI provider"]
+  C -->|"Own-model answers"| G["Your endpoint: local or cloud"]
+  F --> D["Answers, suggestions and reports"]
+  G --> D
+  C -.->|"When account is connected"| S["Account sync"]
 ```
 
-音声はあなたのコンピューター上に残ります。AI に送信されるのは、文字起こしテキスト、あなたの質問、分析対象として選んだスクリーンショットだけです。Free、Pro、Unlimited プランでは Meetingly のリレー経由（プロバイダーキーを保持し、タスクごとにモデルを選択します）、自分のキーを使う場合は自分のエンドポイントへ直接送信されます。
+ローカル文字起こしを選ぶと、音声はコンピューター上で処理されます。Unlimited のクラウド文字起こしを選ぶと、音声はリレー経由で Deepgram に送信されます。AI回答には関連する文字起こし、質問、要求したスクリーンショットが使われ、ホスト型リレーとプロバイダー、または自分のエンドポイントで処理されます。接続したアカウントの同期は別のデータ経路です。
 
 ## インストール時の注意
 

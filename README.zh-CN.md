@@ -87,15 +87,18 @@
 
 ```mermaid
 flowchart LR
-  A["Microphone + call audio"] --> B["Speech recognition<br/>on your computer"]
-  B --> C["Live transcript<br/>You / Them"]
-  C --> D["Answer on screen"]
-  C --> E["Suggested questions"]
-  D -.-> F["Meetingly relay<br/>(Free, Pro, Unlimited)"]
-  D -.-> G["Your own endpoint<br/>(OpenAI, Ollama…)"]
+  A["Microphone + call audio"] -->|"Local transcription (default)"| B["On-device speech model"]
+  A -->|"Cloud transcription selected (Unlimited)"| H["Meetingly relay → Deepgram"]
+  B --> C["Live transcript"]
+  H --> C
+  C -->|"Hosted answers"| F["Meetingly relay + AI provider"]
+  C -->|"Own-model answers"| G["Your endpoint: local or cloud"]
+  F --> D["Answers, suggestions and reports"]
+  G --> D
+  C -.->|"When account is connected"| S["Account sync"]
 ```
 
-你的音频会留在你的电脑上。只有转录文本、你的问题以及你选择分析的截图会发送给 AI：在 Free、Pro 和 Unlimited 计划中通过 Meetingly 的中继（它保存提供商密钥，并为每个任务选择模型），或在使用你自己的密钥时直接发送到你自己的端点。
+选择本地转写时，音频在你的电脑上处理。选择 Unlimited 的云端转写时，音频会通过中继发送至 Deepgram。AI 回答使用相关转录文本、问题和你请求分析的截图，通过托管中继和模型提供商处理，或直接发送至你自己的端点。连接账户后的同步是独立的数据路径。
 
 ## 安装说明
 

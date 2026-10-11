@@ -17,4 +17,10 @@ describe("IPC boundaries", () => {
   it("rejects malformed patch containers", () => {
     for (const input of [null, false, "text", []]) expect(() => rendererSettingsPatch(input)).toThrow()
   })
+  it("rejects non-boolean native preferences before they can be saved", () => {
+    for (const key of ["autoLaunch", "stealth", "suggestions"]) {
+      expect(() => rendererSettingsPatch({ [key]: "yes" })).toThrow("expected a boolean")
+    }
+    expect(rendererSettingsPatch({ autoLaunch: false })).toEqual({ autoLaunch: false })
+  })
 })

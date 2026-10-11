@@ -57,7 +57,7 @@ const VERSION = JSON.parse(fs.readFileSync(new URL("./package.json", import.meta
 const quotas = new Quotas({
   file: env.USAGE_FILE ?? "/var/lib/meetingly-relay/usage.json",
   requestsPerMinutePerIp: Number(env.RPM_PER_IP ?? 60),
-  onRollover: (day, keys) => void pushUsage({ day, keys })
+  onRollover: env.INTERNAL_TOKEN?.trim() ? (day, keys) => pushUsage({ day, keys }) : null
 })
 const accounts = new Accounts({ baseUrl: (env.ACCOUNT_URL ?? "http://127.0.0.1:8091").replace(/\/+$/, "") })
 
@@ -66,7 +66,8 @@ const accounts = new Accounts({ baseUrl: (env.ACCOUNT_URL ?? "http://127.0.0.1:8
 const ACCOUNT_URL = (env.ACCOUNT_URL ?? "http://127.0.0.1:8091").replace(/\/+$/, "")
 const INTERNAL_TOKEN = (env.INTERNAL_TOKEN ?? "").trim()
 async function pushUsage(snapshot) {
-  if (!INTERNAL_TOKEN || !Object.keys(snapshot.keys).length) return
+  if (!Object.keys(snapshot.keys).length) return true
+  if (!INTERNAL_TOKEN) return false
   try {
     const res = await fetch(`${ACCOUNT_URL}/api/internal/usage`, {
       method: "POST",
@@ -75,8 +76,11 @@ async function pushUsage(snapshot) {
       signal: AbortSignal.timeout(10_000)
     })
     if (!res.ok) console.warn(`[relay] usage push: HTTP ${res.status}`)
+    await res.body?.cancel().catch(() => {})
+    return res.ok
   } catch (err) {
     console.warn("[relay] usage push failed:", err.message)
+    return false
   }
 }
 setInterval(() => void pushUsage(quotas.snapshot()), 5 * 60_000).unref()
@@ -129,7 +133,10 @@ server.on("upgrade", async (req, socket, head) => {
       quotas.noteLimit(who.key, "audio_limit")
       return rejectUpgrade(socket, 429, "Daily transcription limit reached")
     }
-    if ((activeListeners.get(who.key) ?? 0) >= plan.concurrent) return rejectUpgrade(socket, 429, "Too many transcription sessions")
+    if ((activeListeners.get(who.key) ?? 0) >= plan.concurrent) {
+      quotas.noteLimit(who.key, "transcription_concurrency")
+      return rejectUpgrade(socket, 429, "Too many transcription sessions")
+    }
     activeListeners.set(who.key, (activeListeners.get(who.key) ?? 0) + 1)
     let released = false
     const release = () => {

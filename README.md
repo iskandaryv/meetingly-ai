@@ -91,15 +91,18 @@ Version 1.2.3 requires a secure OS keychain before saving an API key. Existing p
 
 ```mermaid
 flowchart LR
-  A["Microphone + call audio"] --> B["Speech recognition<br/>on your computer"]
-  B --> C["Live transcript<br/>You / Them"]
-  C --> D["Answer on screen"]
-  C --> E["Suggested questions"]
-  D -.-> F["Meetingly relay<br/>(Free, Pro, Unlimited)"]
-  D -.-> G["Your own endpoint<br/>(OpenAI, Ollama…)"]
+  A["Microphone + call audio"] -->|"Local transcription (default)"| B["On-device speech model"]
+  A -->|"Cloud transcription selected (Unlimited)"| H["Meetingly relay → Deepgram"]
+  B --> C["Live transcript"]
+  H --> C
+  C -->|"Hosted answers"| F["Meetingly relay + AI provider"]
+  C -->|"Own-model answers"| G["Your endpoint: local or cloud"]
+  F --> D["Answers, suggestions and reports"]
+  G --> D
+  C -.->|"When account is connected"| S["Account sync"]
 ```
 
-Your audio stays on your computer. Only the transcript text, your questions and the screenshots you choose to analyze go to the AI: through Meetingly's relay on the Free, Pro and Unlimited plans (it holds the provider keys and picks the model for each task), or straight to your own endpoint when you use your own key.
+Audio is processed on your computer when local transcription is selected. Choosing cloud transcription on Unlimited sends audio through the relay to Deepgram. AI answers use the relevant transcript text, questions and requested screenshots: through the hosted relay/provider, or directly through your own endpoint. Connected-account synchronization is a separate data path.
 
 ## Install notes
 

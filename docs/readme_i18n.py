@@ -29,7 +29,9 @@ ROW = '<p align="center"><!-- languages -->'
 KEEP_NAMES = (
     "Meetingly, Pro, Unlimited, GitHub, OpenAI, OpenRouter, Ollama, LM Studio, vLLM, LiteLLM, Cluely, Final Round AI, "
     "Parakeet AI, NVIDIA Nemotron, Electron, React, Vite, TypeScript, Tailwind, Node, Apache-2.0, AppImage, .deb, "
-    "SmartScreen, Windows, macOS, Linux, Debian, Ubuntu, Intel, Apple Silicon, AI Prime Tech, Claude, GPT, SBP, Stripe"
+    "SmartScreen, Windows, macOS, Linux, Debian, Ubuntu, Intel, Apple Silicon, AI Prime Tech, Claude, GPT, SBP, Stripe, "
+    "Pluely, Interview Coder, LockedIn AI, Codex, Claude Code, Codex CLI, Zoom, Google Meet, Microsoft Teams, Slack, "
+    "Discord, Webex, LeetCode, HackerRank, CoderPad, Codility, PulseAudio, Deepgram, Instructions"
 )
 
 

@@ -1,12 +1,14 @@
+<p align="center"><b>Sponsored by <a href="https://aiprimetech.io">AI Prime Tech</a></b>: 低価格の Claude API と Codex API を利用できる AI API ゲートウェイ。Claude Code、Codex CLI、GPT モデルを 1 つのキーで使えます。</p>
+
 <div align="center">
 
 <img src="docs/logo.png" width="84" alt="Meetingly logo" />
 
-# Meetingly
+# Meetingly: オープンソースの AI 面接アシスタント兼ミーティング副操縦士
 
 **相手がまだ質問している間に、答えを。**
 
-ライブ会議や面接向けのオープンソース AI アシスタントです。通話を聞き取り、自分のコンピューター上で文字起こしし、質問された瞬間に画面へ答えを表示します。アカウントがあれば無料で使えるほか、自分の OpenAI、OpenRouter、Ollama キーも使えます。Cluely のオープンソース代替です。
+Meetingly は、Windows、macOS、Linux で使える、就職面接とライブ会議向けの無料オープンソース AI アシスタントです。Zoom、Google Meet、Microsoft Teams などの通話を聞き取り、自分のコンピューター上で文字起こしし、質問された瞬間に画面へ回答を表示します。無料プラン（1 日 50 回回答、カード不要）を使うか、自分の OpenAI、OpenRouter、Ollama キーを持ち込めます。Cluely、Interview Coder、Final Round AI、LockedIn AI、Parakeet AI の無料代替です。
 
 <p align="center"><!-- languages --><a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.pt-BR.md">Português</a> · <b>日本語</b> · <a href="README.ko.md">한국어</a></p>
 
@@ -28,17 +30,30 @@
 
 </div>
 
+## 実用ガイド
+
+[はじめに](https://meetinglyai.com/blog/ai-meeting-assistant-without-bot/) · [ローカルとクラウドのデータフロー](https://meetinglyai.com/blog/local-vs-cloud-transcription/) · [Ollama のセットアップ](https://meetinglyai.com/blog/meetingly-ollama-setup/) · [議事録テンプレート](https://meetinglyai.com/blog/meeting-notes-template/)
+
 ## 機能
 
 - **本物の答えを、瞬時に。** 相手が何かを質問すると、すぐに答えが表示されます。口に出せる太字の1行と、広げるための要点がいくつか。コーチングでも、「…に触れるとよい」といった提案でもありません。
 - **質問の提案。** サイド列が会話を追い、ワンクリックで使える質問を提示します。たった今聞かれた質問、出てきた用語、次に来そうな質問です。
-- **コンピューター上で音声認識。** 標準では NVIDIA Nemotron が28言語をローカルで文字起こしします。Unlimited で任意のクラウド文字起こしを選ぶと、音声は Deepgram に送信されます。
+- **自分のコンピューター上で音声認識。** デフォルトでは NVIDIA Nemotron が 28 言語をローカルで文字起こしします。Unlimited では、音声を Deepgram に送る任意のクラウド文字起こしも利用できます。
 - **自分と相手を分けて表示。** 自分のマイクと通話音声を別々に文字起こしするので、チャットのように読めます。
 - **画面分析。** ワンクリックで画面上の内容（コーディング課題、スライド、質問）を読み取り、回答します。
-- **画面共有時のコンテンツ保護。** Windows と macOS のOS保護を利用します。一部のキャプチャ方式ではウィンドウが映る場合があり、Linux では同じ保護を利用できません。
+- **画面共有コンテンツの保護。** Windows と macOS では OS の保護機能を使います。一部のキャプチャ方法ではウィンドウが含まれる場合があります。Linux には同等の保護はありません。
 - **会議レポート。** 各会議の終了時に、要約、決定事項、アクション項目、フォローアップを作成します。
 - **自分の API キーを使うか、こちらのキーは使わないか。** 無料プランを使うか、Meetingly を OpenAI、OpenRouter、ローカルの Ollama モデル、または任意の OpenAI 互換エンドポイントに向けられます。
 - Windows、macOS、Linux で **自動更新** します。通話中には更新しません。
+
+**対応:** Zoom、Google Meet、Microsoft Teams、Slack ハドル、Discord、Webex など、コンピューター上で通話音声を再生するあらゆるアプリ。ボットは会議に参加しません。Meetingly はコンピューターの音声を聞き取ります。
+
+## 主な用途
+
+- **就職面接。** 一度 *Instructions* に貼り付けた履歴書と求人票をもとに、行動面接、技術面接、HR の質問に回答します。
+- **コーディング面接。** 画面分析が画面上の課題（LeetCode、HackerRank、CoderPad、Codility、または共有エディタ）を読み取り、方針とコードで回答します。
+- **営業・顧客対応の通話。** 顧客が話している最中に質問への回答を出し、終了後に次のステップを含むレポートを作成します。
+- **会議・講義。** 28 言語のライブ文字起こし、質問候補、決定事項とアクション項目を含む要約を提供します。
 
 ## 2つの使い方
 
@@ -64,20 +79,21 @@
 | Ollama（完全ローカル） | `http://localhost:11434/v1` | なし |
 | OpenAI 互換のもの（LM Studio、vLLM、LiteLLM…） | その `/v1` アドレス | 必要な場合 |
 
-キーは、OS のキーチェーンで暗号化されて自分のコンピューターに保存されます。画面分析には、画像を受け付けるモデルが必要です。
+バージョン 1.2.3 では、API キーを保存する前に安全な OS キーチェーンが必要です。安全なストレージが利用可能になると既存の平文キーは移行されます。キーチェーンが利用できなくても保存済み設定は消去されません。画面分析には画像を受け付けるモデルが必要です。
 
-## Meetingly vs Cluely vs Final Round AI vs Parakeet AI
+## Meetingly vs Cluely、Pluely、Interview Coder、Final Round AI、LockedIn AI、Parakeet AI
 
-| | **Meetingly** | Cluely | Final Round AI | Parakeet AI |
-|---|---|---|---|---|
-| 料金 | **Free**、Pro $19.99、Unlimited $39.99 / 月 | Free プラン、Pro $19.99 / 月 | Pro は $25 / 月から | €129.90 / 月、またはクレジット |
-| 無料のライブ回答 | **毎日50件** | "Limited AI responses" | なし: ライブセッションには Pro が必要 | 10分セッション1回 |
-| 画面共有に映らない | **全プランで標準オン** | Pro + Undetectability のみ、$149.99 / 月 | Pro | 有料プラン |
-| Linux | **AppImage and .deb** | — | — | Chrome のみ |
-| オープンソース | **Apache-2.0** | — | — | — |
-| 自分の API キーを使用 | **OpenAI、OpenRouter、Ollama…** | — | — | — |
+| | **Meetingly** | Cluely | Pluely | Interview Coder | Final Round AI | LockedIn AI | Parakeet AI |
+|---|---|---|---|---|---|---|---|
+| 価格 | **Free**, Pro $19.99, Unlimited $39.99 / 月 | 無料プラン、Pro $19.99 / 月 | 自分のキーで無料、Pro は $15 / 月から、買い切り $120 | $299 / 月または買い切り $799 | Pro は $25 / 月から | $54.99 / 月、または 3 か月ごとの請求で $39.99 / 月 | €129.90 / 月、またはクレジット |
+| 自分のキーなしでの無料 AI 回答 | **毎日 50 回** | "Limited AI responses" | — | なし: AI にはサブスクリプションが必要 | なし: ライブセッションには Pro が必要 | — | 10 分セッション 1 回 |
+| 画面共有から非表示 | **全プラン。OS とキャプチャ方法の制限あり** | Pro + Undetectability のみ、$149.99 / 月 | 全プラン | 全プラン | Pro | — | 有料プラン |
+| Linux | **AppImage and .deb** | — | .deb | — | — | — | Chrome のみ |
+| オープンソース | **Apache-2.0** | — | GPL-3.0 | — | — | — | — |
+| 自分の API キーを使用 | **OpenAI, OpenRouter, Ollama…** | — | はい | — | — | — | — |
+| 自分のコンピューター上で音声認識 | **はい、28 言語** | — | — | — | — | — | — |
 
-<sub>各製品の公式サイト（<a href="https://cluely.com/pricing">cluely.com/pricing</a>、<a href="https://www.finalroundai.com/pricing">finalroundai.com/pricing</a>、<a href="https://www.parakeet-ai.com/pricing">parakeet-ai.com/pricing</a>）より、2026年10月5日。— はそこに記載がないことを意味します。</sub>
+<sub>各製品の公式サイト（<a href="https://cluely.com/pricing">cluely.com/pricing</a>, <a href="https://pluely.com/pricing">pluely.com/pricing</a>, <a href="https://www.interviewcoder.co">interviewcoder.co</a>, <a href="https://www.finalroundai.com/pricing">finalroundai.com/pricing</a>, <a href="https://www.lockedinai.com/pricing">lockedinai.com/pricing</a>, <a href="https://www.parakeet-ai.com/pricing">parakeet-ai.com/pricing</a>）より、2026 年 10 月 5〜11 日。— は記載がないことを意味します。</sub>
 
 <div align="center">
 <img src="docs/transcript.jpg" width="720" alt="Live transcript with You and Them separated, and suggested questions" />
@@ -98,7 +114,7 @@ flowchart LR
   C -.->|"When account is connected"| S["Account sync"]
 ```
 
-ローカル文字起こしを選ぶと、音声はコンピューター上で処理されます。Unlimited のクラウド文字起こしを選ぶと、音声はリレー経由で Deepgram に送信されます。AI回答には関連する文字起こし、質問、要求したスクリーンショットが使われ、ホスト型リレーとプロバイダー、または自分のエンドポイントで処理されます。接続したアカウントの同期は別のデータ経路です。
+ローカル文字起こしを選択した場合、音声は自分のコンピューター上で処理されます。Unlimited でクラウド文字起こしを選ぶと、音声はリレー経由で Deepgram に送られます。AI 回答は、関連する文字起こしテキスト、質問、要求されたスクリーンショットを使用します。ホストされたリレー/プロバイダー経由、または自分のエンドポイントへ直接送信されます。連携アカウントの同期は別のデータ経路です。
 
 ## インストール時の注意
 
@@ -131,13 +147,49 @@ relay/    the small Node service behind the Free, Pro and Unlimited plans (holds
 docs/     images for this page
 ```
 
+## FAQ
+
+### Meetingly は無料ですか？
+
+はい。無料プランでは、カード不要で 1 台のコンピューターにつき 1 日 50 回の AI 回答を利用できます。自分の API キーを使う場合、Meetingly 側の制限は一切ありません。コードは Apache-2.0 のもとでオープンソースです。
+
+### Meetingly は Cluely の代替ですか？
+
+はい。同じこと（通話中にオーバーレイでライブ回答）を行い、オープンソースで、Linux でも動作し、無料プランでも画面共有から非表示にでき、自分の API キーやローカルモデルで使えます。
+
+### Zoom、Google Meet、Microsoft Teams で動作しますか？
+
+はい。他の通話アプリでも動作します。Meetingly はコンピューターの音声をキャプチャするため（Windows ではループバック、macOS 13 以降ではオーディオタップ、Linux では PulseAudio モニターデバイス）、会議に何も参加せず、相手側にボットは見えません。
+
+### 画面共有から非表示になりますか？検出不能ですか？
+
+Windows と macOS では、ウィンドウは OS の画面キャプチャ保護を使用するため、通常は画面共有や録画に含まれません。一部のキャプチャ方法では含まれる場合があり、Linux にはそのような保護はありません。また、Meetingly は監督ソフトウェアを回避する目的で作られていません。どんなツールも、正直に検出不能を約束することはできません。
+
+### コーディング面接に役立ちますか？
+
+はい。画面分析は押したときだけスクリーンショットを撮り、課題（LeetCode、HackerRank、CoderPad、Codility、または任意のエディタ）を読み取り、方針とコードで回答します。自分のキーを使う場合は、画像を受け付けるモデルを選んでください。
+
+### 完全にオフラインで動作しますか？
+
+音声認識はすでに自分のコンピューター上で動作します。NVIDIA Nemotron を一度ダウンロードします（約 560 MB）。回答先をローカルの Ollama モデルにすれば、何もコンピューターの外に出ません。
+
+### どの言語に対応していますか？
+
+文字起こしと回答の両方で 28 言語に対応しています: 英語、アラビア語、ブルガリア語、中国語、クロアチア語、チェコ語、デンマーク語、オランダ語、エストニア語、フィンランド語、フランス語、ドイツ語、ヒンディー語、ハンガリー語、イタリア語、日本語、韓国語、ノルウェー語、ポーランド語、ポルトガル語、ルーマニア語、ロシア語、スロバキア語、スペイン語、スウェーデン語、トルコ語、ウクライナ語、ベトナム語。
+
+### データはどこに保存されますか？
+
+文字起こしとレポートはあなたのコンピューターに保存されます。無料アカウントでは、Instructions、設定、会議レポートも他のコンピューターに同期されます。音声は保存されません。詳細: [プライバシーポリシー](https://meetinglyai.com/privacy)。
+
+## コントリビュート
+
 コントリビューションを歓迎します。[CONTRIBUTING](.github/CONTRIBUTING.md) を参照してください。セキュリティの問題: [SECURITY](.github/SECURITY.md)。
 
 Meetingly が役に立ったら、⭐ で他の人が見つけやすくなります。
 
-## Powered by AI Prime Tech
+## スポンサー
 
-無料プランは **[AI Prime Tech](https://aiprimetech.io)** 上で動作します。AI Prime Tech は、開発者や企業向けに無制限 API プランを提供する Claude API プロバイダーです。
+Meetinglyの無料プランは、Claude、Codex、GPTモデル向けのAI APIゲートウェイである**[AI Prime Tech](https://aiprimetech.io)**上で動作します。1つのキーで安価にClaude APIとCodex APIへアクセスでき、プリペイドまたは時間制プランを選べ、Claude CodeとCodex CLIのセットアップガイドも用意されています。
 
 <div align="center">
 <sub>Apache-2.0 ライセンス。</sub>

@@ -1,12 +1,14 @@
+<p align="center"><b>Patrocinado por <a href="https://aiprimetech.io">AI Prime Tech</a></b>: una pasarela de API de AI con acceso barato a la API de Claude y la API de Codex. Una clave para modelos Claude Code, Codex CLI y GPT.</p>
+
 <div align="center">
 
 <img src="docs/logo.png" width="84" alt="Meetingly logo" />
 
-# Meetingly
+# Meetingly: asistente de AI open-source para entrevistas y copiloto de reuniones
 
 **La respuesta, mientras aún están preguntando.**
 
-Un asistente de AI de código abierto para reuniones y entrevistas en vivo. Escucha la llamada, la transcribe en tu propio ordenador y muestra la respuesta en pantalla en cuanto se hace una pregunta. Gratis con una cuenta, o usa tu propia clave de OpenAI, OpenRouter u Ollama. Una alternativa de código abierto a Cluely.
+Meetingly es un asistente de AI gratuito y open-source para entrevistas de trabajo y reuniones en directo en Windows, macOS y Linux. Escucha Zoom, Google Meet, Microsoft Teams o cualquier otra llamada, la transcribe en tu propio ordenador y muestra la respuesta en pantalla en cuanto se hace una pregunta. Usa el plan gratis (50 respuestas al día, sin tarjeta) o trae tu propia clave de OpenAI, OpenRouter u Ollama. Una alternativa gratuita a Cluely, Interview Coder, Final Round AI, LockedIn AI y Parakeet AI.
 
 <p align="center"><!-- languages --><a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <b>Español</b> · <a href="README.pt-BR.md">Português</a> · <a href="README.ja.md">日本語</a> · <a href="README.ko.md">한국어</a></p>
 
@@ -28,17 +30,30 @@ Un asistente de AI de código abierto para reuniones y entrevistas en vivo. Escu
 
 </div>
 
+## Guías prácticas
+
+[Primeros pasos](https://meetinglyai.com/blog/ai-meeting-assistant-without-bot/) · [Flujos de datos locales y en la nube](https://meetinglyai.com/blog/local-vs-cloud-transcription/) · [Configuración de Ollama](https://meetinglyai.com/blog/meetingly-ollama-setup/) · [Plantilla de notas de reunión](https://meetinglyai.com/blog/meeting-notes-template/)
+
 ## Funciones
 
 - **Respuestas reales, al instante.** Cuando la otra parte pregunta algo, la respuesta aparece de inmediato: una línea en negrita que puedes decir y luego algunos puntos clave para ampliar. Sin coaching, sin "podrías mencionar…".
 - **Preguntas sugeridas.** Una columna lateral sigue la conversación y ofrece preguntas con un clic: la pregunta que te acaban de hacer, términos que surgieron, la probable siguiente pregunta.
-- **Reconocimiento de voz local.** NVIDIA Nemotron transcribe en el ordenador en 28 idiomas de forma predeterminada. Unlimited también ofrece transcripción en la nube opcional, que envía audio a Deepgram.
+- **Reconocimiento de voz en tu ordenador.** NVIDIA Nemotron transcribe localmente en 28 idiomas de forma predeterminada. Unlimited también ofrece transcripción opcional en la nube, que envía el audio a Deepgram.
 - **Tú y ellos, separados.** Tu micrófono y el audio de la llamada se transcriben por separado, así que la transcripción se lee como un chat.
 - **Análisis de pantalla.** Un clic lee lo que hay en tu pantalla (una tarea de programación, una diapositiva, una pregunta) y lo responde.
-- **Protección al compartir pantalla.** Usa la protección de Windows y macOS. Algunos métodos de captura pueden mostrar la ventana; Linux no ofrece la misma protección.
+- **Protección del contenido al compartir pantalla.** Usa la protección del sistema operativo en Windows y macOS. Algunos métodos de captura aún pueden incluir la ventana; Linux no ofrece la misma protección.
 - **Informes de reunión.** Cada reunión termina con un resumen, decisiones, tareas y seguimientos.
 - **Tu propia clave de API, o ninguna nuestra.** Usa el plan gratis, o apunta Meetingly a OpenAI, OpenRouter, un modelo local de Ollama o cualquier endpoint compatible con OpenAI.
 - **Se actualiza solo** en Windows, macOS y Linux, nunca en medio de una llamada.
+
+**Funciona con** Zoom, Google Meet, Microsoft Teams, reuniones de Slack, Discord, Webex y cualquier otra app que reproduzca la llamada en tu ordenador. Ningún bot se une a la reunión: Meetingly escucha el audio de tu ordenador.
+
+## Para qué lo usa la gente
+
+- **Entrevistas de trabajo.** Responde preguntas conductuales, técnicas y de RR. HH. a partir de tu CV y la descripción del puesto, que pegas una vez en *Instructions*.
+- **Entrevistas de programación.** El análisis de pantalla lee la tarea en pantalla (LeetCode, HackerRank, CoderPad, Codility o un editor compartido) y responde con un enfoque y código.
+- **Ventas y llamadas con clientes.** La respuesta a la pregunta de un cliente mientras aún está hablando, y después un informe con los siguientes pasos.
+- **Reuniones y clases.** Una transcripción en directo en 28 idiomas, preguntas sugeridas y un resumen con decisiones y tareas.
 
 ## Dos formas de usarlo
 
@@ -64,20 +79,21 @@ Paga con tarjeta, o con SBP o cripto, en la [página de planes](https://account.
 | Ollama (totalmente local) | `http://localhost:11434/v1` | ninguna |
 | Cualquier cosa compatible con OpenAI (LM Studio, vLLM, LiteLLM…) | su dirección `/v1` | si necesita una |
 
-La clave se guarda en tu ordenador, cifrada con el llavero del sistema operativo. El análisis de pantalla necesita un modelo que acepte imágenes.
+La versión 1.2.3 requiere un llavero seguro del sistema operativo antes de guardar una clave de API. Las claves existentes en texto plano se migran cuando hay almacenamiento seguro disponible; un llavero no disponible no borra la configuración guardada. El análisis de pantalla necesita un modelo que acepte imágenes.
 
-## Meetingly vs Cluely vs Final Round AI vs Parakeet AI
+## Meetingly frente a Cluely, Pluely, Interview Coder, Final Round AI, LockedIn AI y Parakeet AI
 
-| | **Meetingly** | Cluely | Final Round AI | Parakeet AI |
-|---|---|---|---|---|
-| Precio | **Free**, Pro $19.99, Unlimited $39.99 / mes | Plan Free, Pro $19.99 / mes | Pro desde $25 / mes | €129.90 / mes, o créditos |
-| Respuestas en vivo gratis | **50 al día, todos los días** | "Limited AI responses" | Ninguna: las sesiones en vivo necesitan Pro | Una sesión de 10 minutos |
-| Oculto al compartir pantalla | **Todos los planes, activado por defecto** | Solo Pro + Undetectability, $149.99 / mes | Pro | Planes de pago |
-| Linux | **AppImage y .deb** | — | — | Solo en Chrome |
-| Código abierto | **Apache-2.0** | — | — | — |
-| Usa tu propia clave de API | **OpenAI, OpenRouter, Ollama…** | — | — | — |
+| | **Meetingly** | Cluely | Pluely | Interview Coder | Final Round AI | LockedIn AI | Parakeet AI |
+|---|---|---|---|---|---|---|---|
+| Precio | **Free**, Pro $19.99, Unlimited $39.99 / mes | Plan gratis, Pro $19.99 / mes | Gratis con tus propias claves, Pro desde $15 / mes, $120 de por vida | $299 / mes o $799 de por vida | Pro desde $25 / mes | $54.99 / mes, o $39.99 / mes facturado cada 3 meses | €129.90 / mes, o créditos |
+| Respuestas de AI gratis sin tu propia clave | **50 al día, todos los días** | "Respuestas de AI limitadas" | — | Ninguna: la AI necesita una suscripción | Ninguna: las sesiones en directo necesitan Pro | — | Una sesión de 10 minutos |
+| Oculto al compartir pantalla | **Todos los planes; se aplican limitaciones del sistema operativo y del método de captura** | Solo Pro + Undetectability, $149.99 / mes | Todos los planes | Todos los planes | Pro | — | Planes de pago |
+| Linux | **AppImage y .deb** | — | .deb | — | — | — | Solo en Chrome |
+| Open source | **Apache-2.0** | — | GPL-3.0 | — | — | — | — |
+| Usa tu propia clave de API | **OpenAI, OpenRouter, Ollama…** | — | Sí | — | — | — | — |
+| Reconocimiento de voz en tu ordenador | **Sí, 28 idiomas** | — | — | — | — | — | — |
 
-<sub>De la web de cada producto (<a href="https://cluely.com/pricing">cluely.com/pricing</a>, <a href="https://www.finalroundai.com/pricing">finalroundai.com/pricing</a>, <a href="https://www.parakeet-ai.com/pricing">parakeet-ai.com/pricing</a>), 5 de octubre de 2026. — significa que no se menciona allí.</sub>
+<sub>De la web de cada producto (<a href="https://cluely.com/pricing">cluely.com/pricing</a>, <a href="https://pluely.com/pricing">pluely.com/pricing</a>, <a href="https://www.interviewcoder.co">interviewcoder.co</a>, <a href="https://www.finalroundai.com/pricing">finalroundai.com/pricing</a>, <a href="https://www.lockedinai.com/pricing">lockedinai.com/pricing</a>, <a href="https://www.parakeet-ai.com/pricing">parakeet-ai.com/pricing</a>), 5–11 de octubre de 2026. — significa que no se menciona allí.</sub>
 
 <div align="center">
 <img src="docs/transcript.jpg" width="720" alt="Live transcript with You and Them separated, and suggested questions" />
@@ -98,7 +114,7 @@ flowchart LR
   C -.->|"When account is connected"| S["Account sync"]
 ```
 
-Con la transcripción local, el audio se procesa en tu ordenador. La transcripción en la nube de Unlimited envía el audio a Deepgram mediante el relay. Las respuestas de IA utilizan el texto pertinente, tus preguntas y las capturas solicitadas: mediante el relay y proveedor alojados, o directamente en tu endpoint. La sincronización de una cuenta conectada es independiente.
+El audio se procesa en tu ordenador cuando se selecciona la transcripción local. Elegir transcripción en la nube en Unlimited envía el audio a Deepgram a través del relé. Las respuestas de AI usan el texto relevante de la transcripción, las preguntas y las capturas de pantalla solicitadas: a través del relé/proveedor alojado, o directamente mediante tu propio endpoint. La sincronización de cuentas conectadas es una ruta de datos separada.
 
 ## Notas de instalación
 
@@ -131,13 +147,49 @@ relay/    the small Node service behind the Free, Pro and Unlimited plans (holds
 docs/     images for this page
 ```
 
+## FAQ
+
+### ¿Meetingly es gratis?
+
+Sí. El plan gratis da 50 respuestas de AI al día sin tarjeta, en un ordenador. Con tu propia clave de API no hay ningún límite de Meetingly. El código es open source bajo Apache-2.0.
+
+### ¿Meetingly es una alternativa a Cluely?
+
+Sí. Hace el mismo trabajo (respuestas en directo en una superposición durante una llamada), y es open source, también funciona en Linux, se oculta al compartir pantalla en el plan gratis y funciona con tu propia clave de API o un modelo local.
+
+### ¿Funciona con Zoom, Google Meet y Microsoft Teams?
+
+Sí, y con cualquier otra app de llamadas. Meetingly captura el audio de tu ordenador (loopback en Windows, una toma de audio en macOS 13 y posteriores, dispositivos de monitor PulseAudio en Linux), así que nada se une a la reunión y la otra parte no ve ningún bot.
+
+### ¿Se oculta al compartir pantalla? ¿Es indetectable?
+
+En Windows y macOS, las ventanas usan la protección de captura de pantalla del sistema operativo, por lo que las pantallas compartidas y las grabaciones normalmente las excluyen. Algunos métodos de captura aún pueden incluirlas, Linux no tiene esa protección y Meetingly no está creado para eludir software de supervisión. Ninguna herramienta puede prometer honestamente ser indetectable.
+
+### ¿Puede ayudar en entrevistas de programación?
+
+Sí. El análisis de pantalla toma una captura solo cuando lo pulsas, lee la tarea (LeetCode, HackerRank, CoderPad, Codility o cualquier editor) y responde con un enfoque y código. Con tu propia clave, elige un modelo que acepte imágenes.
+
+### ¿Puede funcionar totalmente sin conexión?
+
+El reconocimiento de voz ya se ejecuta en tu ordenador: NVIDIA Nemotron, descargado una vez (unos 560 MB). Dirige las respuestas a un modelo local de Ollama y nada sale de tu ordenador.
+
+### ¿Qué idiomas admite?
+
+28, tanto para transcripción como para respuestas: inglés, árabe, búlgaro, chino, croata, checo, danés, neerlandés, estonio, finés, francés, alemán, hindi, húngaro, italiano, japonés, coreano, noruego, polaco, portugués, rumano, ruso, eslovaco, español, sueco, turco, ucraniano y vietnamita.
+
+### ¿Dónde se almacenan mis datos?
+
+Las transcripciones y los informes se guardan en tu ordenador. Con una cuenta gratuita, tus Instructions, ajustes e informes de reuniones también se sincronizan con tus otros ordenadores. El audio no se almacena. Detalles: [política de privacidad](https://meetinglyai.com/privacy).
+
+## Contribuir
+
 Las contribuciones son bienvenidas; consulta [CONTRIBUTING](.github/CONTRIBUTING.md). Problemas de seguridad: [SECURITY](.github/SECURITY.md).
 
 Si Meetingly te ayuda, una ⭐ ayuda a que otras personas lo encuentren.
 
-## Con tecnología de AI Prime Tech
+## Patrocinador
 
-El plan gratuito funciona con **[AI Prime Tech](https://aiprimetech.io)**, el proveedor de la API de Claude con planes de API ilimitados para desarrolladores y empresas.
+El plan gratuito de Meetingly funciona con **[AI Prime Tech](https://aiprimetech.io)**, una pasarela de API de AI para modelos Claude, Codex y GPT: acceso barato a Claude API y Codex API con una sola clave, prepago o con un plan por tiempo, con guías de configuración para Claude Code y Codex CLI.
 
 <div align="center">
 <sub>Licencia Apache-2.0.</sub>

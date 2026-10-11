@@ -1,12 +1,14 @@
+<p align="center"><b>Sponsored by <a href="https://aiprimetech.io">AI Prime Tech</a></b>：一个提供便宜 Claude API 和 Codex API 访问的 AI API 网关。一个密钥即可用于 Claude Code、Codex CLI 和 GPT 模型。</p>
+
 <div align="center">
 
 <img src="docs/logo.png" width="84" alt="Meetingly logo" />
 
-# Meetingly
+# Meetingly：开源 AI 面试助手和会议副驾驶
 
 **他们还在问，答案已经出现。**
 
-一款用于实时会议和面试的开源 AI 助手。它会监听通话，在你的电脑上转写，并在问题被问出的瞬间把答案显示在屏幕上。注册账号即可免费使用，也可以自带 OpenAI、OpenRouter 或 Ollama 密钥。Cluely 的开源替代品。
+Meetingly 是一款免费开源的 AI 助手，适用于 Windows、macOS 和 Linux 上的求职面试与实时会议。它会监听 Zoom、Google Meet、Microsoft Teams 或任何其他通话，在你的电脑上转写，并在问题提出时立即把答案显示在屏幕上。可使用免费计划（每天 50 个答案，无需银行卡），或使用你自己的 OpenAI、OpenRouter 或 Ollama 密钥。它是 Cluely、Interview Coder、Final Round AI、LockedIn AI 和 Parakeet AI 的免费替代品。
 
 <p align="center"><!-- languages --><a href="README.md">English</a> · <b>简体中文</b> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.pt-BR.md">Português</a> · <a href="README.ja.md">日本語</a> · <a href="README.ko.md">한국어</a></p>
 
@@ -28,17 +30,30 @@
 
 </div>
 
+## 实用指南
+
+[快速开始](https://meetinglyai.com/blog/ai-meeting-assistant-without-bot/) · [本地和云端数据流](https://meetinglyai.com/blog/local-vs-cloud-transcription/) · [Ollama 设置](https://meetinglyai.com/blog/meetingly-ollama-setup/) · [会议纪要模板](https://meetinglyai.com/blog/meeting-notes-template/)
+
 ## 功能
 
 - **真正的答案，立即出现。** 对方一提问，答案马上出现：一句可以直接说的加粗回答，再加几个可展开的要点。没有辅导式废话，也没有“你可以提到…”。
 - **问题建议。** 侧边栏会跟随对话并提供一键提问：刚刚被问到的问题、出现过的术语、可能的下一个问题。
-- **在电脑上识别语音。** 默认使用 NVIDIA Nemotron 在本地转写 28 种语言。Unlimited 还提供可选的云端转写，选择后音频会发送至 Deepgram。
+- **在你的电脑上进行语音识别。** NVIDIA Nemotron 默认支持 28 种语言的本地转写。Unlimited 还提供可选的云端转写，会将音频发送到 Deepgram。
 - **你和对方，分开记录。** 你的麦克风和通话音频会分别转写，因此转写稿读起来像聊天记录。
 - **屏幕分析。** 一键读取屏幕内容（编程题、幻灯片、问题）并给出答案。
-- **屏幕共享内容保护。** 使用 Windows 和 macOS 的系统保护功能。某些捕获方式仍可能显示窗口；Linux 不提供相同保护。
+- **屏幕共享内容保护。** 在 Windows 和 macOS 上使用操作系统保护。某些捕获方式仍可能包含该窗口；Linux 不提供同等保护。
 - **会议报告。** 每场会议结束后都会生成摘要、决策、行动项和后续事项。
 - **使用你自己的 API 密钥，或不使用我们的。** 使用免费计划，或将 Meetingly 指向 OpenAI、OpenRouter、本地 Ollama 模型或任何兼容 OpenAI 的端点。
 - 在 Windows、macOS 和 Linux 上**自动更新**，且绝不会在通话过程中更新。
+
+**适用于** Zoom、Google Meet、Microsoft Teams、Slack huddles、Discord、Webex 以及任何在你电脑上播放通话的应用。没有机器人加入会议：Meetingly 会监听你电脑的音频。
+
+## 大家用它做什么
+
+- **求职面试。** 根据你的简历和职位描述回答行为、技术和 HR 问题；你只需将它们粘贴到 *Instructions* 一次。
+- **编程面试。** 屏幕分析会读取屏幕上的题目（LeetCode、HackerRank、CoderPad、Codility 或共享编辑器），并给出思路和代码。
+- **销售和客户通话。** 在客户还在说话时给出问题答案，并在之后生成包含后续步骤的报告。
+- **会议和讲座。** 提供 28 种语言的实时转写、建议问题，以及包含决策和行动项的总结。
 
 ## 两种使用方式
 
@@ -64,20 +79,21 @@
 | Ollama（完全本地） | `http://localhost:11434/v1` | 无 |
 | 任何兼容 OpenAI 的服务（LM Studio、vLLM、LiteLLM…） | 它的 `/v1` 地址 | 如果需要的话 |
 
-密钥存储在你的电脑上，并使用操作系统的钥匙串加密。屏幕分析需要支持图像的模型。
+版本 1.2.3 在保存 API 密钥前需要安全的操作系统钥匙串。安全存储可用时，现有明文密钥会迁移；钥匙串不可用不会清除已保存的设置。屏幕分析需要支持图像的模型。
 
-## Meetingly vs Cluely vs Final Round AI vs Parakeet AI
+## Meetingly 对比 Cluely、Pluely、Interview Coder、Final Round AI、LockedIn AI 和 Parakeet AI
 
-| | **Meetingly** | Cluely | Final Round AI | Parakeet AI |
-|---|---|---|---|---|
-| 价格 | **Free**，Pro $19.99，Unlimited $39.99 / 月 | 免费计划，Pro $19.99 / 月 | Pro 起价 $25 / 月 | €129.90 / 月，或点数 |
-| 免费实时回答 | **每天 50 次，天天可用** | "Limited AI responses" | 无：实时会话需要 Pro | 一次 10 分钟会话 |
-| 屏幕共享中隐藏 | **所有计划，默认开启** | 仅 Pro + Undetectability，$149.99 / 月 | Pro | 付费计划 |
-| Linux | **AppImage and .deb** | — | — | 仅 Chrome |
-| 开源 | **Apache-2.0** | — | — | — |
-| 使用自己的 API 密钥 | **OpenAI, OpenRouter, Ollama…** | — | — | — |
+| | **Meetingly** | Cluely | Pluely | Interview Coder | Final Round AI | LockedIn AI | Parakeet AI |
+|---|---|---|---|---|---|---|---|
+| 价格 | **Free**，Pro $19.99，Unlimited $39.99 / 月 | Free plan，Pro $19.99 / 月 | 使用自有密钥免费，Pro $15 / 月起，$120 终身 | $299 / 月或 $799 终身 | Pro $25 / 月起 | $54.99 / 月，或 $39.99 / 月（每 3 个月计费） | €129.90 / 月，或点数 |
+| 无需自有密钥的免费 AI 答案 | **每天 50 个，每天都有** | "Limited AI responses" | — | 无：AI 需要订阅 | 无：实时会话需要 Pro | — | 一个 10 分钟会话 |
+| 屏幕共享中隐藏 | **所有计划；受操作系统和捕获方式限制** | 仅 Pro + Undetectability，$149.99 / 月 | 所有计划 | 所有计划 | Pro | — | 付费计划 |
+| Linux | **AppImage 和 .deb** | — | .deb | — | — | — | 仅 Chrome |
+| 开源 | **Apache-2.0** | — | GPL-3.0 | — | — | — | — |
+| 使用你自己的 API 密钥 | **OpenAI、OpenRouter、Ollama…** | — | 是 | — | — | — | — |
+| 在你的电脑上进行语音识别 | **是，28 种语言** | — | — | — | — | — | — |
 
-<sub>来自各产品官网（<a href="https://cluely.com/pricing">cluely.com/pricing</a>、<a href="https://www.finalroundai.com/pricing">finalroundai.com/pricing</a>、<a href="https://www.parakeet-ai.com/pricing">parakeet-ai.com/pricing</a>），2026 年 10 月 5 日。— 表示官网未提及。</sub>
+<sub>来自各产品官网（<a href="https://cluely.com/pricing">cluely.com/pricing</a>、<a href="https://pluely.com/pricing">pluely.com/pricing</a>、<a href="https://www.interviewcoder.co">interviewcoder.co</a>、<a href="https://www.finalroundai.com/pricing">finalroundai.com/pricing</a>、<a href="https://www.lockedinai.com/pricing">lockedinai.com/pricing</a>、<a href="https://www.parakeet-ai.com/pricing">parakeet-ai.com/pricing</a>），2026 年 10 月 5–11 日。— 表示该处未提及。</sub>
 
 <div align="center">
 <img src="docs/transcript.jpg" width="720" alt="Live transcript with You and Them separated, and suggested questions" />
@@ -98,7 +114,7 @@ flowchart LR
   C -.->|"When account is connected"| S["Account sync"]
 ```
 
-选择本地转写时，音频在你的电脑上处理。选择 Unlimited 的云端转写时，音频会通过中继发送至 Deepgram。AI 回答使用相关转录文本、问题和你请求分析的截图，通过托管中继和模型提供商处理，或直接发送至你自己的端点。连接账户后的同步是独立的数据路径。
+选择本地转写时，音频会在你的电脑上处理。选择 Unlimited 的云端转写会通过中继将音频发送到 Deepgram。AI 答案会使用相关转写文本、问题和请求的截图：通过托管中继/提供商，或直接通过你自己的端点。已连接账户同步是单独的数据路径。
 
 ## 安装说明
 
@@ -131,13 +147,49 @@ relay/    the small Node service behind the Free, Pro and Unlimited plans (holds
 docs/     images for this page
 ```
 
+## FAQ
+
+### Meetingly 免费吗？
+
+是。免费计划在一台电脑上每天提供 50 个 AI 答案，无需银行卡。使用你自己的 API 密钥时，Meetingly 完全不设限制。代码以 Apache-2.0 开源。
+
+### Meetingly 是 Cluely 的替代品吗？
+
+是。它完成同样的工作（通话时在叠加层实时给出答案），并且开源，也能在 Linux 上运行，免费计划也可在屏幕共享中隐藏，并支持使用你自己的 API 密钥或本地模型。
+
+### 它支持 Zoom、Google Meet 和 Microsoft Teams 吗？
+
+支持，也支持任何其他通话应用。Meetingly 会捕获你电脑的音频（Windows 上的 loopback，macOS 13 及更高版本上的 audio tap，Linux 上的 PulseAudio 监听设备），因此不会有任何东西加入会议，对方也看不到机器人。
+
+### 它会在屏幕共享中隐藏吗？它不可检测吗？
+
+在 Windows 和 macOS 上，窗口使用操作系统的屏幕捕获保护，因此屏幕共享和录制通常不会包含它们。某些捕获方式仍可能包含它们，Linux 没有这种保护，而且 Meetingly 并不是为绕过监考软件而构建的。没有任何工具能诚实地承诺不可检测。
+
+### 它能帮助编程面试吗？
+
+能。屏幕分析只会在你按下时截图，读取题目（LeetCode、HackerRank、CoderPad、Codility 或任何编辑器），并给出思路和代码。使用你自己的密钥时，请选择支持图像的模型。
+
+### 它能完全离线运行吗？
+
+语音识别已经在你的电脑上运行：NVIDIA Nemotron，只需下载一次（约 560 MB）。将答案指向本地 Ollama 模型，就不会有任何内容离开你的电脑。
+
+### 它支持哪些语言？
+
+28 种，转写和答案都支持：英语、阿拉伯语、保加利亚语、中文、克罗地亚语、捷克语、丹麦语、荷兰语、爱沙尼亚语、芬兰语、法语、德语、印地语、匈牙利语、意大利语、日语、韩语、挪威语、波兰语、葡萄牙语、罗马尼亚语、俄语、斯洛伐克语、西班牙语、瑞典语、土耳其语、乌克兰语和越南语。
+
+### 我的数据存储在哪里？
+
+转录和报告会保存在你的电脑上。使用免费账户时，你的 Instructions、设置和会议报告也会同步到你的其他电脑。音频不会被存储。详情：[隐私政策](https://meetinglyai.com/privacy)。
+
+## 贡献
+
 欢迎贡献，参见 [CONTRIBUTING](.github/CONTRIBUTING.md)。安全问题： [SECURITY](.github/SECURITY.md)。
 
 如果 Meetingly 对你有帮助，点一个 ⭐ 可以帮助更多人发现它。
 
-## 由 AI Prime Tech 提供支持
+## 赞助
 
-免费计划运行在 **[AI Prime Tech](https://aiprimetech.io)** 上，这是为开发者和公司提供无限 API 计划的 Claude API 提供商。
+Meetingly 的免费计划运行在 **[AI Prime Tech](https://aiprimetech.io)** 上，这是一个面向 Claude、Codex 和 GPT 模型的 AI API 网关：用一个密钥即可低成本访问 Claude API 和 Codex API，支持预付费或按时长套餐，并提供 Claude Code 和 Codex CLI 的设置指南。
 
 <div align="center">
 <sub>Apache-2.0 许可。</sub>

@@ -32,10 +32,10 @@ Un asistente de AI de código abierto para reuniones y entrevistas en vivo. Escu
 
 - **Respuestas reales, al instante.** Cuando la otra parte pregunta algo, la respuesta aparece de inmediato: una línea en negrita que puedes decir y luego algunos puntos clave para ampliar. Sin coaching, sin "podrías mencionar…".
 - **Preguntas sugeridas.** Una columna lateral sigue la conversación y ofrece preguntas con un clic: la pregunta que te acaban de hacer, términos que surgieron, la probable siguiente pregunta.
-- **Reconocimiento de voz en tu ordenador.** NVIDIA Nemotron se ejecuta localmente en 28 idiomas, así que tu audio nunca sale de tu equipo y no hay coste por minuto.
+- **Reconocimiento de voz local.** NVIDIA Nemotron transcribe en el ordenador en 28 idiomas de forma predeterminada. Unlimited también ofrece transcripción en la nube opcional, que envía audio a Deepgram.
 - **Tú y ellos, separados.** Tu micrófono y el audio de la llamada se transcriben por separado, así que la transcripción se lee como un chat.
 - **Análisis de pantalla.** Un clic lee lo que hay en tu pantalla (una tarea de programación, una diapositiva, una pregunta) y lo responde.
-- **Oculto al compartir pantalla.** Las ventanas se excluyen de las pantallas compartidas y grabaciones en Windows y macOS.
+- **Protección al compartir pantalla.** Usa la protección de Windows y macOS. Algunos métodos de captura pueden mostrar la ventana; Linux no ofrece la misma protección.
 - **Informes de reunión.** Cada reunión termina con un resumen, decisiones, tareas y seguimientos.
 - **Tu propia clave de API, o ninguna nuestra.** Usa el plan gratis, o apunta Meetingly a OpenAI, OpenRouter, un modelo local de Ollama o cualquier endpoint compatible con OpenAI.
 - **Se actualiza solo** en Windows, macOS y Linux, nunca en medio de una llamada.
@@ -47,7 +47,6 @@ Un asistente de AI de código abierto para reuniones y entrevistas en vivo. Escu
 | | Free | Pro | Unlimited |
 |---|---|---|---|
 | Precio | $0 | $19.99 / mes, 7 días gratis | $39.99 / mes |
-| Modelos de AI | Modelos de AI rápidos | Últimos modelos GPT y Claude | Los modelos GPT y Claude más nuevos y potentes, primero |
 | Respuestas | 50 al día | 300 al día | Unlimited (uso razonable) |
 | Análisis de pantalla | 3 al día | 50 al día | 300 al día |
 | Sugerencias en vivo | Unos 30 minutos al día | Unas 4 horas al día | Unas 8 horas al día |

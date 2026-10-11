@@ -28,14 +28,18 @@ An open-source AI assistant for live meetings and interviews. It listens to the 
 
 </div>
 
+## Practical guides
+
+[Get started](https://meetinglyai.com/blog/ai-meeting-assistant-without-bot/) · [Local and cloud data flows](https://meetinglyai.com/blog/local-vs-cloud-transcription/) · [Ollama setup](https://meetinglyai.com/blog/meetingly-ollama-setup/) · [Meeting notes template](https://meetinglyai.com/blog/meeting-notes-template/)
+
 ## Features
 
 - **Real answers, instantly.** When the other side asks something, the answer appears right away: one bold line you can say, then a few catch points to expand on. No coaching, no "you could mention…".
 - **Suggested questions.** A side column follows the conversation and offers one-click questions: the question you were just asked, terms that came up, the likely next question.
-- **Speech recognition on your computer.** NVIDIA Nemotron runs locally in 28 languages, so your audio never leaves your machine and there is no per-minute cost.
+- **Speech recognition on your computer.** NVIDIA Nemotron transcribes locally in 28 languages by default. Unlimited also offers optional cloud transcription, which sends audio to Deepgram.
 - **You and Them, separated.** Your microphone and the call audio are transcribed apart, so the transcript reads like a chat.
 - **Screen analysis.** One click reads what is on your screen (a coding task, a slide, a question) and answers it.
-- **Hidden from screen sharing.** The windows are excluded from screen shares and recordings on Windows and macOS.
+- **Screen-share content protection.** Uses OS protection on Windows and macOS. Some capture methods can still include the window; Linux does not offer the same protection.
 - **Meeting reports.** Every meeting ends with a summary, decisions, action items and follow-ups.
 - **Your own API key, or none of ours.** Use the free plan, or point Meetingly at OpenAI, OpenRouter, a local Ollama model or any OpenAI-compatible endpoint.
 - **Updates itself** on Windows, macOS and Linux, never in the middle of a call.
@@ -47,7 +51,6 @@ An open-source AI assistant for live meetings and interviews. It listens to the 
 | | Free | Pro | Unlimited |
 |---|---|---|---|
 | Price | $0 | $19.99 / month, 7 days free | $39.99 / month |
-| AI models | Fast AI models | Latest GPT and Claude models | The newest, most powerful GPT and Claude models, first |
 | Answers | 50 a day | 300 a day | Unlimited (fair use) |
 | Screen analysis | 3 a day | 50 a day | 300 a day |
 | Live suggestions | About 30 minutes a day | About 4 hours a day | About 8 hours a day |
@@ -65,7 +68,7 @@ Pay by card, or with SBP or crypto, on the [plan page](https://account.meetingly
 | Ollama (fully local) | `http://localhost:11434/v1` | none |
 | Anything OpenAI-compatible (LM Studio, vLLM, LiteLLM…) | its `/v1` address | if it needs one |
 
-The key is stored on your computer, encrypted with the operating system's keychain. Screen analysis needs a model that accepts images.
+Version 1.2.3 requires a secure OS keychain before saving an API key. Existing plaintext keys migrate when secure storage is available; an unavailable keychain does not erase the saved setting. Screen analysis needs a model that accepts images.
 
 ## Meetingly vs Cluely vs Final Round AI vs Parakeet AI
 
@@ -73,7 +76,7 @@ The key is stored on your computer, encrypted with the operating system's keycha
 |---|---|---|---|---|
 | Price | **Free**, Pro $19.99, Unlimited $39.99 / month | Free plan, Pro $19.99 / month | Pro from $25 / month | €129.90 / month, or credits |
 | Free live answers | **50 a day, every day** | "Limited AI responses" | None: live sessions need Pro | One 10-minute session |
-| Hidden from screen sharing | **Every plan, on by default** | Only Pro + Undetectability, $149.99 / month | Pro | Paid plans |
+| Hidden from screen sharing | **Every plan; OS and capture-method limitations apply** | Only Pro + Undetectability, $149.99 / month | Pro | Paid plans |
 | Linux | **AppImage and .deb** | — | — | In Chrome only |
 | Open source | **Apache-2.0** | — | — | — |
 | Use your own API key | **OpenAI, OpenRouter, Ollama…** | — | — | — |

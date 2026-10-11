@@ -97,6 +97,11 @@ export class SettingsStore extends EventEmitter {
   private load(): Settings {
     try {
       if (fs.existsSync(this.file)) {
+        if (process.platform !== "win32") {
+          // Upgrade permissions even when a valid existing device id means no write is needed.
+          try { fs.chmodSync(this.file, 0o600); fs.chmodSync(path.dirname(this.file), 0o700) }
+          catch { console.warn("[settings] could not tighten existing settings permissions") }
+        }
         const raw = JSON.parse(fs.readFileSync(this.file, "utf8")) as Partial<Settings> & { __v?: number }
         // v2: "microphone" used to be the silent default; nobody chose it. Move to mic + system.
         if ((raw.__v ?? 1) < SETTINGS_VERSION && raw.audioSource === "microphone") raw.audioSource = "both"
@@ -110,9 +115,10 @@ export class SettingsStore extends EventEmitter {
 
   private persist(): void {
     try {
-      fs.mkdirSync(path.dirname(this.file), { recursive: true })
+      fs.mkdirSync(path.dirname(this.file), { recursive: true, mode: 0o700 })
       const tmp = `${this.file}.tmp`
-      fs.writeFileSync(tmp, JSON.stringify({ ...this.data, __v: SETTINGS_VERSION }, null, 2))
+      fs.writeFileSync(tmp, JSON.stringify({ ...this.data, __v: SETTINGS_VERSION }, null, 2), { mode: 0o600 })
+      if (process.platform !== "win32") fs.chmodSync(tmp, 0o600)
       fs.renameSync(tmp, this.file)
     } catch (err) {
       console.error("[settings] failed to write settings:", err)
@@ -131,6 +137,7 @@ export function normalize(s: Settings): Settings {
     // A prompt still on an earlier default follows the current one; edited prompts stay as they are.
     LEGACY_DEFAULT_SYSTEM_PROMPTS.some((old) => squash(p.content) === squash(old)) ? { ...p, content: DEFAULT_PROMPT.content } : p
   )
+  if (prompts.length === 0) prompts.push({ ...DEFAULT_PROMPT })
   const activePromptId = prompts.some((p) => p.id === s.activePromptId) ? s.activePromptId : prompts[0].id
   const shortcuts = { ...DEFAULT_SHORTCUTS }
   for (const key of Object.keys(DEFAULT_SHORTCUTS) as ShortcutAction[]) {
@@ -153,6 +160,8 @@ export function normalize(s: Settings): Settings {
     outputLanguage: LANGUAGES.some((l) => l.code === s.outputLanguage) ? s.outputLanguage : "en",
     audioLanguage: LANGUAGES.some((l) => l.code === s.audioLanguage) ? s.audioLanguage : "en",
     transcriptionEngine: s.transcriptionEngine === "cloud" ? "cloud" : "local",
-    suggestions: s.suggestions !== false
+    suggestions: s.suggestions !== false,
+    autoLaunch: s.autoLaunch === true,
+    stealth: s.stealth !== false
   }
 }

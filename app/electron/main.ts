@@ -14,7 +14,8 @@ import { SettingsStore } from "./services/settings"
 import { setLocale } from "../shared/i18n"
 import { SuggestionService } from "./services/suggestions"
 import { PlanService } from "./services/plan"
-import { OwnKeyService, type SecretBox } from "./services/ownKey"
+import { OwnKeyService } from "./services/ownKey"
+import { keychainBox, sealLegacyOwnKey } from "./services/secretBox"
 import { ShortcutManager } from "./shortcuts"
 import { createTray } from "./tray"
 import { WindowManager } from "./windows/WindowManager"
@@ -48,7 +49,7 @@ function bootstrap(): void {
     locale: app.getLocale()
   })
   setLocale(settings.uiLocale())
-  const box = keychainBox()
+  const box = keychainBox(safeStorage)
   const llm = new Llm(settings, undefined, box)
   const meetings = new MeetingStore(path.join(userData, "meetings.json"))
   const reports = new ReportGenerator({ llm, meetings, settings })
@@ -93,6 +94,11 @@ function bootstrap(): void {
   }
 
   app.whenReady().then(() => {
+    try {
+      sealLegacyOwnKey(settings, box)
+    } catch {
+      logger.warn("settings", "The existing API key needs an available OS keychain; the saved setting was retained.")
+    }
     if (process.platform === "darwin") app.dock?.hide()
     installSystemAudioHandler()
     registerIpc({ settings, windows, session, chat, suggestions, meetings, reports, logger, cloud, plan, ownKey })
@@ -156,25 +162,6 @@ function bootstrap(): void {
     shortcuts.unregister()
     session.cancel()
   })
-}
-
-/**
- * The own API key, encrypted with the OS keychain (DPAPI, Keychain, libsecret). Stored values start with "enc:";
- * without a keychain the key is stored as typed, like any other setting.
- */
-function keychainBox(): SecretBox {
-  return {
-    encrypt: (plain) => (safeStorage.isEncryptionAvailable() ? `enc:${safeStorage.encryptString(plain).toString("base64")}` : plain),
-    decrypt: (stored) => {
-      if (!stored.startsWith("enc:")) return stored
-      try {
-        return safeStorage.decryptString(Buffer.from(stored.slice(4), "base64"))
-      } catch {
-        // Copied from another computer or user: the keychain can't open it. Re-entering the key fixes it.
-        return ""
-      }
-    }
-  }
 }
 
 /** Everything already written with console.* lands in the log file too. */

@@ -32,10 +32,10 @@ Um assistente de AI open-source para reuniões e entrevistas ao vivo. Ele ouve a
 
 - **Respostas reais, instantâneas.** Quando a outra pessoa pergunta algo, a resposta aparece na hora: uma linha em negrito que você pode dizer, depois alguns pontos para desenvolver. Sem coaching, sem "você poderia mencionar…".
 - **Perguntas sugeridas.** Uma coluna lateral acompanha a conversa e oferece perguntas com um clique: a pergunta que acabaram de fazer, termos que surgiram, a provável próxima pergunta.
-- **Reconhecimento de fala no seu computador.** NVIDIA Nemotron roda localmente em 28 idiomas, então seu áudio nunca sai da sua máquina e não há custo por minuto.
+- **Reconhecimento de fala local.** Por padrão, NVIDIA Nemotron transcreve no computador em 28 idiomas. Unlimited também oferece transcrição opcional na nuvem, que envia áudio ao Deepgram.
 - **Você e Eles, separados.** Seu microfone e o áudio da chamada são transcritos separadamente, então a transcrição parece um chat.
 - **Análise de tela.** Um clique lê o que está na sua tela (uma tarefa de código, um slide, uma pergunta) e responde.
-- **Oculto no compartilhamento de tela.** As janelas são excluídas de compartilhamentos de tela e gravações no Windows e macOS.
+- **Proteção no compartilhamento de tela.** Usa a proteção do Windows e macOS. Alguns métodos de captura ainda podem mostrar a janela; Linux não oferece a mesma proteção.
 - **Relatórios de reunião.** Toda reunião termina com um resumo, decisões, itens de ação e acompanhamentos.
 - **Sua própria chave de API, ou nenhuma nossa.** Use o plano grátis, ou aponte o Meetingly para OpenAI, OpenRouter, um modelo Ollama local ou qualquer endpoint compatível com OpenAI.
 - **Atualiza sozinho** no Windows, macOS e Linux, nunca no meio de uma chamada.
@@ -47,7 +47,6 @@ Um assistente de AI open-source para reuniões e entrevistas ao vivo. Ele ouve a
 | | Free | Pro | Unlimited |
 |---|---|---|---|
 | Preço | $0 | $19.99 / mês, 7 dias grátis | $39.99 / mês |
-| Modelos de AI | Modelos de AI rápidos | Modelos GPT e Claude mais recentes | Os modelos GPT e Claude mais novos e poderosos, primeiro |
 | Respostas | 50 por dia | 300 por dia | Unlimited (uso justo) |
 | Análise de tela | 3 por dia | 50 por dia | 300 por dia |
 | Sugestões ao vivo | Cerca de 30 minutos por dia | Cerca de 4 horas por dia | Cerca de 8 horas por dia |
@@ -88,15 +87,18 @@ A chave fica armazenada no seu computador, criptografada com o chaveiro do siste
 
 ```mermaid
 flowchart LR
-  A["Microphone + call audio"] --> B["Speech recognition<br/>on your computer"]
-  B --> C["Live transcript<br/>You / Them"]
-  C --> D["Answer on screen"]
-  C --> E["Suggested questions"]
-  D -.-> F["Meetingly relay<br/>(Free, Pro, Unlimited)"]
-  D -.-> G["Your own endpoint<br/>(OpenAI, Ollama…)"]
+  A["Microphone + call audio"] -->|"Local transcription (default)"| B["On-device speech model"]
+  A -->|"Cloud transcription selected (Unlimited)"| H["Meetingly relay → Deepgram"]
+  B --> C["Live transcript"]
+  H --> C
+  C -->|"Hosted answers"| F["Meetingly relay + AI provider"]
+  C -->|"Own-model answers"| G["Your endpoint: local or cloud"]
+  F --> D["Answers, suggestions and reports"]
+  G --> D
+  C -.->|"When account is connected"| S["Account sync"]
 ```
 
-Seu áudio fica no seu computador. Apenas o texto da transcrição, suas perguntas e as capturas de tela que você escolher analisar vão para a AI: pelo relay do Meetingly nos planos Free, Pro e Unlimited (ele guarda as chaves do provedor e escolhe o modelo para cada tarefa), ou direto para seu próprio endpoint quando você usa sua própria chave.
+Com a transcrição local, o áudio é processado no computador. A transcrição na nuvem do Unlimited envia o áudio ao Deepgram pelo relay. As respostas de IA usam o texto relevante, as perguntas e as capturas solicitadas: pelo relay e provedor hospedados ou diretamente pelo seu endpoint. A sincronização de uma conta conectada é independente.
 
 ## Notas de instalação
 

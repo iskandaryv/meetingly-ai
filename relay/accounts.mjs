@@ -6,11 +6,12 @@ import { createHash } from "node:crypto"
  * lookup per account every few minutes, not one per request.
  */
 export class Accounts {
-  constructor({ baseUrl = "http://127.0.0.1:8091", fetch = globalThis.fetch, now = () => Date.now(), ttlMs = 5 * 60_000, errorTtlMs = 30_000, maxEntries = 50_000 } = {}) {
+  constructor({ baseUrl = "http://127.0.0.1:8091", fetch = globalThis.fetch, now = () => Date.now(), ttlMs = 5 * 60_000, staleTtlMs = 5 * 60_000, errorTtlMs = 30_000, maxEntries = 50_000 } = {}) {
     this.baseUrl = baseUrl
     this.fetch = fetch
     this.now = now
     this.ttlMs = ttlMs
+    this.staleTtlMs = staleTtlMs
     this.errorTtlMs = errorTtlMs
     this.maxEntries = maxEntries
     this.cache = new Map() // sha256(token) -> { value, expires }
@@ -30,7 +31,7 @@ export class Accounts {
     try {
       res = await this.fetch(`${this.baseUrl}/api/meetingly/entitlement`, { headers: { Authorization: token }, signal: AbortSignal.timeout(5000) })
     } catch (err) {
-      if (hit) return hit.value // stale beats refusing everyone while the account service restarts
+      if (hit && t <= hit.expires + this.staleTtlMs) return hit.value // bounded grace during account-service restarts
       throw err
     }
     let value
@@ -40,7 +41,7 @@ export class Accounts {
     } else if (res.status === 401 || res.status === 403 || res.status === 404) {
       value = { ok: false }
     } else {
-      if (hit) return hit.value
+      if (hit && t <= hit.expires + this.staleTtlMs) return hit.value
       throw new Error(`account service HTTP ${res.status}`)
     }
     this.remember(key, value, t + (value.ok ? this.ttlMs : this.errorTtlMs))

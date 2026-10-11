@@ -55,3 +55,8 @@ npm test
 Point a development build at it with `IGPT_RELAY_URL=http://127.0.0.1:8090` (the app token must match
 `app/shared/relay.ts`). In production it runs as a systemd service (`meetingly-relay.service`) behind nginx
 (`nginx-location.conf`, `nginx-upgrade-map.conf`); `deploy.sh <ssh-host>` copies and restarts it.
+
+Install `nginx-safe-log.conf` in the nginx HTTP context before loading the server configuration, for example
+as `/etc/nginx/conf.d/00-meetingly-safe-log.conf`. The location file uses its `meetingly_relay_safe` format,
+which omits query strings and referrers because WebSocket connection URLs can contain account credentials.
+Run `nginx -t` before reloading. Keep any older access logs restricted to privileged operators.

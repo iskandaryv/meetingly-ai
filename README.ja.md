@@ -32,10 +32,10 @@
 
 - **本物の答えを、瞬時に。** 相手が何かを質問すると、すぐに答えが表示されます。口に出せる太字の1行と、広げるための要点がいくつか。コーチングでも、「…に触れるとよい」といった提案でもありません。
 - **質問の提案。** サイド列が会話を追い、ワンクリックで使える質問を提示します。たった今聞かれた質問、出てきた用語、次に来そうな質問です。
-- **自分のコンピューター上で音声認識。** NVIDIA Nemotron が28言語でローカル実行されるため、音声はマシンの外に出ず、分単位のコストもかかりません。
+- **コンピューター上で音声認識。** 標準では NVIDIA Nemotron が28言語をローカルで文字起こしします。Unlimited で任意のクラウド文字起こしを選ぶと、音声は Deepgram に送信されます。
 - **自分と相手を分けて表示。** 自分のマイクと通話音声を別々に文字起こしするので、チャットのように読めます。
 - **画面分析。** ワンクリックで画面上の内容（コーディング課題、スライド、質問）を読み取り、回答します。
-- **画面共有に映りません。** Windows と macOS では、ウィンドウが画面共有や録画から除外されます。
+- **画面共有時のコンテンツ保護。** Windows と macOS のOS保護を利用します。一部のキャプチャ方式ではウィンドウが映る場合があり、Linux では同じ保護を利用できません。
 - **会議レポート。** 各会議の終了時に、要約、決定事項、アクション項目、フォローアップを作成します。
 - **自分の API キーを使うか、こちらのキーは使わないか。** 無料プランを使うか、Meetingly を OpenAI、OpenRouter、ローカルの Ollama モデル、または任意の OpenAI 互換エンドポイントに向けられます。
 - Windows、macOS、Linux で **自動更新** します。通話中には更新しません。
@@ -47,7 +47,6 @@
 | | Free | Pro | Unlimited |
 |---|---|---|---|
 | 料金 | $0 | $19.99 / 月、7日間無料 | $39.99 / 月 |
-| AI モデル | 高速な AI モデル | 最新の GPT と Claude モデル | 最新かつ最強の GPT と Claude モデルをいち早く |
 | 回答 | 1日50件 | 1日300件 | Unlimited（フェアユース） |
 | 画面分析 | 1日3件 | 1日50件 | 1日300件 |
 | ライブ提案 | 1日約30分 | 1日約4時間 | 1日約8時間 |
@@ -88,15 +87,18 @@
 
 ```mermaid
 flowchart LR
-  A["Microphone + call audio"] --> B["Speech recognition<br/>on your computer"]
-  B --> C["Live transcript<br/>You / Them"]
-  C --> D["Answer on screen"]
-  C --> E["Suggested questions"]
-  D -.-> F["Meetingly relay<br/>(Free, Pro, Unlimited)"]
-  D -.-> G["Your own endpoint<br/>(OpenAI, Ollama…)"]
+  A["Microphone + call audio"] -->|"Local transcription (default)"| B["On-device speech model"]
+  A -->|"Cloud transcription selected (Unlimited)"| H["Meetingly relay → Deepgram"]
+  B --> C["Live transcript"]
+  H --> C
+  C -->|"Hosted answers"| F["Meetingly relay + AI provider"]
+  C -->|"Own-model answers"| G["Your endpoint: local or cloud"]
+  F --> D["Answers, suggestions and reports"]
+  G --> D
+  C -.->|"When account is connected"| S["Account sync"]
 ```
 
-音声はあなたのコンピューター上に残ります。AI に送信されるのは、文字起こしテキスト、あなたの質問、分析対象として選んだスクリーンショットだけです。Free、Pro、Unlimited プランでは Meetingly のリレー経由（プロバイダーキーを保持し、タスクごとにモデルを選択します）、自分のキーを使う場合は自分のエンドポイントへ直接送信されます。
+ローカル文字起こしを選ぶと、音声はコンピューター上で処理されます。Unlimited のクラウド文字起こしを選ぶと、音声はリレー経由で Deepgram に送信されます。AI回答には関連する文字起こし、質問、要求したスクリーンショットが使われ、ホスト型リレーとプロバイダー、または自分のエンドポイントで処理されます。接続したアカウントの同期は別のデータ経路です。
 
 ## インストール時の注意
 

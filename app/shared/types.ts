@@ -204,7 +204,7 @@ export interface OwnKey {
   /** Base URL of an OpenAI-compatible API, e.g. https://api.openai.com/v1. */
   baseUrl: string
   model: string
-  /** Encrypted at rest when the OS keychain is available; empty for endpoints without keys (Ollama). */
+  /** Encrypted with the OS keychain; saving a key requires a secure keychain. Empty for local endpoints without keys. */
   key: string
 }
 

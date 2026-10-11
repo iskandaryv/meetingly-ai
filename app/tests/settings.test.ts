@@ -42,6 +42,22 @@ describe("SettingsStore", () => {
     expect(first).toMatch(/^[a-f0-9]{32}$/)
     expect(new SettingsStore(file).deviceId()).toBe(first)
   })
+  it.skipIf(process.platform === "win32")("tightens an existing settings file without requiring an update", () => {
+    const file = tmpFile()
+    fs.writeFileSync(file, JSON.stringify({ deviceId: "existing-device-id", cloud: { token: "fixture", email: "fixture@example.invalid" } }), { mode: 0o644 })
+    fs.chmodSync(path.dirname(file), 0o755)
+    const store = new SettingsStore(file)
+    expect(store.deviceId()).toBe("existing-device-id")
+    expect(fs.statSync(file).mode & 0o777).toBe(0o600)
+    expect(fs.statSync(path.dirname(file)).mode & 0o777).toBe(0o700)
+  })
+  it("normalizes malformed saved native boolean settings", () => {
+    const file = tmpFile()
+    fs.writeFileSync(file, JSON.stringify({ deviceId: "existing-device-id", autoLaunch: "yes", stealth: null }))
+    const store = new SettingsStore(file)
+    expect(store.get().autoLaunch).toBe(false)
+    expect(store.get().stealth).toBe(true)
+  })
 
   it("never ends up without a prompt or with a dangling active id", () => {
     const store = new SettingsStore(tmpFile())
@@ -60,6 +76,13 @@ describe("SettingsStore", () => {
     const store = new SettingsStore(file)
     expect(store.get().outputLanguage).toBe("en")
     expect(store.deviceId()).toHaveLength(32)
+  })
+
+  it("recovers when every saved prompt is malformed", () => {
+    const file = tmpFile()
+    fs.writeFileSync(file, JSON.stringify({ prompts: [null, { id: 5 }, { content: false }], activePromptId: "missing" }))
+    const store = new SettingsStore(file)
+    expect(store.activePrompt()).toEqual(DEFAULT_PROMPT)
   })
 
   it("notifies listeners", () => {

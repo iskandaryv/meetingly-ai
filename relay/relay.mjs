@@ -20,12 +20,14 @@ import fs from "node:fs"
 import http from "node:http"
 import https from "node:https"
 import path from "node:path"
+import { once } from "node:events"
 import { WebSocket, WebSocketServer } from "ws"
 import { Accounts } from "./accounts.mjs"
 import { ReplyWatcher } from "./answers.mjs"
 import { modelConfig, modelsFor, upstreamFor } from "./models.mjs"
 import { chargeFor, checkBudget, GUEST_UNTIL, IP_ANSWERS_PER_DAY, PAID, planName, PLANS, taskSpec } from "./plans.mjs"
 import { Quotas } from "./quotas.mjs"
+import { clientLifetime } from "./client-lifetime.mjs"
 
 const env = process.env
 const PORT = Number(env.PORT ?? 8090)
@@ -54,9 +56,34 @@ const VERSION = JSON.parse(fs.readFileSync(new URL("./package.json", import.meta
 
 const quotas = new Quotas({
   file: env.USAGE_FILE ?? "/var/lib/meetingly-relay/usage.json",
-  requestsPerMinutePerIp: Number(env.RPM_PER_IP ?? 60)
+  requestsPerMinutePerIp: Number(env.RPM_PER_IP ?? 60),
+  onRollover: env.INTERNAL_TOKEN?.trim() ? (day, keys) => pushUsage({ day, keys }) : null
 })
-const accounts = new Accounts()
+const accounts = new Accounts({ baseUrl: (env.ACCOUNT_URL ?? "http://127.0.0.1:8091").replace(/\/+$/, "") })
+
+// The day's counters go to the account service every few minutes (and the finished day at midnight), where the
+// owner's admin panel keeps the history. INTERNAL_TOKEN must match /etc/meetingly-cloud.env; without it, nothing is sent.
+const ACCOUNT_URL = (env.ACCOUNT_URL ?? "http://127.0.0.1:8091").replace(/\/+$/, "")
+const INTERNAL_TOKEN = (env.INTERNAL_TOKEN ?? "").trim()
+async function pushUsage(snapshot) {
+  if (!Object.keys(snapshot.keys).length) return true
+  if (!INTERNAL_TOKEN) return false
+  try {
+    const res = await fetch(`${ACCOUNT_URL}/api/internal/usage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Internal-Token": INTERNAL_TOKEN },
+      body: JSON.stringify(snapshot),
+      signal: AbortSignal.timeout(10_000)
+    })
+    if (!res.ok) console.warn(`[relay] usage push: HTTP ${res.status}`)
+    await res.body?.cancel().catch(() => {})
+    return res.ok
+  } catch (err) {
+    console.warn("[relay] usage push failed:", err.message)
+    return false
+  }
+}
+setInterval(() => void pushUsage(quotas.snapshot()), 5 * 60_000).unref()
 
 const ALLOWED_LISTEN_PARAMS = new Set([
   "language", "encoding", "sample_rate", "channels", "interim_results", "punctuate",
@@ -87,6 +114,7 @@ const server = createServer(async (req, res) => {
 })
 
 const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 })
+const activeListeners = new Map()
 server.on("upgrade", async (req, socket, head) => {
   try {
     const url = new URL(req.url, "http://relay")
@@ -99,9 +127,28 @@ server.on("upgrade", async (req, socket, head) => {
     if (who.error) return rejectUpgrade(socket, who.error.status, who.error.message)
     const plan = PLANS[who.plan]
     // Only Unlimited includes cloud transcription; the app transcribes on the computer otherwise.
+    if (!plan.audioMinutes) quotas.noteLimit(who.key, "cloud_transcription_plan")
     if (!plan.audioMinutes) return rejectUpgrade(socket, 403, "Cloud transcription is part of Unlimited. Meetingly uses on-device recognition instead.")
-    if (quotas.used(who.key).audioMinutes >= plan.audioMinutes) return rejectUpgrade(socket, 429, "Daily transcription limit reached")
-    wss.handleUpgrade(req, socket, head, (client) => proxyListen(client, url, who))
+    if (quotas.used(who.key).audioMinutes >= plan.audioMinutes) {
+      quotas.noteLimit(who.key, "audio_limit")
+      return rejectUpgrade(socket, 429, "Daily transcription limit reached")
+    }
+    if ((activeListeners.get(who.key) ?? 0) >= plan.concurrent) {
+      quotas.noteLimit(who.key, "transcription_concurrency")
+      return rejectUpgrade(socket, 429, "Too many transcription sessions")
+    }
+    activeListeners.set(who.key, (activeListeners.get(who.key) ?? 0) + 1)
+    let released = false
+    const release = () => {
+      if (released) return
+      released = true
+      const count = (activeListeners.get(who.key) ?? 1) - 1
+      if (count > 0) activeListeners.set(who.key, count)
+      else activeListeners.delete(who.key)
+    }
+    socket.once("close", release)
+    try { wss.handleUpgrade(req, socket, head, (client) => proxyListen(client, url, who, release)) }
+    catch (error) { release(); throw error }
   } catch (err) {
     console.error("[relay] listen upgrade:", err.message)
     rejectUpgrade(socket, 500, "Relay error")
@@ -164,7 +211,7 @@ async function chatCompletions(req, res, ip) {
   } catch {
     return json(res, 400, { error: { message: "Invalid JSON" } })
   }
-  if (!Array.isArray(body.messages) || body.messages.length === 0) {
+  if (!body || !Array.isArray(body.messages) || body.messages.length === 0) {
     return json(res, 400, { error: { message: "messages required" } })
   }
   if (spec.noStream && body.stream) return json(res, 400, { error: { message: "This task is not streamed" } })
@@ -172,13 +219,13 @@ async function chatCompletions(req, res, ip) {
   // Budgets before anything goes upstream.
   const plan = PLANS[who.plan]
   const used = quotas.used(who.key)
-  if (!quotas.allowKey(who.key, plan.rpm)) return limited(res, "rate_limit", "Too many requests at once. Slow down a little.", who.plan)
-  if (used.requests >= REQUESTS_PER_DAY) return limited(res, "daily_limit", "Today's usage limit is reached. It resets at midnight UTC.", who.plan)
-  if (quotas.inFlight(who.key) >= plan.concurrent) return limited(res, "busy", "Another request is still running. Try again in a moment.", who.plan)
+  if (!quotas.allowKey(who.key, plan.rpm)) return limited(res, "rate_limit", "Too many requests at once. Slow down a little.", who.plan, {}, who.key)
+  if (used.requests >= REQUESTS_PER_DAY) return limited(res, "daily_limit", "Today's usage limit is reached. It resets at midnight UTC.", who.plan, {}, who.key)
+  if (quotas.inFlight(who.key) >= plan.concurrent) return limited(res, "busy", "Another request is still running. Try again in a moment.", who.plan, {}, who.key)
   const over = checkBudget(who.plan, used, task)
-  if (over) return limited(res, over.code, over.message, who.plan, { limit: over.limit, hours: over.hours })
+  if (over) return limited(res, over.code, over.message, who.plan, { limit: over.limit, hours: over.hours }, who.key)
   if (spec.bucket === "answers" && !PAID.has(who.plan) && quotas.used(`ipa:${ip}`).answers >= IP_ANSWERS_PER_DAY) {
-    return limited(res, "network_limit", "Too many free answers from this network today. It resets at midnight UTC.", who.plan)
+    return limited(res, "network_limit", "Too many free answers from this network today. It resets at midnight UTC.", who.plan, {}, who.key)
   }
 
   // Only a fixed set of fields goes upstream. Reasoning models (gpt-5.x) reject `temperature` and prefer
@@ -188,13 +235,14 @@ async function chatCompletions(req, res, ip) {
   const forwarded = {
     messages: body.messages,
     stream: Boolean(body.stream),
-    max_completion_tokens: Math.min(requested || MAX_TOKENS, MAX_TOKENS, spec.maxTokens),
+    max_completion_tokens: Math.min(Number.isFinite(requested) && requested > 0 ? Math.max(1, Math.floor(requested)) : MAX_TOKENS, MAX_TOKENS, spec.maxTokens),
     ...(REASONING_EFFORT ? { reasoning_effort: REASONING_EFFORT } : {}),
     ...(body.stream ? { stream_options: { include_usage: true } } : {})
   }
   const models = modelsFor(MODELS, task === "auto" ? "answer" : task, who.plan)
 
   quotas.begin(who.key)
+  const client = clientLifetime(res)
   let watcher = null
   let upstreamOk = false
   try {
@@ -209,9 +257,10 @@ async function chatCompletions(req, res, ip) {
           method: "POST",
           headers: { Authorization: `Bearer ${up.key}`, "Content-Type": "application/json" },
           body: JSON.stringify({ model, ...forwarded }),
-          signal: AbortSignal.timeout(120_000)
+          signal: AbortSignal.any([client.signal, AbortSignal.timeout(120_000)])
         })
       } catch (err) {
+        if (client.signal.aborted) throw err
         if (last) throw err
         console.warn(`[relay] ${model} unreachable (${task || "chat"}), trying ${models[i + 1]}: ${err.message}`)
         continue
@@ -235,15 +284,15 @@ async function chatCompletions(req, res, ip) {
     watcher = upstream.ok ? new ReplyWatcher(Boolean(body.stream)) : null
     const decoder = new TextDecoder()
     const reader = upstream.body.getReader()
-    req.on("close", () => reader.cancel().catch(() => {}))
     for (;;) {
       const { done, value } = await reader.read()
       if (done) break
       watcher?.push(decoder.decode(value, { stream: true }))
-      res.write(value)
+      if (!res.write(value)) await once(res, "drain", { signal: client.signal })
     }
     res.end()
   } finally {
+    client.dispose()
     quotas.end(who.key)
     quotas.add(who.key, "requests")
     if (upstreamOk && watcher) {
@@ -255,7 +304,7 @@ async function chatCompletions(req, res, ip) {
   }
 }
 
-function proxyListen(client, url, who) {
+function proxyListen(client, url, who, release) {
   const params = new URLSearchParams()
   for (const [k, v] of url.searchParams) if (ALLOWED_LISTEN_PARAMS.has(k)) params.set(k, v)
   params.set("model", "nova-2")
@@ -263,29 +312,37 @@ function proxyListen(client, url, who) {
   if (!params.has("sample_rate")) params.set("sample_rate", "16000")
 
   const upstream = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, {
-    headers: { Authorization: `Token ${DEEPGRAM_API_KEY}` }
+    headers: { Authorization: `Token ${DEEPGRAM_API_KEY}` }, handshakeTimeout: 10_000, maxPayload: 1024 * 1024
   })
-  const startedAt = Date.now()
+  let accountedAt = Date.now()
   const queued = []
+  let queuedBytes = 0
   let closed = false
   const limit = PLANS[who.plan].audioMinutes
-  const before = quotas.used(who.key).audioMinutes
+  const accountElapsed = () => {
+    const now = Date.now()
+    quotas.add(who.key, "audioMinutes", (now - accountedAt) / 60000)
+    accountedAt = now
+  }
 
   const closeBoth = (code = 1000, reason = "") => {
     if (closed) return
     closed = true
     clearInterval(meter)
-    quotas.add(who.key, "audioMinutes", (Date.now() - startedAt) / 60000)
+    accountElapsed()
+    release()
     try { client.close(code, reason) } catch {}
     try { upstream.close(code, reason) } catch {}
   }
   // A long session must not run past the day's minutes just because it started under them.
   const meter = setInterval(() => {
-    if (before + (Date.now() - startedAt) / 60000 >= limit) closeBoth(4429, "Daily transcription limit reached")
-  }, 30_000)
+    accountElapsed()
+    if (quotas.used(who.key).audioMinutes >= limit) closeBoth(4429, "Daily transcription limit reached")
+  }, 5_000)
 
   upstream.on("open", () => {
     for (const msg of queued.splice(0)) upstream.send(msg)
+    queuedBytes = 0
   })
   upstream.on("message", (data, isBinary) => {
     if (client.readyState === WebSocket.OPEN) client.send(data, { binary: isBinary })
@@ -301,15 +358,19 @@ function proxyListen(client, url, who) {
   })
 
   client.on("message", (data, isBinary) => {
+    if (closed) return
+    if (upstream.bufferedAmount + queuedBytes + data.length > 2 * 1024 * 1024) return closeBoth(1008, "Audio buffer limit reached")
     if (upstream.readyState === WebSocket.OPEN) upstream.send(data, { binary: isBinary })
-    else if (queued.length < 200) queued.push(data)
+    else { queued.push(data); queuedBytes += data.length }
   })
   client.on("close", () => closeBoth())
   client.on("error", () => closeBoth(1011, "client error"))
 }
 
 /** 429 with a code the app maps to a clear message; never retried by the client SDK. */
-function limited(res, code, message, plan, extra = {}) {
+/** A 429 the app words for the user; refusals of a known caller are counted for the owner's abuse view. */
+function limited(res, code, message, plan, extra = {}, key = null) {
+  if (key) quotas.noteLimit(key, code)
   res.writeHead(429, { "Content-Type": "application/json", "Cache-Control": "no-store", "x-should-retry": "false" })
   res.end(JSON.stringify({ error: { message, code, plan: plan ?? null, resetAt: quotas.resetAt(), ...extra } }))
 }

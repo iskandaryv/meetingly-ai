@@ -32,10 +32,10 @@
 
 - **真正的答案，立即出现。** 对方一提问，答案马上出现：一句可以直接说的加粗回答，再加几个可展开的要点。没有辅导式废话，也没有“你可以提到…”。
 - **问题建议。** 侧边栏会跟随对话并提供一键提问：刚刚被问到的问题、出现过的术语、可能的下一个问题。
-- **在你的电脑上语音识别。** NVIDIA Nemotron 以 28 种语言本地运行，因此你的音频不会离开设备，也没有按分钟计费。
+- **在电脑上识别语音。** 默认使用 NVIDIA Nemotron 在本地转写 28 种语言。Unlimited 还提供可选的云端转写，选择后音频会发送至 Deepgram。
 - **你和对方，分开记录。** 你的麦克风和通话音频会分别转写，因此转写稿读起来像聊天记录。
 - **屏幕分析。** 一键读取屏幕内容（编程题、幻灯片、问题）并给出答案。
-- **屏幕共享中隐藏。** 在 Windows 和 macOS 上，窗口会从屏幕共享和录制中排除。
+- **屏幕共享内容保护。** 使用 Windows 和 macOS 的系统保护功能。某些捕获方式仍可能显示窗口；Linux 不提供相同保护。
 - **会议报告。** 每场会议结束后都会生成摘要、决策、行动项和后续事项。
 - **使用你自己的 API 密钥，或不使用我们的。** 使用免费计划，或将 Meetingly 指向 OpenAI、OpenRouter、本地 Ollama 模型或任何兼容 OpenAI 的端点。
 - 在 Windows、macOS 和 Linux 上**自动更新**，且绝不会在通话过程中更新。
@@ -47,7 +47,6 @@
 | | Free | Pro | Unlimited |
 |---|---|---|---|
 | 价格 | $0 | $19.99 / 月，免费 7 天 | $39.99 / 月 |
-| AI 模型 | 快速 AI 模型 | 最新 GPT 和 Claude 模型 | 最新、最强大的 GPT 和 Claude 模型，优先使用 |
 | 回答 | 每天 50 次 | 每天 300 次 | Unlimited（合理使用） |
 | 屏幕分析 | 每天 3 次 | 每天 50 次 | 每天 300 次 |
 | 实时建议 | 每天约 30 分钟 | 每天约 4 小时 | 每天约 8 小时 |
@@ -88,15 +87,18 @@
 
 ```mermaid
 flowchart LR
-  A["Microphone + call audio"] --> B["Speech recognition<br/>on your computer"]
-  B --> C["Live transcript<br/>You / Them"]
-  C --> D["Answer on screen"]
-  C --> E["Suggested questions"]
-  D -.-> F["Meetingly relay<br/>(Free, Pro, Unlimited)"]
-  D -.-> G["Your own endpoint<br/>(OpenAI, Ollama…)"]
+  A["Microphone + call audio"] -->|"Local transcription (default)"| B["On-device speech model"]
+  A -->|"Cloud transcription selected (Unlimited)"| H["Meetingly relay → Deepgram"]
+  B --> C["Live transcript"]
+  H --> C
+  C -->|"Hosted answers"| F["Meetingly relay + AI provider"]
+  C -->|"Own-model answers"| G["Your endpoint: local or cloud"]
+  F --> D["Answers, suggestions and reports"]
+  G --> D
+  C -.->|"When account is connected"| S["Account sync"]
 ```
 
-你的音频会留在你的电脑上。只有转录文本、你的问题以及你选择分析的截图会发送给 AI：在 Free、Pro 和 Unlimited 计划中通过 Meetingly 的中继（它保存提供商密钥，并为每个任务选择模型），或在使用你自己的密钥时直接发送到你自己的端点。
+选择本地转写时，音频在你的电脑上处理。选择 Unlimited 的云端转写时，音频会通过中继发送至 Deepgram。AI 回答使用相关转录文本、问题和你请求分析的截图，通过托管中继和模型提供商处理，或直接发送至你自己的端点。连接账户后的同步是独立的数据路径。
 
 ## 安装说明
 

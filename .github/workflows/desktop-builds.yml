@@ -12,6 +12,9 @@ name: Desktop builds
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: ${{ matrix.name }}
@@ -39,12 +42,16 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
       - run: npm run fetch:asr
       - run: npm run build
       - name: Package
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: ${{ matrix.package }}
+      - name: Record source revision
+        run: node -e "require('fs').writeFileSync('release/build-info.json', JSON.stringify({commit: process.env.GITHUB_SHA, version: require('./package.json').version, platform: process.platform, runId: process.env.GITHUB_RUN_ID}, null, 2))"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
@@ -58,3 +65,4 @@ jobs:
             app/release/*.blockmap
             app/release/latest-mac.yml
             app/release/latest-linux.yml
+            app/release/build-info.json

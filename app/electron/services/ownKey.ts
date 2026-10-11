@@ -9,7 +9,7 @@ export interface SecretBox {
   decrypt(stored: string): string
 }
 
-/** No encryption: tests, and systems without a keychain. */
+/** In-memory/test adapter. Production uses the guarded OS keychain implementation. */
 export const PLAIN_BOX: SecretBox = { encrypt: (s) => s, decrypt: (s) => s }
 
 /** The base URL as people paste it: with or without a trailing slash or /chat/completions. */
@@ -88,13 +88,16 @@ export class OwnKeyService {
     const model = (input.model ?? "").trim()
     if (!model) throw new Error(t("Choose a model."))
     const key = this.keyFor(input)
+    // Check storage before making a billable validation request. An unavailable
+    // keychain must not silently persist the secret as plaintext.
+    const storedKey = key ? this.deps.box.encrypt(key) : ""
     const client = new OpenAI({ apiKey: key || "none", baseURL: baseUrl, maxRetries: 0, timeout: 30_000, fetch: this.deps.fetch })
     try {
       await client.chat.completions.create({ model, messages: [{ role: "user", content: "Reply with the word OK." }], ...reasoningFor(model) })
     } catch (err) {
       throw describeOwnKeyError(err, { baseUrl, model })
     }
-    this.deps.settings.update({ ownKey: { baseUrl, model, key: key ? this.deps.box.encrypt(key) : "" } })
+    this.deps.settings.update({ ownKey: { baseUrl, model, key: storedKey } })
   }
 
   clear(): void {

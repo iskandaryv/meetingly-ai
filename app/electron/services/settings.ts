@@ -110,9 +110,10 @@ export class SettingsStore extends EventEmitter {
 
   private persist(): void {
     try {
-      fs.mkdirSync(path.dirname(this.file), { recursive: true })
+      fs.mkdirSync(path.dirname(this.file), { recursive: true, mode: 0o700 })
       const tmp = `${this.file}.tmp`
-      fs.writeFileSync(tmp, JSON.stringify({ ...this.data, __v: SETTINGS_VERSION }, null, 2))
+      fs.writeFileSync(tmp, JSON.stringify({ ...this.data, __v: SETTINGS_VERSION }, null, 2), { mode: 0o600 })
+      if (process.platform !== "win32") fs.chmodSync(tmp, 0o600)
       fs.renameSync(tmp, this.file)
     } catch (err) {
       console.error("[settings] failed to write settings:", err)
@@ -131,6 +132,7 @@ export function normalize(s: Settings): Settings {
     // A prompt still on an earlier default follows the current one; edited prompts stay as they are.
     LEGACY_DEFAULT_SYSTEM_PROMPTS.some((old) => squash(p.content) === squash(old)) ? { ...p, content: DEFAULT_PROMPT.content } : p
   )
+  if (prompts.length === 0) prompts.push({ ...DEFAULT_PROMPT })
   const activePromptId = prompts.some((p) => p.id === s.activePromptId) ? s.activePromptId : prompts[0].id
   const shortcuts = { ...DEFAULT_SHORTCUTS }
   for (const key of Object.keys(DEFAULT_SHORTCUTS) as ShortcutAction[]) {

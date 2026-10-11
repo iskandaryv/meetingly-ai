@@ -13,6 +13,7 @@ import type { SuggestionService } from "../services/suggestions"
 import { suggestionsVisible } from "../../shared/types"
 import { SUGGESTIONS_WIDTH } from "../windows/config"
 import type { WindowManager } from "../windows/WindowManager"
+import { rendererSettingsPatch, trustedFrame } from "./guard"
 
 export interface IpcDeps {
   settings: SettingsStore
@@ -34,9 +35,12 @@ type Handler<K extends InvokeChannel> = (
 ) => ReturnType<InvokeMap[K]> | Promise<ReturnType<InvokeMap[K]>>
 
 /** Typed `ipcMain.handle`. Errors are logged once and rejected to the renderer as plain messages. */
-function handle<K extends InvokeChannel>(channel: K, fn: Handler<K>): void {
+function registerHandler<K extends InvokeChannel>(channel: K, fn: Handler<K>, windows: WindowManager): void {
   ipcMain.handle(channel, async (event, ...args) => {
     try {
+      if (!trustedFrame(Boolean(windows.kindOf(event.sender)), event.senderFrame, event.sender.mainFrame)) {
+        throw new Error("Untrusted IPC sender")
+      }
       return await fn(event, ...(args as Parameters<InvokeMap[K]>))
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -57,13 +61,12 @@ export function openOwnKeyForm(windows: WindowManager): void {
 
 export function registerIpc(deps: IpcDeps): void {
   const { settings, windows, session, chat, suggestions, meetings, logger, cloud, plan, ownKey } = deps
+  const handle = <K extends InvokeChannel>(channel: K, fn: Handler<K>) => registerHandler(channel, fn, windows)
 
   // Settings
   handle("settings:get", () => settings.view())
   handle("settings:update", (_e, patch) => {
-    // The own key changes only through ownkey:*, which checks it first.
-    const { ownKey: _ownKey, ...rest } = patch
-    settings.update(rest)
+    settings.update(rendererSettingsPatch(patch))
     return settings.view()
   })
 

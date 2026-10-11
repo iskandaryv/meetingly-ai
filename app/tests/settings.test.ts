@@ -62,6 +62,13 @@ describe("SettingsStore", () => {
     expect(store.deviceId()).toHaveLength(32)
   })
 
+  it("recovers when every saved prompt is malformed", () => {
+    const file = tmpFile()
+    fs.writeFileSync(file, JSON.stringify({ prompts: [null, { id: 5 }, { content: false }], activePromptId: "missing" }))
+    const store = new SettingsStore(file)
+    expect(store.activePrompt()).toEqual(DEFAULT_PROMPT)
+  })
+
   it("notifies listeners", () => {
     const store = new SettingsStore(tmpFile())
     const seen: string[] = []

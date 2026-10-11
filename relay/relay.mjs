@@ -20,12 +20,14 @@ import fs from "node:fs"
 import http from "node:http"
 import https from "node:https"
 import path from "node:path"
+import { once } from "node:events"
 import { WebSocket, WebSocketServer } from "ws"
 import { Accounts } from "./accounts.mjs"
 import { ReplyWatcher } from "./answers.mjs"
 import { modelConfig, modelsFor, upstreamFor } from "./models.mjs"
 import { chargeFor, checkBudget, GUEST_UNTIL, IP_ANSWERS_PER_DAY, PAID, planName, PLANS, taskSpec } from "./plans.mjs"
 import { Quotas } from "./quotas.mjs"
+import { clientLifetime } from "./client-lifetime.mjs"
 
 const env = process.env
 const PORT = Number(env.PORT ?? 8090)
@@ -57,7 +59,7 @@ const quotas = new Quotas({
   requestsPerMinutePerIp: Number(env.RPM_PER_IP ?? 60),
   onRollover: (day, keys) => void pushUsage({ day, keys })
 })
-const accounts = new Accounts()
+const accounts = new Accounts({ baseUrl: (env.ACCOUNT_URL ?? "http://127.0.0.1:8091").replace(/\/+$/, "") })
 
 // The day's counters go to the account service every few minutes (and the finished day at midnight), where the
 // owner's admin panel keeps the history. INTERNAL_TOKEN must match /etc/meetingly-cloud.env; without it, nothing is sent.
@@ -108,6 +110,7 @@ const server = createServer(async (req, res) => {
 })
 
 const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 })
+const activeListeners = new Map()
 server.on("upgrade", async (req, socket, head) => {
   try {
     const url = new URL(req.url, "http://relay")
@@ -126,7 +129,19 @@ server.on("upgrade", async (req, socket, head) => {
       quotas.noteLimit(who.key, "audio_limit")
       return rejectUpgrade(socket, 429, "Daily transcription limit reached")
     }
-    wss.handleUpgrade(req, socket, head, (client) => proxyListen(client, url, who))
+    if ((activeListeners.get(who.key) ?? 0) >= plan.concurrent) return rejectUpgrade(socket, 429, "Too many transcription sessions")
+    activeListeners.set(who.key, (activeListeners.get(who.key) ?? 0) + 1)
+    let released = false
+    const release = () => {
+      if (released) return
+      released = true
+      const count = (activeListeners.get(who.key) ?? 1) - 1
+      if (count > 0) activeListeners.set(who.key, count)
+      else activeListeners.delete(who.key)
+    }
+    socket.once("close", release)
+    try { wss.handleUpgrade(req, socket, head, (client) => proxyListen(client, url, who, release)) }
+    catch (error) { release(); throw error }
   } catch (err) {
     console.error("[relay] listen upgrade:", err.message)
     rejectUpgrade(socket, 500, "Relay error")
@@ -189,7 +204,7 @@ async function chatCompletions(req, res, ip) {
   } catch {
     return json(res, 400, { error: { message: "Invalid JSON" } })
   }
-  if (!Array.isArray(body.messages) || body.messages.length === 0) {
+  if (!body || !Array.isArray(body.messages) || body.messages.length === 0) {
     return json(res, 400, { error: { message: "messages required" } })
   }
   if (spec.noStream && body.stream) return json(res, 400, { error: { message: "This task is not streamed" } })
@@ -213,13 +228,14 @@ async function chatCompletions(req, res, ip) {
   const forwarded = {
     messages: body.messages,
     stream: Boolean(body.stream),
-    max_completion_tokens: Math.min(requested || MAX_TOKENS, MAX_TOKENS, spec.maxTokens),
+    max_completion_tokens: Math.min(Number.isFinite(requested) && requested > 0 ? Math.max(1, Math.floor(requested)) : MAX_TOKENS, MAX_TOKENS, spec.maxTokens),
     ...(REASONING_EFFORT ? { reasoning_effort: REASONING_EFFORT } : {}),
     ...(body.stream ? { stream_options: { include_usage: true } } : {})
   }
   const models = modelsFor(MODELS, task === "auto" ? "answer" : task, who.plan)
 
   quotas.begin(who.key)
+  const client = clientLifetime(res)
   let watcher = null
   let upstreamOk = false
   try {
@@ -234,9 +250,10 @@ async function chatCompletions(req, res, ip) {
           method: "POST",
           headers: { Authorization: `Bearer ${up.key}`, "Content-Type": "application/json" },
           body: JSON.stringify({ model, ...forwarded }),
-          signal: AbortSignal.timeout(120_000)
+          signal: AbortSignal.any([client.signal, AbortSignal.timeout(120_000)])
         })
       } catch (err) {
+        if (client.signal.aborted) throw err
         if (last) throw err
         console.warn(`[relay] ${model} unreachable (${task || "chat"}), trying ${models[i + 1]}: ${err.message}`)
         continue
@@ -260,15 +277,15 @@ async function chatCompletions(req, res, ip) {
     watcher = upstream.ok ? new ReplyWatcher(Boolean(body.stream)) : null
     const decoder = new TextDecoder()
     const reader = upstream.body.getReader()
-    req.on("close", () => reader.cancel().catch(() => {}))
     for (;;) {
       const { done, value } = await reader.read()
       if (done) break
       watcher?.push(decoder.decode(value, { stream: true }))
-      res.write(value)
+      if (!res.write(value)) await once(res, "drain", { signal: client.signal })
     }
     res.end()
   } finally {
+    client.dispose()
     quotas.end(who.key)
     quotas.add(who.key, "requests")
     if (upstreamOk && watcher) {
@@ -280,7 +297,7 @@ async function chatCompletions(req, res, ip) {
   }
 }
 
-function proxyListen(client, url, who) {
+function proxyListen(client, url, who, release) {
   const params = new URLSearchParams()
   for (const [k, v] of url.searchParams) if (ALLOWED_LISTEN_PARAMS.has(k)) params.set(k, v)
   params.set("model", "nova-2")
@@ -288,29 +305,37 @@ function proxyListen(client, url, who) {
   if (!params.has("sample_rate")) params.set("sample_rate", "16000")
 
   const upstream = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, {
-    headers: { Authorization: `Token ${DEEPGRAM_API_KEY}` }
+    headers: { Authorization: `Token ${DEEPGRAM_API_KEY}` }, handshakeTimeout: 10_000, maxPayload: 1024 * 1024
   })
-  const startedAt = Date.now()
+  let accountedAt = Date.now()
   const queued = []
+  let queuedBytes = 0
   let closed = false
   const limit = PLANS[who.plan].audioMinutes
-  const before = quotas.used(who.key).audioMinutes
+  const accountElapsed = () => {
+    const now = Date.now()
+    quotas.add(who.key, "audioMinutes", (now - accountedAt) / 60000)
+    accountedAt = now
+  }
 
   const closeBoth = (code = 1000, reason = "") => {
     if (closed) return
     closed = true
     clearInterval(meter)
-    quotas.add(who.key, "audioMinutes", (Date.now() - startedAt) / 60000)
+    accountElapsed()
+    release()
     try { client.close(code, reason) } catch {}
     try { upstream.close(code, reason) } catch {}
   }
   // A long session must not run past the day's minutes just because it started under them.
   const meter = setInterval(() => {
-    if (before + (Date.now() - startedAt) / 60000 >= limit) closeBoth(4429, "Daily transcription limit reached")
-  }, 30_000)
+    accountElapsed()
+    if (quotas.used(who.key).audioMinutes >= limit) closeBoth(4429, "Daily transcription limit reached")
+  }, 5_000)
 
   upstream.on("open", () => {
     for (const msg of queued.splice(0)) upstream.send(msg)
+    queuedBytes = 0
   })
   upstream.on("message", (data, isBinary) => {
     if (client.readyState === WebSocket.OPEN) client.send(data, { binary: isBinary })
@@ -326,8 +351,10 @@ function proxyListen(client, url, who) {
   })
 
   client.on("message", (data, isBinary) => {
+    if (closed) return
+    if (upstream.bufferedAmount + queuedBytes + data.length > 2 * 1024 * 1024) return closeBoth(1008, "Audio buffer limit reached")
     if (upstream.readyState === WebSocket.OPEN) upstream.send(data, { binary: isBinary })
-    else if (queued.length < 200) queued.push(data)
+    else { queued.push(data); queuedBytes += data.length }
   })
   client.on("close", () => closeBoth())
   client.on("error", () => closeBoth(1011, "client error"))

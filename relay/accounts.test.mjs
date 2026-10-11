@@ -63,3 +63,14 @@ test("when the account service is down, a stale answer is used; with nothing cac
   assert.equal((await a.resolve("tok")).plan, "pro")
   await assert.rejects(() => a.resolve("other"))
 })
+
+test("stale authorization cannot remain valid indefinitely during an outage", async () => {
+  let t = 0
+  const svc = fakeService([{ status: 200, body: { userId: "u1", plan: "pro" } }, new Error("offline"), { status: 503 }])
+  const a = new Accounts({ fetch: svc.fetch, now: () => t, ttlMs: 1000, staleTtlMs: 1000 })
+  await a.resolve("tok")
+  t = 1500
+  assert.equal((await a.resolve("tok")).plan, "pro")
+  t = 2001
+  await assert.rejects(() => a.resolve("tok"))
+})

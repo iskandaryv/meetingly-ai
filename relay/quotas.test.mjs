@@ -71,6 +71,16 @@ test("per-ip rate limit is a sliding minute", () => {
   assert.equal(q.allowRequest("1.2.3.4"), true)
 })
 
+test("denied bursts keep rate-limit memory bounded and do not delay recovery", () => {
+  const {q,advance}=make()
+  for(let i=0;i<3;i++) assert.equal(q.allowRequest("fixture-ip"),true)
+  advance(30_000)
+  for(let i=0;i<10_000;i++) assert.equal(q.allowRequest("fixture-ip"),false)
+  assert.equal(q.ipHits.get("fixture-ip").length,3)
+  advance(30_001)
+  assert.equal(q.allowRequest("fixture-ip"),true)
+})
+
 test("per-account rate limit is its own sliding minute, sized by the plan", () => {
   const { q, advance } = make()
   for (let i = 0; i < 2; i++) assert.equal(q.allowKey("u:1", 2), true)

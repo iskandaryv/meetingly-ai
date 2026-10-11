@@ -38,13 +38,15 @@ export class Quotas {
   slide(map, id, limit) {
     const t = this.now()
     const hits = (map.get(id) ?? []).filter((x) => t - x < 60_000)
-    hits.push(t)
+    // Denied requests must not grow the timestamp list or extend it indefinitely.
+    const allowed = hits.length < limit
+    if (allowed) hits.push(t)
     map.set(id, hits)
     if (map.size > 20_000) {
       // Forget quiet callers instead of resetting everyone.
       for (const [k, v] of map) if (!v.length || t - v[v.length - 1] >= 60_000) map.delete(k)
     }
-    return hits.length <= limit
+    return allowed
   }
 
   /** Today's counters for a key (zeros when unseen; reading never creates an entry). */

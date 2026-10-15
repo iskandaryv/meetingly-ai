@@ -24,7 +24,7 @@ import { listAudioInputs, type AudioInputDevice, type AudioLevels } from "@/lib/
 import { cn, copyText } from "@/lib/utils"
 import { markdownToPlain } from "@/lib/plain-text"
 import { Button } from "@/components/ui/button"
-import { Select } from "@/components/ui/fields"
+import { Select, Toggle } from "@/components/ui/fields"
 import { Markdown } from "@/components/Markdown"
 
 /**
@@ -125,7 +125,7 @@ export function PanelWindow() {
           </div>
         )}
         <div className="flex min-h-0 flex-1">
-          {rail && <Suggestions state={suggestions} plan={plan} />}
+          {rail && <Suggestions state={suggestions} plan={plan} onOff={() => void update({ suggestions: false })} />}
           <div className="flex min-w-0 flex-1 flex-col">
             {/* Both tabs stay mounted: a reply keeps streaming and scroll positions survive tab switches. */}
             <div className={cn("min-h-0 flex-1 flex-col", tab === "answers" ? "flex" : "hidden")}>
@@ -142,6 +142,8 @@ export function PanelWindow() {
                 onSource={(s) => void update({ audioSource: s })}
                 deviceId={settings?.audioDeviceId ?? ""}
                 onDevice={(id) => void update({ audioDeviceId: id })}
+                suggestions={settings?.suggestions ?? false}
+                onSuggestions={(on) => void update({ suggestions: on })}
               />
             </div>
           </div>
@@ -173,7 +175,7 @@ const ACTION_ICONS: Record<QuickActionId, React.ReactNode> = {
 }
 
 /** Questions drawn from the conversation, then fixed quick actions; a click answers in the Answers tab. */
-function Suggestions({ state, plan }: { state: SuggestionsState; plan: PlanState }) {
+function Suggestions({ state, plan, onOff }: { state: SuggestionsState; plan: PlanState; onOff: () => void }) {
   const [busy, setBusy] = useState(false)
   useEvent("chat:busy", setBusy)
   const use = (id: string) => void api.invoke("suggestions:use", id).catch(() => {})
@@ -182,6 +184,9 @@ function Suggestions({ state, plan }: { state: SuggestionsState; plan: PlanState
     <aside className="flex w-[200px] shrink-0 flex-col border-r border-white/10 bg-white/[0.02]">
       <div className="flex h-7 shrink-0 items-center gap-1 pl-2.5 pr-1">
         <span className="flex-1 text-[10.5px] font-medium uppercase tracking-wide text-white/35">{t("Suggested")}</span>
+        <span className="flex items-center px-1" title={t("Turn off suggested questions: nothing is sent to the AI for them.")}>
+          <Toggle size="sm" checked onChange={onOff} label={t("Suggested questions")} />
+        </span>
         <button
           type="button"
           onClick={() => void api.invoke("suggestions:refresh").catch(() => {})}
@@ -622,8 +627,11 @@ function Transcript(props: {
   onSource: (s: AudioSource) => void
   deviceId: string
   onDevice: (id: string) => void
+  /** Suggested questions while listening; off sends nothing to the AI for them. */
+  suggestions: boolean
+  onSuggestions: (on: boolean) => void
 }) {
-  const { status, connected, source, notice, lines, interim, onSource, deviceId, onDevice } = props
+  const { status, connected, source, notice, lines, interim, onSource, deviceId, onDevice, suggestions, onSuggestions } = props
   const ref = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState(false)
   const live = [interim.them, interim.you, interim.other].filter(Boolean).join(" ")
@@ -665,6 +673,13 @@ function Transcript(props: {
           {(Object.keys(AUDIO_SOURCE_LABELS) as AudioSource[]).map((s) => <option key={s} value={s}>{t(AUDIO_SOURCE_LABELS[s])}</option>)}
         </Select>
         {source !== "system" && <MicPicker value={deviceId} onChange={onDevice} />}
+        <label
+          className="flex shrink-0 cursor-pointer items-center gap-1.5 px-1.5 text-[11px] text-white/55"
+          title={t("Suggested questions while listening. Off: just the transcript, nothing is sent to the AI for suggestions.")}
+        >
+          {t("Suggestions")}
+          <Toggle size="sm" checked={suggestions} onChange={onSuggestions} label={t("Suggested questions")} />
+        </label>
         <Button variant="ghost" size="icon-sm" onClick={copy} disabled={!text} title={t("Copy transcript")}>
           {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
         </Button>

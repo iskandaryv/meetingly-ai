@@ -25,9 +25,11 @@ interface ToggleProps {
   onChange: (value: boolean) => void
   disabled?: boolean
   label?: string
+  /** "sm" fits a toolbar row (the panel); the default fits a settings row. */
+  size?: "sm"
 }
 
-export function Toggle({ checked, onChange, disabled, label }: ToggleProps) {
+export function Toggle({ checked, onChange, disabled, label, size }: ToggleProps) {
   return (
     <button
       type="button"
@@ -37,11 +39,17 @@ export function Toggle({ checked, onChange, disabled, label }: ToggleProps) {
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors disabled:opacity-40",
+        "relative inline-flex shrink-0 items-center rounded-full border transition-colors disabled:opacity-40",
+        size === "sm" ? "h-4 w-7" : "h-6 w-11",
         checked ? "border-sky-400/50 bg-sky-500/80" : "border-white/20 bg-white/10"
       )}
     >
-      <span className={cn("inline-block h-4 w-4 rounded-full bg-white shadow transition-transform", checked ? "translate-x-6" : "translate-x-1")} />
+      <span
+        className={cn(
+          "inline-block rounded-full bg-white shadow transition-transform",
+          size === "sm" ? (checked ? "h-2.5 w-2.5 translate-x-3.5" : "h-2.5 w-2.5 translate-x-0.5") : checked ? "h-4 w-4 translate-x-6" : "h-4 w-4 translate-x-1"
+        )}
+      />
     </button>
   )
 }

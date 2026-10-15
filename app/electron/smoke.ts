@@ -128,7 +128,7 @@ export async function runSmokeTest(mode: string, { windows, chat, session, setti
   let cloudProbe: Record<string, unknown> & { ok: boolean } | undefined
   if (mode === "cloud") cloudProbe = await cloudSmoke({ cloud, settings, meetings })
 
-  if (mode === "shots") await shots(windows, process.env.IGPT_SMOKE_SHOTS || app.getPath("temp"))
+  if (mode === "shots") await shots(windows, settings, process.env.IGPT_SMOKE_SHOTS || app.getPath("temp"))
   if (mode === "demo") await demoFrames(windows, process.env.IGPT_SMOKE_SHOTS || app.getPath("temp"))
 
   let answersProbe: Record<string, unknown> & { ok: boolean } | undefined
@@ -265,8 +265,10 @@ function sendKeys(keys: string): Promise<void> {
 const TEST_PHRASE = "The purple elephant is testing system audio capture."
 
 /** Render sample content into the panel and save each window as a PNG (with alpha) plus its bounds. */
-async function shots(windows: WindowManager, dir: string): Promise<void> {
+async function shots(windows: WindowManager, settings: SmokeDeps["settings"], dir: string): Promise<void> {
   const now = Date.now()
+  // Suggestions start off (1.2.5); the shots show the rail, so turn them on (smoke runs use a throwaway settings folder).
+  settings.update({ suggestions: true })
   const sample = [
     { id: "s1", role: "user", kind: "auto", text: "What is Kafka?", timestamp: now },
     { id: "s2", role: "assistant", kind: "auto", text: "**Kafka is a distributed event-streaming platform for publishing, storing and processing real-time data.**\n- Producers write to topics\n- Consumers read at their own pace\n- Partitions scale it out\n- Replicated, so durable", timestamp: now },

@@ -13,6 +13,8 @@ interface Deps {
   capture: () => Promise<Capture>
   /** Hide / restore the app's own windows around a capture when they are not content-protected. */
   hideForCapture?: () => () => void
+  /** Whether hands-free answering is available now (Pro, Unlimited or the user's own key); always, when not given. */
+  canAutoAnswer?: () => boolean
 }
 
 const MAX_HISTORY = 40
@@ -76,7 +78,7 @@ export class ChatService extends EventEmitter {
    * own speech (microphone channel) is context only and never answered.
    */
   async autoAnswer(utterance: Utterance): Promise<void> {
-    if (this.deps.settings.get().autoAnswer === "off") return
+    if (this.deps.settings.get().autoAnswer === "off" || this.deps.canAutoAnswer?.() === false) return
     if (utterance.channel === "you") return
     const text = utterance.text.trim()
     if (letterCount(text) < AUTO_ANSWER_MIN_LETTERS) return
@@ -124,7 +126,7 @@ export class ChatService extends EventEmitter {
         const next = this.queued
         this.queued = null
         const mode = this.deps.settings.get().autoAnswer
-        if (mode === "off") break
+        if (mode === "off" || this.deps.canAutoAnswer?.() === false) break
         await this.answerUtterance(next, mode === "questions")
       }
     } finally {

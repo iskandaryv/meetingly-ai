@@ -26,10 +26,10 @@ describe("SettingsStore", () => {
     expect(reloaded.get().stealth).toBe(false)
   })
 
-  it("has suggestions on by default, also for settings saved before they existed", () => {
+  it("has suggestions off by default (1.2.5), and keeps them on where they were saved on", () => {
     const file = tmpFile()
-    expect(new SettingsStore(file).get().suggestions).toBe(true)
-    fs.writeFileSync(file, JSON.stringify({ outputLanguage: "ru" }))
+    expect(new SettingsStore(file).get().suggestions).toBe(false)
+    fs.writeFileSync(file, JSON.stringify({ outputLanguage: "ru", suggestions: true, __v: 2 }))
     expect(new SettingsStore(file).get().suggestions).toBe(true)
     const store = new SettingsStore(file)
     store.update({ suggestions: false })
@@ -156,5 +156,34 @@ describe("logger", () => {
     expect(redact("Authorization: Bearer igpt_v1_7Qm3xLk9pZ2vT8nR4wYb6Hd1Fs5Ja0Ce")).not.toContain("Ja0Ce")
     expect(redact("key=sk-or-v1-0123456789abcdef01234567")).toBe("key=sk-or-v1-01…")
     expect(redact("nothing secret here")).toBe("nothing secret here")
+  })
+})
+
+describe("auto-answer (Pro since 1.2.5)", () => {
+  it("is off for a new install, and turned off once for settings saved before 1.2.5", () => {
+    const file = tmpFile()
+    expect(new SettingsStore(file).get().autoAnswer).toBe("off")
+    fs.writeFileSync(file, JSON.stringify({ autoAnswer: "questions", __v: 2 }))
+    expect(new SettingsStore(file).get().autoAnswer).toBe("off")
+  })
+
+  it("keeps the user's choice made after that", () => {
+    const file = tmpFile()
+    fs.writeFileSync(file, JSON.stringify({ autoAnswer: "questions", __v: 2 }))
+    const store = new SettingsStore(file)
+    store.update({ autoAnswer: "always" })
+    expect(new SettingsStore(file).get().autoAnswer).toBe("always")
+  })
+
+  it("is available on Pro, Unlimited and the user's own key only", async () => {
+    const { autoAnswerAllowed } = await import("../shared/types")
+    expect(autoAnswerAllowed({ status: "ok", plan: "pro" })).toBe(true)
+    expect(autoAnswerAllowed({ status: "ok", plan: "unlimited" })).toBe(true)
+    expect(autoAnswerAllowed({ status: "own-key" })).toBe(true)
+    expect(autoAnswerAllowed({ status: "ok", plan: "free" })).toBe(false)
+    expect(autoAnswerAllowed({ status: "ok", plan: "guest" })).toBe(false)
+    expect(autoAnswerAllowed({ status: "signed-out" })).toBe(false)
+    expect(autoAnswerAllowed({ status: "unknown" })).toBe(false)
+    expect(autoAnswerAllowed({ status: "offline" })).toBe(false)
   })
 })

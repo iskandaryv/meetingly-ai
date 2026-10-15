@@ -143,4 +143,22 @@ describe("ChatService priorities", () => {
     await chat.autoAnswer({ text: "What is Kafka, I would say it is a log", speaker: null, channel: "you", timestamp: Date.now() })
     expect(calls).toBe(0)
   })
+  it("asks nothing when the plan has no auto-answer (Free)", async () => {
+    const { ChatService } = await import("../electron/services/chat")
+    let calls = 0
+    let allowed = false
+    const chat = new ChatService({
+      settings: { get: () => ({ autoAnswer: "questions", answerLength: "auto" }), activePrompt: () => DEFAULT_PROMPT } as never,
+      llm: { chat: async () => { calls++; return { text: SKIP_TOKEN } }, languageInstruction: () => "" } as never,
+      session: { transcriptText: () => "" } as never,
+      capture: async () => ({}) as never,
+      canAutoAnswer: () => allowed
+    })
+    const heard = { text: "So, what is Kafka used for?", speaker: null, channel: "them" as const, timestamp: Date.now() }
+    await chat.autoAnswer(heard)
+    expect(calls).toBe(0)
+    allowed = true
+    await chat.autoAnswer(heard)
+    expect(calls).toBe(1)
+  })
 })

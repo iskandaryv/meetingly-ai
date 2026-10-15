@@ -104,7 +104,10 @@ export class SettingsStore extends EventEmitter {
         }
         const raw = JSON.parse(fs.readFileSync(this.file, "utf8")) as Partial<Settings> & { __v?: number }
         // v2: "microphone" used to be the silent default; nobody chose it. Move to mic + system.
-        if ((raw.__v ?? 1) < SETTINGS_VERSION && raw.audioSource === "microphone") raw.audioSource = "both"
+        if ((raw.__v ?? 1) < 2 && raw.audioSource === "microphone") raw.audioSource = "both"
+        // v3 (1.2.5): auto-answer became a Pro feature, off until turned on. It used to be on by default, so turn it
+        // off once; on a paying account the next sync brings back what the account has.
+        if ((raw.__v ?? 1) < 3) raw.autoAnswer = "off"
         return normalize({ ...DEFAULT_SETTINGS, ...raw })
       }
     } catch (err) {
@@ -126,7 +129,7 @@ export class SettingsStore extends EventEmitter {
   }
 }
 
-const SETTINGS_VERSION = 2
+const SETTINGS_VERSION = 3
 
 export function normalize(s: Settings): Settings {
   const squash = (t: string) => t.replace(/\s+/g, " ").trim()

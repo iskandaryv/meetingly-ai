@@ -10,6 +10,8 @@ interface TrayActions {
   /** The web dashboard (signed in): the overview, or a page such as the guide. */
   openWeb: (page?: "guide") => void
   openLogs: () => void
+  /** The folder with every finished session as a text file. */
+  openTranscripts: () => void
   /** The panel with the "use your own API key" form. */
   ownKey: () => void
 }
@@ -32,6 +34,7 @@ export function createTray(windows: WindowManager, settings: SettingsStore, acti
         { label: t("Show toolbar"), click: () => windows.centerMain() },
         { label: t("Show / hide all windows"), click: () => windows.toggleAll() },
         { label: t("Live transcript"), click: () => windows.showPanel("transcript") },
+        { label: t("Open saved transcripts"), click: () => actions.openTranscripts() },
         { type: "separator" },
         { label: t("Open web dashboard"), click: () => actions.openWeb() },
         { label: t("Guide"), click: () => actions.openWeb("guide") },

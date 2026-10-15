@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { chargeFor, checkBudget, PAID, planName, PLANS, taskSpec } from "./plans.mjs"
+import { chargeFor, checkBudget, PAID, planName, PLANS, taskAllowed, taskSpec } from "./plans.mjs"
 
 const zero = { requests: 0, answers: 0, vision: 0, listening: 0, reports: 0, tokens: 0, audioMinutes: 0 }
 
@@ -72,4 +72,12 @@ test("unknown tasks are refused; suggestions are capped small and never streamed
   assert.equal(taskSpec("whatever"), null)
   assert.equal(taskSpec("suggest").noStream, true)
   assert.ok(taskSpec("suggest").maxTokens < taskSpec("answer").maxTokens)
+})
+
+test("auto-answer is for Pro and Unlimited only; every other task is open to all plans", () => {
+  assert.equal(taskAllowed("auto", "pro"), true)
+  assert.equal(taskAllowed("auto", "unlimited"), true)
+  assert.equal(taskAllowed("auto", "free"), false)
+  assert.equal(taskAllowed("auto", "guest"), false)
+  for (const task of ["answer", "vision", "suggest", "report", ""]) assert.equal(taskAllowed(task, "free"), true)
 })

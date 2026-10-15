@@ -36,13 +36,14 @@ Meetingly é um assistente de IA gratuito e open-source para entrevistas de empr
 
 ## Recursos
 
-- **Respostas reais, instantâneas.** Quando a outra pessoa pergunta algo, a resposta aparece na hora: uma linha em negrito que você pode dizer, depois alguns pontos para desenvolver. Sem coaching, sem "você poderia mencionar…".
+- **Respostas reais, na hora.** Quando a outra pessoa perguntar algo, pressione *Responder* (ou deixe o recurso de resposta automática do Pro fazer isso): uma frase em negrito que você pode dizer, seguida de alguns pontos-chave para desenvolver. Sem coaching, sem “você poderia mencionar…”.
 - **Perguntas sugeridas.** Uma coluna lateral acompanha a conversa e oferece perguntas com um clique: a pergunta que acabaram de fazer, termos que surgiram, a provável próxima pergunta.
 - **Reconhecimento de fala no seu computador.** NVIDIA Nemotron transcreve localmente em 28 idiomas por padrão. Unlimited também oferece transcrição opcional na nuvem, que envia áudio para Deepgram.
 - **Você e Eles, separados.** Seu microfone e o áudio da chamada são transcritos separadamente, então a transcrição parece um chat.
 - **Análise de tela.** Um clique lê o que está na sua tela (uma tarefa de código, um slide, uma pergunta) e responde.
 - **Proteção de conteúdo no compartilhamento de tela.** Usa a proteção do sistema operacional no Windows e macOS. Alguns métodos de captura ainda podem incluir a janela; Linux não oferece a mesma proteção.
 - **Relatórios de reunião.** Toda reunião termina com um resumo, decisões, itens de ação e acompanhamentos.
+- **Transcrições salvas como arquivos de texto.** Cada sessão é salva em *Documents/Meetingly* como um arquivo .txt simples, com You e Them em cada turno. Assim, o Meetingly também funciona como um app gratuito de transcrição, sem AI e sem conta.
 - **Sua própria chave de API, ou nenhuma nossa.** Use o plano grátis, ou aponte o Meetingly para OpenAI, OpenRouter, um modelo Ollama local ou qualquer endpoint compatível com OpenAI.
 - **Atualiza sozinho** no Windows, macOS e Linux, nunca no meio de uma chamada.
 
@@ -63,6 +64,7 @@ Meetingly é um assistente de IA gratuito e open-source para entrevistas de empr
 |---|---|---|---|
 | Preço | $0 | $19.99 / mês, 7 dias grátis | $39.99 / mês |
 | Respostas | 50 por dia | 300 por dia | Unlimited (uso justo) |
+| Resposta automática (responde às perguntas conforme são feitas) | — (pressione Answer) | Incluído | Incluído |
 | Análise de tela | 3 por dia | 50 por dia | 300 por dia |
 | Sugestões ao vivo | Cerca de 30 minutos por dia | Cerca de 4 horas por dia | Cerca de 8 horas por dia |
 | Relatórios de reunião | 1 por dia | 20 por dia | 100 por dia |
@@ -168,6 +170,10 @@ No Windows e macOS, as janelas usam a proteção contra captura de tela do siste
 ### Ele pode ajudar em entrevistas de programação?
 
 Sim. A análise de tela faz uma captura de tela apenas quando você pressiona, lê a tarefa (LeetCode, HackerRank, CoderPad, Codility ou qualquer editor) e responde com uma abordagem e código. Com sua própria chave, escolha um modelo que aceite imagens.
+
+### Posso usá-lo apenas para transcrição, sem AI?
+
+Sim. Pressione Listen e o Meetingly transcreve a chamada no seu computador em 28 idiomas, sem limite de tempo, e salva cada sessão como um arquivo .txt em *Documents/Meetingly*. As sugestões ao vivo e a resposta automática começam desativadas; a única etapa de AI executada automaticamente é o relatório no final de uma reunião.
 
 ### Ele pode rodar totalmente offline?
 

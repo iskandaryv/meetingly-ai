@@ -36,13 +36,14 @@ Meetingly is a free, open-source AI assistant for job interviews and live meetin
 
 ## Features
 
-- **Real answers, instantly.** When the other side asks something, the answer appears right away: one bold line you can say, then a few catch points to expand on. No coaching, no "you could mention…".
+- **Real answers, instantly.** When the other side asks something, press *Answer* (or let Pro's auto-answer do it): one bold line you can say, then a few catch points to expand on. No coaching, no "you could mention…".
 - **Suggested questions.** A side column follows the conversation and offers one-click questions: the question you were just asked, terms that came up, the likely next question.
 - **Speech recognition on your computer.** NVIDIA Nemotron transcribes locally in 28 languages by default. Unlimited also offers optional cloud transcription, which sends audio to Deepgram.
 - **You and Them, separated.** Your microphone and the call audio are transcribed apart, so the transcript reads like a chat.
 - **Screen analysis.** One click reads what is on your screen (a coding task, a slide, a question) and answers it.
 - **Screen-share content protection.** Uses OS protection on Windows and macOS. Some capture methods can still include the window; Linux does not offer the same protection.
 - **Meeting reports.** Every meeting ends with a summary, decisions, action items and follow-ups.
+- **Transcripts saved as text files.** Every session is saved to *Documents/Meetingly* as a plain .txt with You and Them on each turn, so Meetingly also works as a free transcription app, with no AI and no account.
 - **Your own API key, or none of ours.** Use the free plan, or point Meetingly at OpenAI, OpenRouter, a local Ollama model or any OpenAI-compatible endpoint.
 - **Updates itself** on Windows, macOS and Linux, never in the middle of a call.
 
@@ -63,6 +64,7 @@ Meetingly is a free, open-source AI assistant for job interviews and live meetin
 |---|---|---|---|
 | Price | $0 | $19.99 / month, 7 days free | $39.99 / month |
 | Answers | 50 a day | 300 a day | Unlimited (fair use) |
+| Auto-answer (answers questions as they're asked) | — (press Answer) | Included | Included |
 | Screen analysis | 3 a day | 50 a day | 300 a day |
 | Live suggestions | About 30 minutes a day | About 4 hours a day | About 8 hours a day |
 | Meeting reports | 1 a day | 20 a day | 100 a day |
@@ -168,6 +170,10 @@ On Windows and macOS the windows use the operating system's screen-capture prote
 ### Can it help in coding interviews?
 
 Yes. Screen analysis takes a screenshot only when you press it, reads the task (LeetCode, HackerRank, CoderPad, Codility or any editor) and answers with an approach and code. With your own key, choose a model that accepts images.
+
+### Can I use it only for transcription, without AI?
+
+Yes. Press Listen and Meetingly transcribes the call on your computer in 28 languages, with no time limit, and saves each session as a .txt file in *Documents/Meetingly*. Live suggestions and auto-answer start off; the only AI step that runs on its own is the report at the end of a meeting.
 
 ### Can it run fully offline?
 

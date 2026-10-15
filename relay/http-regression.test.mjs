@@ -46,6 +46,10 @@ test("relay request validation, streaming and client cancellation with isolated 
     const response = await fetch(base+"/v1/chat/completions", { method:"POST", headers, body:JSON.stringify({ messages:[{role:"user",content:"hello"}],stream:true,max_tokens:-20 }) })
     assert.equal(response.status,200)
     const body=await response.text(); assert.match(body,/Hello/); assert.match(body,/DONE/)
+    // The fixture account is on Free: auto-answer is refused before anything goes upstream.
+    const auto = await fetch(base+"/v1/chat/completions", { method:"POST", headers:{ ...headers, "x-meetingly-task":"auto" }, body:JSON.stringify({ messages:[{role:"user",content:"hello"}],stream:true }) })
+    assert.equal(auto.status,403)
+    assert.equal((await auto.json()).error.code,"auto_answer_plan")
     const controller = new AbortController()
     const pending = fetch(base+"/v1/chat/completions",{method:"POST",headers,body:JSON.stringify({messages:[{role:"user",content:"slow"}]}),signal:controller.signal}).catch(e=>e)
     for(let i=0;i<100&&!reached;i++) await delay(20)

@@ -28,6 +28,8 @@ interface Deps {
   cloudTranscription?: () => boolean
   /** Injectable for tests. */
   createSocket?: (deviceId: string, language: string) => TranscriptionSocket
+  /** A finished session was saved (main writes it as a text file); errors are the caller's to handle. */
+  onFinished?: (meeting: Meeting) => void
 }
 
 /** What the session needs from a transcription engine (Deepgram over the relay, or on-device Nemotron). */
@@ -156,6 +158,7 @@ export class RecordingSession extends EventEmitter {
       updatedAt: endTime
     }
     this.deps.meetings.save(meeting)
+    this.deps.onFinished?.(meeting)
     // Report generation runs in the background; the meeting syncs to the web dashboard when it's done.
     void this.deps.reports.generate(meeting.id).catch((err) => console.error("[session] report failed:", err))
     return meeting

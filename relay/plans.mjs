@@ -44,6 +44,11 @@ export function taskSpec(task) {
   return Object.hasOwn(TASKS, task) ? TASKS[task] : null
 }
 
+/** Hands-free answering ("auto") is part of Pro and Unlimited; Free presses Answer instead (app 1.2.5). */
+export function taskAllowed(task, plan) {
+  return task !== "auto" || PAID.has(plan)
+}
+
 /**
  * The counter a finished request is charged to, from what the reply turned out to be
  * ("answer", "skip" or "empty", see answers.mjs). Null when it costs nothing but tokens.

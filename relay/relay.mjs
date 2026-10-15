@@ -25,7 +25,7 @@ import { WebSocket, WebSocketServer } from "ws"
 import { Accounts } from "./accounts.mjs"
 import { ReplyWatcher } from "./answers.mjs"
 import { modelConfig, modelsFor, upstreamFor } from "./models.mjs"
-import { chargeFor, checkBudget, GUEST_UNTIL, IP_ANSWERS_PER_DAY, PAID, planName, PLANS, taskSpec } from "./plans.mjs"
+import { chargeFor, checkBudget, GUEST_UNTIL, IP_ANSWERS_PER_DAY, PAID, planName, PLANS, taskAllowed, taskSpec } from "./plans.mjs"
 import { Quotas } from "./quotas.mjs"
 import { clientLifetime } from "./client-lifetime.mjs"
 
@@ -203,6 +203,11 @@ async function chatCompletions(req, res, ip) {
   const task = String(req.headers["x-meetingly-task"] ?? "")
   const spec = taskSpec(task)
   if (!spec) return json(res, 400, { error: { message: "Unknown task" } })
+  // Older apps auto-answer on every plan; they get nothing here (silently: an auto-answer error is never shown).
+  // Not counted as a limit hit, so the admin panel's abuse view doesn't flag every Free user.
+  if (!taskAllowed(task, who.plan)) {
+    return json(res, 403, { error: { code: "auto_answer_plan", message: "Auto-answer is part of Pro and Unlimited.", plan: who.plan } })
+  }
 
   const raw = await readBody(req, MAX_BODY_BYTES)
   let body

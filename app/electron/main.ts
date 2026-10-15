@@ -1,4 +1,5 @@
 import { app, BrowserWindow, desktopCapturer, safeStorage, session as electronSession, shell } from "electron"
+import fs from "node:fs"
 import path from "node:path"
 import { openOwnKeyForm, registerIpc } from "./ipc"
 import { Logger, type LogLevel } from "./services/logger"
@@ -11,7 +12,9 @@ import { ReportGenerator } from "./services/reports"
 import { RecordingSession } from "./services/session"
 import { AsrModel } from "./services/asrModel"
 import { SettingsStore } from "./services/settings"
+import { writeTranscriptFile } from "./services/transcriptFiles"
 import { setLocale } from "../shared/i18n"
+import { autoAnswerAllowed } from "../shared/types"
 import { SuggestionService } from "./services/suggestions"
 import { PlanService } from "./services/plan"
 import { OwnKeyService } from "./services/ownKey"
@@ -55,14 +58,30 @@ function bootstrap(): void {
   const reports = new ReportGenerator({ llm, meetings, settings })
   const asrModel = new AsrModel(process.env.MEETINGLY_MODEL_DIR || path.join(userData, "models"))
   // Cloud transcription is part of Unlimited; every other plan transcribes on this computer.
-  const session = new RecordingSession({ settings, meetings, reports, asrModel, cloudTranscription: () => plan.getState().plan === "unlimited" })
+  // Each finished session is also a .txt in Documents/Meetingly (a temp folder for smoke runs): readable without an account.
+  const transcriptDir = process.env.IGPT_SMOKE ? path.join(userData, "transcripts") : path.join(app.getPath("documents"), "Meetingly")
+  const session = new RecordingSession({
+    settings,
+    meetings,
+    reports,
+    asrModel,
+    cloudTranscription: () => plan.getState().plan === "unlimited",
+    onFinished: (meeting) => {
+      try {
+        logger.info("session", `transcript saved to ${writeTranscriptFile(transcriptDir, meeting)}`)
+      } catch (err) {
+        logger.warn("session", `could not save the transcript file: ${(err as Error).message}`)
+      }
+    }
+  })
   const windows = new WindowManager(path.join(__dirname, "preload.js"))
   const chat = new ChatService({
     settings,
     llm,
     session,
     capture: captureScreen,
-    hideForCapture: () => windows.hideForCapture()
+    hideForCapture: () => windows.hideForCapture(),
+    canAutoAnswer: () => autoAnswerAllowed(plan.getState())
   })
   const suggestions = new SuggestionService({ settings, llm, session, chat })
 
@@ -111,7 +130,15 @@ function bootstrap(): void {
     void cloud.start().catch((err) => logger.warn("cloud", "start failed", err))
     if (!process.env.IGPT_SMOKE) plan.start()
     windows.createMain()
-    createTray(windows, settings, { openWeb: (page) => void cloud.openWeb(page), openLogs: () => shell.showItemInFolder(logger.file), ownKey: () => openOwnKeyForm(windows) })
+    createTray(windows, settings, {
+      openWeb: (page) => void cloud.openWeb(page),
+      openLogs: () => shell.showItemInFolder(logger.file),
+      openTranscripts: () => {
+        fs.mkdirSync(transcriptDir, { recursive: true })
+        void shell.openPath(transcriptDir)
+      },
+      ownKey: () => openOwnKeyForm(windows)
+    })
     shortcuts.register()
     if (!process.env.IGPT_SMOKE) {
       startAutoUpdates({

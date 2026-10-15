@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { Camera, Check, CircleHelp, Copy, Eraser, KeyRound, ListChecks, MessageSquareQuote, MessageSquareReply, Mic, PanelLeft, RefreshCw, SendHorizontal, Volume2, X } from "lucide-react"
 import {
   AUDIO_SOURCE_LABELS,
+  autoAnswerAllowed,
   OWN_KEY_PRESETS,
   QUICK_ACTIONS,
   segmentLabel,
@@ -56,7 +57,9 @@ export function PanelWindow() {
     setTab(next)
     void api.invoke("panel:set-tab", next)
   }
-  const handsFree = settings ? settings.autoAnswer !== "off" : true
+  // Hands-free answering needs Pro or Unlimited (or the user's own key); Free answers with the Answer button.
+  const autoAllowed = autoAnswerAllowed(plan)
+  const handsFree = autoAllowed && settings ? settings.autoAnswer !== "off" : false
   const rail = suggestionsVisible(settings, session.status)
 
   return (
@@ -82,7 +85,16 @@ export function PanelWindow() {
                 <PanelLeft className="h-3.5 w-3.5" />
               </Button>
             )}
-            {tab === "answers" ? (
+            {tab === "answers" && !autoAllowed ? (
+              <button
+                type="button"
+                onClick={() => void api.invoke(plan.status === "signed-out" ? "cloud:link-start" : "plan:upgrade").catch(() => {})}
+                title={t("Pro answers questions from the meeting automatically. On Free, press Answer when a question is heard.")}
+                className="h-6 rounded-full px-2 text-[11px] font-medium text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                {t("Auto-answer")} <span className="ml-0.5 rounded bg-sky-500/20 px-1 text-[10px] text-sky-200">Pro</span>
+              </button>
+            ) : tab === "answers" ? (
               <button
                 type="button"
                 onClick={() => update({ autoAnswer: handsFree ? "off" : "questions" })}
@@ -117,7 +129,7 @@ export function PanelWindow() {
           <div className="flex min-w-0 flex-1 flex-col">
             {/* Both tabs stay mounted: a reply keeps streaming and scroll positions survive tab switches. */}
             <div className={cn("min-h-0 flex-1 flex-col", tab === "answers" ? "flex" : "hidden")}>
-              <Answers listening={session.status !== "idle"} handsFree={handsFree} plan={plan} />
+              <Answers listening={session.status !== "idle"} handsFree={handsFree} autoAllowed={autoAllowed} plan={plan} />
             </div>
             <div className={cn("min-h-0 flex-1 flex-col", tab === "transcript" ? "flex" : "hidden")}>
               <Transcript
@@ -229,7 +241,7 @@ function Suggestions({ state, plan }: { state: SuggestionsState; plan: PlanState
   )
 }
 
-function Answers({ listening, handsFree, plan }: { listening: boolean; handsFree: boolean; plan: PlanState }) {
+function Answers({ listening, handsFree, autoAllowed, plan }: { listening: boolean; handsFree: boolean; autoAllowed: boolean; plan: PlanState }) {
   const [history, setHistory] = useState<ChatMessage[]>([])
   const [stream, setStream] = useState<ChatChunk | null>(null)
   const [busy, setBusy] = useState(false)
@@ -273,7 +285,11 @@ function Answers({ listening, handsFree, plan }: { listening: boolean; handsFree
       <div ref={listRef} className="scroll min-h-0 flex-1 space-y-1.5 px-2.5 py-2">
         {history.length === 0 && !stream && (
           <p className="px-4 py-6 text-center text-[11.5px] leading-relaxed text-white/45">
-            {handsFree ? t("Ask anything, or press Listen: questions from the meeting are answered here.") : t("Ask anything. Auto-answer is off.")}
+            {handsFree
+              ? t("Ask anything, or press Listen: questions from the meeting are answered here.")
+              : autoAllowed
+                ? t("Ask anything. Auto-answer is off.")
+                : t("Ask anything, or press Listen and then Answer when a question is heard.")}
           </p>
         )}
         {history.map((m) => <Message key={m.id} message={m} />)}

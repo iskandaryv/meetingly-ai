@@ -27,6 +27,7 @@ export interface IpcDeps {
   cloud: CloudSync
   plan: PlanService
   ownKey: OwnKeyService
+  transcripts: { reveal: () => void }
 }
 
 type Handler<K extends InvokeChannel> = (
@@ -60,7 +61,7 @@ export function openOwnKeyForm(windows: WindowManager): void {
 }
 
 export function registerIpc(deps: IpcDeps): void {
-  const { settings, windows, session, chat, suggestions, meetings, logger, cloud, plan, ownKey } = deps
+  const { settings, windows, session, chat, suggestions, meetings, logger, cloud, plan, ownKey, transcripts } = deps
   const handle = <K extends InvokeChannel>(channel: K, fn: Handler<K>) => registerHandler(channel, fn, windows)
 
   // Settings
@@ -83,6 +84,12 @@ export function registerIpc(deps: IpcDeps): void {
     const kind = windows.kindOf(e.sender)
     if (kind) windows.fit(kind, size.width, size.height)
   })
+  handle("windows:drag", (_e, step) => {
+    const ok = (n: unknown) => typeof n === "number" && Number.isFinite(n) && Math.abs(n) < 20_000
+    if (!step || !["start", "move", "end"].includes(step.phase) || !ok(step.dx) || !ok(step.dy)) return
+    windows.dragMain(step.phase, step.dx, step.dy)
+  })
+  handle("transcripts:reveal", () => transcripts.reveal())
   handle("app:quit", () => app.quit())
   handle("app:open-logs", () => {
     shell.showItemInFolder(logger.file)

@@ -60,6 +60,15 @@ function bootstrap(): void {
   // Cloud transcription is part of Unlimited; every other plan transcribes on this computer.
   // Each finished session is also a .txt in Documents/Meetingly (a temp folder for smoke runs): readable without an account.
   const transcriptDir = process.env.IGPT_SMOKE ? path.join(userData, "transcripts") : path.join(app.getPath("documents"), "Meetingly")
+  let lastTranscript: string | null = null
+  const openTranscripts = () => {
+    fs.mkdirSync(transcriptDir, { recursive: true })
+    void shell.openPath(transcriptDir)
+  }
+  // After Finish without an account: the file manager opens with the new .txt selected.
+  const transcripts = {
+    reveal: () => (lastTranscript && fs.existsSync(lastTranscript) ? shell.showItemInFolder(lastTranscript) : openTranscripts())
+  }
   const session = new RecordingSession({
     settings,
     meetings,
@@ -68,7 +77,8 @@ function bootstrap(): void {
     cloudTranscription: () => plan.getState().plan === "unlimited",
     onFinished: (meeting) => {
       try {
-        logger.info("session", `transcript saved to ${writeTranscriptFile(transcriptDir, meeting)}`)
+        lastTranscript = writeTranscriptFile(transcriptDir, meeting)
+        logger.info("session", `transcript saved to ${lastTranscript}`)
       } catch (err) {
         logger.warn("session", `could not save the transcript file: ${(err as Error).message}`)
       }
@@ -120,7 +130,7 @@ function bootstrap(): void {
     }
     if (process.platform === "darwin") app.dock?.hide()
     installSystemAudioHandler()
-    registerIpc({ settings, windows, session, chat, suggestions, meetings, reports, logger, cloud, plan, ownKey })
+    registerIpc({ settings, windows, session, chat, suggestions, meetings, reports, logger, cloud, plan, ownKey, transcripts })
     instrument({ logger, settings, session, chat, windows })
     applySettings()
     settings.onChange(applySettings)
@@ -133,10 +143,7 @@ function bootstrap(): void {
     createTray(windows, settings, {
       openWeb: (page) => void cloud.openWeb(page),
       openLogs: () => shell.showItemInFolder(logger.file),
-      openTranscripts: () => {
-        fs.mkdirSync(transcriptDir, { recursive: true })
-        void shell.openPath(transcriptDir)
-      },
+      openTranscripts,
       ownKey: () => openOwnKeyForm(windows)
     })
     shortcuts.register()

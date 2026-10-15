@@ -38,6 +38,10 @@ export interface InvokeMap {
   "panel:set-tab": (tab: PanelTab) => void
   /** Resize the calling window to fit its content. */
   "windows:fit": (size: { width: number; height: number }) => void
+  /** Dragging the panel's header moves the toolbar (the panel follows): offsets from where the drag started. */
+  "windows:drag": (step: { phase: "start" | "move" | "end"; dx: number; dy: number }) => void
+  /** Show the last saved transcript (.txt) in the file manager, or the transcripts folder when there is none. */
+  "transcripts:reveal": () => void
   "app:quit": () => void
   /** Reveal the log file in the OS file manager. */
   "app:open-logs": () => void
@@ -130,6 +134,8 @@ export const INVOKE_CHANNELS: InvokeChannel[] = [
   "panel:toggle",
   "panel:set-tab",
   "windows:fit",
+  "windows:drag",
+  "transcripts:reveal",
   "app:quit",
   "app:open-logs",
   "app:log",

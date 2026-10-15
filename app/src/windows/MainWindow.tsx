@@ -47,9 +47,12 @@ export function MainWindow() {
     })
   const finish = () =>
     run(async () => {
-      // Every finished session becomes a meeting: its report shows on the web dashboard's Meetings page.
+      // Every finished session becomes a meeting and a .txt in Documents/Meetingly. Signed in, its report shows on
+      // the web dashboard's Meetings page; otherwise the file manager opens on the saved transcript.
       const meeting = await api.invoke("session:finish")
-      if (meeting) await api.invoke("cloud:open-web", "meetings")
+      if (!meeting) return
+      if (cloud.status === "online") await api.invoke("cloud:open-web", "meetings")
+      else await api.invoke("transcripts:reveal")
     })
   const screenshot = () =>
     run(async () => {

@@ -457,10 +457,53 @@ async function hardwareSmoke(windows: WindowManager): Promise<Record<string, unk
   //   click-api  the eye button, then shown again by code      api-key   hidden by code, then a real Ctrl+B
   //   api-api    hidden and shown by code                      move-key  real Ctrl+Down, Ctrl+Up (moves, no hiding)
   //   shift-key  a real Shift press, nothing else
+  //   drag       drag the panel's header with the real mouse: the toolbar and the panel move together
   const plan = process.env.HW_PLAN || "click-key"
   const realKey = (vk: number) => ps(`${NATIVE} [H]::keybd_event(${vk}, 0, 0, 0); Start-Sleep -Milliseconds 60; [H]::keybd_event(${vk}, 0, 2, 0)`)
   const ctrlKey = (vk: number) => ps(`${NATIVE} [H]::keybd_event(0x11, 0, 0, 0); Start-Sleep -Milliseconds 40; [H]::keybd_event(${vk}, 0, 0, 0); Start-Sleep -Milliseconds 60; [H]::keybd_event(${vk}, 0, 2, 0); [H]::keybd_event(0x11, 0, 2, 0)`)
   steps.push(`plan: ${plan}`)
+  if (plan === "drag") {
+    try {
+      await sleep(800)
+      for (let round = 1; round <= Number(process.env.HW_ROUNDS || 3); round++) {
+        windows.showPanel("answers")
+        await sleep(1200)
+        const panel = windows.get("chat")
+        if (!panel || !windows.isVisible("chat")) {
+          check(`round ${round}: the panel is open`, false)
+          continue
+        }
+        const pb = panel.getBounds()
+        const scale = screen.getDisplayMatching(pb).scaleFactor
+        // An empty spot in the header: right of the tabs, left of the buttons, and nothing clickable under it.
+        const spot = (await panel.webContents.executeJavaScript(
+          `(() => { const h = document.querySelector("header"); if (!h) return null; const r = h.getBoundingClientRect(); const x = r.x + r.width * 0.5, y = r.y + r.height / 2; const el = document.elementFromPoint(x, y); return el && !el.closest("button, select, input, a, label") ? { x, y } : null })()`
+        )) as { x: number; y: number } | null
+        check(`round ${round}: an empty spot in the panel header`, Boolean(spot))
+        if (!spot) continue
+        const before = { main: main().getBounds(), panel: pb }
+        const from = { x: Math.round((pb.x + spot.x) * scale), y: Math.round((pb.y + spot.y) * scale) }
+        const by = { x: round % 2 ? 160 : -140, y: round % 2 ? 90 : -70 }
+        const moves = Array.from({ length: 12 }, (_, i) => `[H]::SetCursorPos(${Math.round(from.x + (by.x * (i + 1)) / 12)}, ${Math.round(from.y + (by.y * (i + 1)) / 12)}) | Out-Null; Start-Sleep -Milliseconds 25;`).join(" ")
+        await ps(`${NATIVE} [H]::SetCursorPos(${from.x}, ${from.y}) | Out-Null; Start-Sleep -Milliseconds 150; [H]::mouse_event(2, 0, 0, 0, 0); Start-Sleep -Milliseconds 80; ${moves} Start-Sleep -Milliseconds 120; [H]::mouse_event(4, 0, 0, 0, 0)`)
+        await sleep(700)
+        const after = { main: main().getBounds(), panel: panel.getBounds() }
+        const moved = { x: after.main.x - before.main.x, y: after.main.y - before.main.y }
+        const want = { x: by.x / scale, y: by.y / scale }
+        steps.push(`round ${round}: dragged ${by.x},${by.y} px; toolbar moved ${moved.x},${moved.y} DIP; panel moved ${after.panel.x - before.panel.x},${after.panel.y - before.panel.y}`)
+        check(`round ${round}: the toolbar follows the drag`, Math.abs(moved.x - want.x) <= 8 && Math.abs(moved.y - want.y) <= 8)
+        check(`round ${round}: the panel stays attached`, Math.abs(after.panel.x - before.panel.x - moved.x) <= 2 && Math.abs(after.panel.y - before.panel.y - moved.y) <= 2)
+        // The toolbar still answers real clicks afterwards.
+        await click("Answers and chat")
+        await sleep(1000)
+        check(`round ${round}: then the chat button still closes the panel`, !windows.isVisible("chat"))
+      }
+    } finally {
+      const [x, y] = saved.split(" ").map(Number)
+      if (Number.isFinite(x) && Number.isFinite(y)) await ps(`${NATIVE} [H]::SetCursorPos(${x}, ${y}) | Out-Null`)
+    }
+    return { ok: problems.length === 0, steps, events }
+  }
   try {
     await sleep(800)
     if (process.env.HW_CONTROL !== "0") {

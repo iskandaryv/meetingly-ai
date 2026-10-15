@@ -21,6 +21,7 @@ jobs:
           - { code: v1.2.0, plan: click-key }
           - { code: current, plan: click-key }
           - { code: current, plan: api-api }
+          - { code: current, plan: drag }
     runs-on: windows-latest
     continue-on-error: ${{ matrix.code == 'v1.2.0' }}
     defaults:

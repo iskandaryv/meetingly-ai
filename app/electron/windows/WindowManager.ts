@@ -187,6 +187,29 @@ export class WindowManager extends EventEmitter {
     this.layoutChildren()
   }
 
+  private dragOrigin: { x: number; y: number } | null = null
+
+  /**
+   * The panel can't be moved on its own (it hangs under the toolbar), so dragging its header moves the toolbar,
+   * and the panel follows. Offsets are from where the pointer went down, so nothing accumulates.
+   */
+  dragMain(phase: "start" | "move" | "end", dx: number, dy: number): void {
+    const main = this.get("main")
+    if (!main) return
+    if (phase === "start") {
+      const b = main.getBounds()
+      this.dragOrigin = { x: b.x, y: b.y }
+      return
+    }
+    if (!this.dragOrigin) return
+    if (phase === "move") {
+      main.setPosition(Math.round(this.dragOrigin.x + dx), Math.round(this.dragOrigin.y + dy))
+      this.layoutChildren()
+    } else {
+      this.dragOrigin = null
+    }
+  }
+
   centerMain(): void {
     const main = this.createMain()
     const b = main.getBounds()

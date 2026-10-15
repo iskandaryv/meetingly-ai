@@ -61,11 +61,12 @@ export function PanelWindow() {
   const autoAllowed = autoAnswerAllowed(plan)
   const handsFree = autoAllowed && settings ? settings.autoAnswer !== "off" : false
   const rail = suggestionsVisible(settings, session.status)
+  const dragToolbar = useDragToolbar()
 
   return (
     <div className="flex h-screen w-full flex-col p-1">
       <div className="glass flex h-full w-full flex-col overflow-hidden">
-        <header className="drag flex h-9 shrink-0 items-center gap-1 border-b border-white/10 pl-1 pr-1">
+        <header {...dragToolbar} className="flex h-9 shrink-0 cursor-grab select-none items-center gap-1 border-b border-white/10 pl-1 pr-1">
           <div className="no-drag flex items-center rounded-md bg-white/[0.04] p-0.5">
             <TabButton active={tab === "answers"} onClick={() => choose("answers")}>{t("Answers")}</TabButton>
             <TabButton active={tab === "transcript"} onClick={() => choose("transcript")}>
@@ -151,6 +152,43 @@ export function PanelWindow() {
       </div>
     </div>
   )
+}
+
+/**
+ * The panel hangs under the toolbar and can't be moved on its own: dragging the header's empty space moves the
+ * toolbar, and the panel follows. One move per animation frame; offsets are from where the pointer went down.
+ */
+function useDragToolbar() {
+  const drag = useRef<{ x: number; y: number; dx: number; dy: number; frame: number } | null>(null)
+  const end = (e: React.PointerEvent<HTMLElement>) => {
+    const d = drag.current
+    if (!d) return
+    cancelAnimationFrame(d.frame)
+    drag.current = null
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+    void api.invoke("windows:drag", { phase: "move", dx: d.dx, dy: d.dy }).then(() => api.invoke("windows:drag", { phase: "end", dx: 0, dy: 0 }))
+  }
+  return {
+    onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
+      if (e.button !== 0 || (e.target as HTMLElement).closest("button, select, input, a, label")) return
+      e.currentTarget.setPointerCapture(e.pointerId)
+      drag.current = { x: e.screenX, y: e.screenY, dx: 0, dy: 0, frame: 0 }
+      void api.invoke("windows:drag", { phase: "start", dx: 0, dy: 0 })
+    },
+    onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
+      const d = drag.current
+      if (!d) return
+      d.dx = e.screenX - d.x
+      d.dy = e.screenY - d.y
+      if (d.frame) return
+      d.frame = requestAnimationFrame(() => {
+        d.frame = 0
+        if (drag.current === d) void api.invoke("windows:drag", { phase: "move", dx: d.dx, dy: d.dy })
+      })
+    },
+    onPointerUp: end,
+    onPointerCancel: end
+  }
 }
 
 function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {

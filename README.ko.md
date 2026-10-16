@@ -36,7 +36,7 @@ Meetingly는 Windows, macOS, Linux에서 채용 면접과 실시간 회의에 �
 
 ## 기능
 
-- **Real answers, instantly.** When the other side asks something, press *Answer* (or let Pro's auto-answer do it): one bold line you can say, then a few catch points to expand on. No coaching, no "you could mention…".
+- **진짜 답변을 즉시.** 상대방이 질문하면 *Answer*를 누르세요(Pro의 자동 답변에 맡겨도 됩니다): 말할 수 있는 굵은 한 줄과, 자세히 설명할 수 있는 몇 가지 핵심 포인트가 제공됩니다. 코칭도, "…을 언급해도 됩니다" 같은 말도 없습니다.
 - **추천 질문.** 사이드 컬럼이 대화를 따라가며 한 번 클릭으로 쓸 수 있는 질문을 제공합니다. 방금 받은 질문, 나온 용어, 다음에 나올 가능성이 큰 질문입니다.
 - **내 컴퓨터에서 음성 인식.** NVIDIA Nemotron이 기본적으로 28개 언어를 로컬에서 전사합니다. Unlimited는 오디오를 Deepgram으로 보내는 선택적 클라우드 전사도 제공합니다.
 - **나와 상대를 분리.** 내 마이크와 통화 오디오를 따로 텍스트로 변환해, 기록이 채팅처럼 읽힙니다.
@@ -60,15 +60,15 @@ Meetingly는 Windows, macOS, Linux에서 채용 면접과 실시간 회의에 �
 
 **무료 계정.** 패널에서 *Sign up free*를 클릭하세요. 카드 없이 하루 50개의 AI 답변을 제공합니다. 지침(이력서, 직무 설명), 설정, 회의 보고서는 [웹 대시보드](https://account.meetinglyai.com)에 저장되고 모든 컴퓨터와 동기화됩니다.
 
-| | Free | Pro | Unlimited |
-|---|---|---|---|
-| 가격 | $0 | $19.99 / 월, 7일 무료 | $39.99 / 월 |
-| 답변 | 하루 50개 | 하루 300개 | Unlimited (공정 사용) |
-| 자동 답변(질문을 받는 즉시 답변) | — (Answer 누르기) | 포함 | 포함 |
-| 화면 분석 | 하루 3회 | 하루 50회 | 하루 300회 |
-| 실시간 제안 | 하루 약 30분 | 하루 약 4시간 | 하루 약 8시간 |
-| 회의 보고서 | 하루 1개 | 하루 20개 | 하루 100개 |
-| 컴퓨터 | 1 | 2 | 3 |
+| | 무료 | Lite | Pro | Unlimited |
+|---|---|---|---|---|
+| 요금 | $0 | 월 $9.99 | 월 $19.99, 7일 무료 | 월 $39.99 |
+| 답변 | 하루 50개 | 하루 150개 | 하루 300개 | 무제한(공정 사용) |
+| 자동 답변(질문이 들어오는 즉시 답변) | —(Answer 누르기) | 포함 | 포함 | 포함 |
+| 화면 분석 | 하루 3회 | 하루 15회 | 하루 50회 | 하루 300회 |
+| 실시간 제안 | 하루 약 30분 | 하루 약 2시간 | 하루 약 4시간 | 하루 약 8시간 |
+| 회의 보고서 | 하루 1개 | 하루 5개 | 하루 20개 | 하루 100개 |
+| 컴퓨터 | 1 | 1 | 2 | 3 |
 
 [플랜 페이지](https://account.meetinglyai.com/dashboard/plan)에서 카드, SBP 또는 암호화폐로 결제하세요. Meetingly에 대해 게시하고 Pro를 무료로 받으세요. [크리에이터 보상](https://meetinglyai.com/creators/)을 확인하세요.
 
@@ -87,7 +87,7 @@ Meetingly는 Windows, macOS, Linux에서 채용 면접과 실시간 회의에 �
 
 | | **Meetingly** | Cluely | Pluely | Interview Coder | Final Round AI | LockedIn AI | Parakeet AI |
 |---|---|---|---|---|---|---|---|
-| 가격 | **Free**, Pro $19.99, Unlimited $39.99 / 월 | Free 플랜, Pro $19.99 / 월 | 직접 키 사용 시 무료, Pro 월 $15부터, 평생 $120 | $299 / 월 또는 평생 $799 | Pro 월 $25부터 | $54.99 / 월, 또는 3개월마다 청구 시 $39.99 / 월 | €129.90 / 월, 또는 크레딧 |
+| 요금 | **무료**, Lite $9.99, Pro $19.99, Unlimited 월 $39.99 | 무료 요금제, Pro 월 $19.99 | 자체 키 사용 시 무료, Pro 월 $15부터, 평생 이용 $120 | 월 $299 또는 평생 이용 $799 | Pro 월 $25부터 | 월 $54.99 또는 3개월마다 청구 시 월 $39.99 | 월 €129.90 또는 크레딧 |
 | 직접 키 없이 무료 AI 답변 | **매일 하루 50개** | "Limited AI responses" | — | 없음: AI에는 구독 필요 | 없음: 라이브 세션에는 Pro 필요 | — | 10분 세션 1회 |
 | 화면 공유에서 숨김 | **모든 플랜; OS 및 캡처 방식 제한 적용** | Pro + Undetectability만, $149.99 / 월 | 모든 플랜 | 모든 플랜 | Pro | — | 유료 플랜 |
 | Linux | **AppImage 및 .deb** | — | .deb | — | — | — | Chrome에서만 |

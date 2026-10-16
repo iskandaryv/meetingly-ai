@@ -3,7 +3,7 @@
 // restart, not an app release. Older builds that still send a model name get the config too.
 
 export const TASKS = ["answer", "suggest", "vision", "report"]
-export const PLAN_NAMES = ["guest", "free", "pro", "unlimited"]
+export const PLAN_NAMES = ["guest", "free", "lite", "pro", "unlimited"]
 
 /**
  * DEFAULT_MODEL for everything; MODEL_<PLAN> for a plan, MODEL_<TASK> for a task on every plan,

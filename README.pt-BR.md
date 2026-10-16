@@ -60,15 +60,15 @@ Meetingly é um assistente de IA gratuito e open-source para entrevistas de empr
 
 **Conta grátis.** Clique em *Sign up free* no painel: 50 respostas de AI por dia, sem cartão. Instruções (seu currículo, a descrição da vaga), configurações e relatórios de reunião ficam no seu [dashboard web](https://account.meetinglyai.com) e sincronizam com todos os computadores.
 
-| | Free | Pro | Unlimited |
-|---|---|---|---|
-| Preço | $0 | $19.99 / mês, 7 dias grátis | $39.99 / mês |
-| Respostas | 50 por dia | 300 por dia | Unlimited (uso justo) |
-| Resposta automática (responde às perguntas conforme são feitas) | — (pressione Answer) | Incluído | Incluído |
-| Análise de tela | 3 por dia | 50 por dia | 300 por dia |
-| Sugestões ao vivo | Cerca de 30 minutos por dia | Cerca de 4 horas por dia | Cerca de 8 horas por dia |
-| Relatórios de reunião | 1 por dia | 20 por dia | 100 por dia |
-| Computadores | 1 | 2 | 3 |
+| | Grátis | Lite | Pro | Unlimited |
+|---|---|---|---|---|
+| Preço | $0 | $9.99 / mês | $19.99 / mês, 7 dias grátis | $39.99 / mês |
+| Respostas | 50 por dia | 150 por dia | 300 por dia | Ilimitadas (uso justo) |
+| Resposta automática (responde às perguntas à medida que são feitas) | — (pressione Responder) | Incluído | Incluído | Incluído |
+| Análise de tela | 3 por dia | 15 por dia | 50 por dia | 300 por dia |
+| Sugestões em tempo real | Cerca de 30 minutos por dia | Cerca de 2 horas por dia | Cerca de 4 horas por dia | Cerca de 8 horas por dia |
+| Relatórios de reuniões | 1 por dia | 5 por dia | 20 por dia | 100 por dia |
+| Computadores | 1 | 1 | 2 | 3 |
 
 Pague com cartão, ou com SBP ou cripto, na [página de planos](https://account.meetinglyai.com/dashboard/plan). Publique sobre o Meetingly e ganhe Pro grátis: veja a [recompensa para criadores](https://meetinglyai.com/creators/).
 
@@ -87,7 +87,7 @@ A versão 1.2.3 exige um chaveiro seguro do sistema operacional antes de salvar 
 
 | | **Meetingly** | Cluely | Pluely | Interview Coder | Final Round AI | LockedIn AI | Parakeet AI |
 |---|---|---|---|---|---|---|---|
-| Preço | **Grátis**, Pro US$ 19,99, Unlimited US$ 39,99 / mês | Plano gratuito, Pro US$ 19,99 / mês | Grátis com suas próprias chaves, Pro a partir de US$ 15 / mês, US$ 120 vitalício | US$ 299 / mês ou US$ 799 vitalício | Pro a partir de US$ 25 / mês | US$ 54,99 / mês, ou US$ 39,99 / mês cobrado a cada 3 meses | €129,90 / mês, ou créditos |
+| Preço | **Grátis**, Lite $9.99, Pro $19.99, Unlimited $39.99 / mês | Plano grátis, Pro $19.99 / mês | Grátis com suas próprias chaves, Pro a partir de $15 / mês, $120 vitalício | $299 / mês ou $799 vitalício | Pro a partir de $25 / mês | $54.99 / mês ou $39.99 / mês cobrados a cada 3 meses | €129.90 / mês ou créditos |
 | Respostas de IA gratuitas sem sua própria chave | **50 por dia, todos os dias** | "Respostas de IA limitadas" | — | Nenhuma: a IA precisa de assinatura | Nenhuma: sessões ao vivo precisam do Pro | — | Uma sessão de 10 minutos |
 | Oculto no compartilhamento de tela | **Todos os planos; aplicam-se limitações do sistema operacional e do método de captura** | Apenas Pro + Undetectability, US$ 149,99 / mês | Todos os planos | Todos os planos | Pro | — | Planos pagos |
 | Linux | **AppImage e .deb** | — | .deb | — | — | — | Apenas no Chrome |

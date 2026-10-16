@@ -175,8 +175,9 @@ describe("auto-answer (Pro since 1.2.5)", () => {
     expect(new SettingsStore(file).get().autoAnswer).toBe("always")
   })
 
-  it("is available on Pro, Unlimited and the user's own key only", async () => {
+  it("is available on Lite, Pro, Unlimited and the user's own key only", async () => {
     const { autoAnswerAllowed } = await import("../shared/types")
+    expect(autoAnswerAllowed({ status: "ok", plan: "lite" })).toBe(true)
     expect(autoAnswerAllowed({ status: "ok", plan: "pro" })).toBe(true)
     expect(autoAnswerAllowed({ status: "ok", plan: "unlimited" })).toBe(true)
     expect(autoAnswerAllowed({ status: "own-key" })).toBe(true)

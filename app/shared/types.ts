@@ -449,7 +449,7 @@ export interface Meeting {
 }
 
 /** Plans the relay knows. "guest" is the allowance for builds from before accounts. */
-export type PlanName = "guest" | "free" | "pro" | "unlimited"
+export type PlanName = "guest" | "free" | "lite" | "pro" | "unlimited"
 
 export interface PlanUsage {
   answers: number
@@ -473,11 +473,11 @@ export interface PlanState {
 }
 
 /**
- * Hands-free answering is part of Pro and Unlimited. With the user's own key it always works (the relay isn't
+ * Hands-free answering is part of Lite, Pro and Unlimited. With the user's own key it always works (the relay isn't
  * involved); signed out, offline or not known yet, it doesn't. Free users press Answer instead.
  */
 export function autoAnswerAllowed(plan: PlanState): boolean {
-  return plan.status === "own-key" || (plan.status === "ok" && (plan.plan === "pro" || plan.plan === "unlimited"))
+  return plan.status === "own-key" || (plan.status === "ok" && (plan.plan === "lite" || plan.plan === "pro" || plan.plan === "unlimited"))
 }
 
 /** What the updater is doing, for the toolbar: installing (the app restarts in a moment), or stuck. */

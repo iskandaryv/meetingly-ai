@@ -158,7 +158,9 @@ function relayMessage(e: RelayError): string {
   const upgrade =
     e.plan === "free"
       ? ` ${t("Upgrade for more.")}`
-      : e.plan === "pro"
+      : e.plan === "lite"
+        ? ` ${t("Upgrade to Pro for more.")}`
+        : e.plan === "pro"
         ? ` ${t("Upgrade to Unlimited for more.")}`
         : e.plan === "guest"
           ? ` ${t("Update Meetingly and sign in to keep going.")}`
@@ -171,7 +173,7 @@ function relayMessage(e: RelayError): string {
       return t("The account service is unavailable. Try again in a minute.")
     case "answers_limit":
       if (e.plan === "unlimited") return t("You've reached today's fair-use limit of answers. It resets at midnight UTC.")
-      return (e.plan === "pro" ? t("You've used today's {n} answers.", { n }) : t("You've used today's {n} free answers.", { n })) + upgrade
+      return (e.plan === "pro" || e.plan === "lite" ? t("You've used today's {n} answers.", { n }) : t("You've used today's {n} free answers.", { n })) + upgrade
     case "listening_limit":
       return t("Live suggestions and auto-answer are paused: today's {hours} hours are used up. Questions you ask still work.", { hours: e.hours ?? "" }) + upgrade
     case "vision_limit":

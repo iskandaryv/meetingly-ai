@@ -8,13 +8,15 @@ export const PLANS = {
   // They still transcribe in the cloud, so they keep their minutes; every other number is at most Free's.
   guest: { answers: 20, vision: 3, listening: 60, reports: 1, tokens: 60_000, audioMinutes: 30, concurrent: 1, rpm: 15 },
   free: { answers: 50, vision: 3, listening: 90, reports: 1, tokens: 100_000, audioMinutes: 0, concurrent: 2, rpm: 15 },
+  // $9.99: half of Pro, with auto-answer, on one computer (added 2026-10-16).
+  lite: { answers: 150, vision: 15, listening: 360, reports: 5, tokens: 750_000, audioMinutes: 0, concurrent: 2, rpm: 20 },
   pro: { answers: 300, vision: 50, listening: 720, reports: 20, tokens: 1_500_000, audioMinutes: 0, concurrent: 3, rpm: 30 },
   // "Unlimited" in the UI; these are fair-use ceilings no real meeting schedule reaches.
   unlimited: { answers: 2000, vision: 300, listening: 1440, reports: 100, tokens: 4_000_000, audioMinutes: 480, concurrent: 4, rpm: 60 }
 }
 
 /** Plans someone pays for: no per-network cap, and the fair-use wording. */
-export const PAID = new Set(["pro", "unlimited"])
+export const PAID = new Set(["lite", "pro", "unlimited"])
 
 /** A plan name from anywhere, as one this relay knows (unknown names get the free budget). */
 export function planName(name) {
@@ -74,6 +76,7 @@ const HOURS = (n) => `${Math.round((n * 20) / 3600 * 10) / 10}` // one listening
 const UPGRADE = {
   guest: " Update Meetingly and sign in to keep going.",
   free: " Upgrade for more.",
+  lite: " Upgrade to Pro for more.",
   pro: " Upgrade to Unlimited for more.",
   unlimited: ""
 }
@@ -89,7 +92,7 @@ export function checkBudget(name, used, task) {
     const message =
       name === "unlimited"
         ? "You've reached today's fair-use limit of answers. It resets at midnight UTC."
-        : `You've used today's ${plan.answers} ${name === "pro" ? "" : "free "}answers.${upgrade}`
+        : `You've used today's ${plan.answers} ${PAID.has(name) ? "" : "free "}answers.${upgrade}`
     return { code: "answers_limit", limit: plan.answers, message }
   }
   if ((spec.bucket === "listening" || spec.alsoNeeds === "listening") && over("listening")) {

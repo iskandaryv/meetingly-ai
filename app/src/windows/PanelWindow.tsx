@@ -90,10 +90,10 @@ export function PanelWindow() {
               <button
                 type="button"
                 onClick={() => void api.invoke(plan.status === "signed-out" ? "cloud:link-start" : "plan:upgrade").catch(() => {})}
-                title={t("Pro answers questions from the meeting automatically. On Free, press Answer when a question is heard.")}
+                title={t("Lite and Pro answer questions from the meeting automatically. On Free, press Answer when a question is heard.")}
                 className="h-6 rounded-full px-2 text-[11px] font-medium text-white/55 transition-colors hover:bg-white/10 hover:text-white"
               >
-                {t("Auto-answer")} <span className="ml-0.5 rounded bg-sky-500/20 px-1 text-[10px] text-sky-200">Pro</span>
+                {t("Auto-answer")} <span className="ml-0.5 rounded bg-sky-500/20 px-1 text-[10px] text-sky-200">Lite</span>
               </button>
             ) : tab === "answers" ? (
               <button

@@ -7,7 +7,9 @@ export const PLANS = {
   // Builds from before accounts (1.0.0): a small allowance per IP until they update, then nothing.
   // They still transcribe in the cloud, so they keep their minutes; every other number is at most Free's.
   guest: { answers: 20, vision: 3, listening: 60, reports: 1, tokens: 60_000, audioMinutes: 30, concurrent: 1, rpm: 15 },
-  free: { answers: 50, vision: 3, listening: 90, reports: 1, tokens: 100_000, audioMinutes: 0, concurrent: 2, rpm: 15 },
+  // 400k tokens: 50 answers plus ~30 minutes of suggestions fit (each call carries the conversation, ~2k tokens);
+  // at 100k free users were stopped after about 3 answers (2026-10-18).
+  free: { answers: 50, vision: 3, listening: 90, reports: 1, tokens: 400_000, audioMinutes: 0, concurrent: 2, rpm: 15 },
   // $9.99: half of Pro, with auto-answer, on one computer (added 2026-10-16).
   lite: { answers: 150, vision: 15, listening: 360, reports: 5, tokens: 750_000, audioMinutes: 0, concurrent: 2, rpm: 20 },
   pro: { answers: 300, vision: 50, listening: 720, reports: 20, tokens: 1_500_000, audioMinutes: 0, concurrent: 3, rpm: 30 },

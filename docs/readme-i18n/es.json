@@ -77,7 +77,7 @@
  "| Open source | **Apache-2.0** | — | GPL-3.0 | — | — | — | — |": "| Open source | **Apache-2.0** | — | GPL-3.0 | — | — | — | — |",
  "| OpenAI | `https://api.openai.com/v1` | from platform.openai.com |": "| OpenAI | `https://api.openai.com/v1` | de platform.openai.com |",
  "| OpenRouter | `https://openrouter.ai/api/v1` | from openrouter.ai |": "| OpenRouter | `https://openrouter.ai/api/v1` | de openrouter.ai |",
- "| Price | $0 | $9.99 / month | $19.99 / month, 7 days free | $39.99 / month |": "| Precio | $0 | $9.99 / mes | $19.99 / mes, 7 días gratis | $39.99 / mes |",
+ "| Price | $0 | $9.99 / month, 7 days free | $19.99 / month | $39.99 / month |": "| Precio | $0 | $9.99 / mes, 7 días gratis | $19.99 / mes | $39.99 / mes |",
  "| Price | **Free**, Lite $9.99, Pro $19.99, Unlimited $39.99 / month | Free plan, Pro $19.99 / month | Free with your own keys, Pro from $15 / month, $120 lifetime | $299 / month or $799 lifetime | Pro from $25 / month | $54.99 / month, or $39.99 / month billed every 3 months | €129.90 / month, or credits |": "| Precio | **Gratis**, Lite $9.99, Pro $19.99, Unlimited $39.99 / mes | Plan gratuito, Pro $19.99 / mes | Gratis con tus propias claves, Pro desde $15 / mes, $120 de por vida | $299 / mes o $799 de por vida | Pro desde $25 / mes | $54.99 / mes, o $39.99 / mes con facturación cada 3 meses | €129.90 / mes, o créditos |",
  "| Provider | API address | Key |": "| Proveedor | Dirección de API | Clave |",
  "| Screen analysis | 3 a day | 15 a day | 50 a day | 300 a day |": "| Análisis de pantalla | 3 al día | 15 al día | 50 al día | 300 al día |",

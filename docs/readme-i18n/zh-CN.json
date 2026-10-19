@@ -77,7 +77,7 @@
  "| Open source | **Apache-2.0** | — | GPL-3.0 | — | — | — | — |": "| 开源 | **Apache-2.0** | — | GPL-3.0 | — | — | — | — |",
  "| OpenAI | `https://api.openai.com/v1` | from platform.openai.com |": "| OpenAI | `https://api.openai.com/v1` | 来自 platform.openai.com |",
  "| OpenRouter | `https://openrouter.ai/api/v1` | from openrouter.ai |": "| OpenRouter | `https://openrouter.ai/api/v1` | 来自 openrouter.ai |",
- "| Price | $0 | $9.99 / month | $19.99 / month, 7 days free | $39.99 / month |": "| 价格 | $0 | $9.99 / 月 | $19.99 / 月，免费试用 7 天 | $39.99 / 月 |",
+ "| Price | $0 | $9.99 / month, 7 days free | $19.99 / month | $39.99 / month |": "| 价格 | $0 | $9.99 / 月，免费 7 天 | $19.99 / 月 | $39.99 / 月 |",
  "| Price | **Free**, Lite $9.99, Pro $19.99, Unlimited $39.99 / month | Free plan, Pro $19.99 / month | Free with your own keys, Pro from $15 / month, $120 lifetime | $299 / month or $799 lifetime | Pro from $25 / month | $54.99 / month, or $39.99 / month billed every 3 months | €129.90 / month, or credits |": "| 价格 | **免费**，Lite $9.99、Pro $19.99、Unlimited $39.99 / 月 | 免费计划，Pro $19.99 / 月 | 使用自己的密钥免费，Pro $15 / 月起，终身 $120 | $299 / 月或终身 $799 | Pro $25 / 月起 | $54.99 / 月，或每 3 个月计费 $39.99 / 月 | €129.90 / 月，或使用点数 |",
  "| Provider | API address | Key |": "| 提供商 | API 地址 | 密钥 |",
  "| Screen analysis | 3 a day | 15 a day | 50 a day | 300 a day |": "| 屏幕分析 | 每天 3 次 | 每天 15 次 | 每天 50 次 | 每天 300 次 |",

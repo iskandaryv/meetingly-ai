@@ -77,7 +77,7 @@
  "| Open source | **Apache-2.0** | — | GPL-3.0 | — | — | — | — |": "| 오픈 소스 | **Apache-2.0** | — | GPL-3.0 | — | — | — | — |",
  "| OpenAI | `https://api.openai.com/v1` | from platform.openai.com |": "| OpenAI | `https://api.openai.com/v1` | platform.openai.com에서 |",
  "| OpenRouter | `https://openrouter.ai/api/v1` | from openrouter.ai |": "| OpenRouter | `https://openrouter.ai/api/v1` | openrouter.ai에서 |",
- "| Price | $0 | $9.99 / month | $19.99 / month, 7 days free | $39.99 / month |": "| 요금 | $0 | 월 $9.99 | 월 $19.99, 7일 무료 | 월 $39.99 |",
+ "| Price | $0 | $9.99 / month, 7 days free | $19.99 / month | $39.99 / month |": "| 가격 | $0 | 월 $9.99, 7일 무료 | 월 $19.99 | 월 $39.99 |",
  "| Price | **Free**, Lite $9.99, Pro $19.99, Unlimited $39.99 / month | Free plan, Pro $19.99 / month | Free with your own keys, Pro from $15 / month, $120 lifetime | $299 / month or $799 lifetime | Pro from $25 / month | $54.99 / month, or $39.99 / month billed every 3 months | €129.90 / month, or credits |": "| 요금 | **무료**, Lite $9.99, Pro $19.99, Unlimited 월 $39.99 | 무료 요금제, Pro 월 $19.99 | 자체 키 사용 시 무료, Pro 월 $15부터, 평생 이용 $120 | 월 $299 또는 평생 이용 $799 | Pro 월 $25부터 | 월 $54.99 또는 3개월마다 청구 시 월 $39.99 | 월 €129.90 또는 크레딧 |",
  "| Provider | API address | Key |": "| 제공업체 | API 주소 | 키 |",
  "| Screen analysis | 3 a day | 15 a day | 50 a day | 300 a day |": "| 화면 분석 | 하루 3회 | 하루 15회 | 하루 50회 | 하루 300회 |",

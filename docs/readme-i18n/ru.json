@@ -77,7 +77,7 @@
  "| Open source | **Apache-2.0** | — | GPL-3.0 | — | — | — | — |": "| Open source | **Apache-2.0** | — | GPL-3.0 | — | — | — | — |",
  "| OpenAI | `https://api.openai.com/v1` | from platform.openai.com |": "| OpenAI | `https://api.openai.com/v1` | с platform.openai.com |",
  "| OpenRouter | `https://openrouter.ai/api/v1` | from openrouter.ai |": "| OpenRouter | `https://openrouter.ai/api/v1` | с openrouter.ai |",
- "| Price | $0 | $9.99 / month | $19.99 / month, 7 days free | $39.99 / month |": "| Цена | $0 | $9.99 / месяц | $19.99 / месяц, 7 дней бесплатно | $39.99 / месяц |",
+ "| Price | $0 | $9.99 / month, 7 days free | $19.99 / month | $39.99 / month |": "| Цена | $0 | $9.99 / месяц, 7 дней бесплатно | $19.99 / месяц | $39.99 / месяц |",
  "| Price | **Free**, Lite $9.99, Pro $19.99, Unlimited $39.99 / month | Free plan, Pro $19.99 / month | Free with your own keys, Pro from $15 / month, $120 lifetime | $299 / month or $799 lifetime | Pro from $25 / month | $54.99 / month, or $39.99 / month billed every 3 months | €129.90 / month, or credits |": "| Цена | **Бесплатно**, Lite $9.99, Pro $19.99, Unlimited $39.99 / месяц | Бесплатный план, Pro $19.99 / месяц | Бесплатно с собственными ключами, Pro от $15 / месяц, $120 навсегда | $299 / месяц или $799 навсегда | Pro от $25 / месяц | $54.99 / месяц или $39.99 / месяц при оплате каждые 3 месяца | €129.90 / месяц или кредиты |",
  "| Provider | API address | Key |": "| Провайдер | API-адрес | Ключ |",
  "| Screen analysis | 3 a day | 15 a day | 50 a day | 300 a day |": "| Анализ экрана | 3 в день | 15 в день | 50 в день | 300 в день |",

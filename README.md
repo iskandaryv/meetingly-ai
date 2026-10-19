@@ -62,7 +62,7 @@ Meetingly is a free, open-source AI assistant for job interviews and live meetin
 
 | | Free | Lite | Pro | Unlimited |
 |---|---|---|---|---|
-| Price | $0 | $9.99 / month | $19.99 / month, 7 days free | $39.99 / month |
+| Price | $0 | $9.99 / month, 7 days free | $19.99 / month | $39.99 / month |
 | Answers | 50 a day | 150 a day | 300 a day | Unlimited (fair use) |
 | Auto-answer (answers questions as they're asked) | — (press Answer) | Included | Included | Included |
 | Screen analysis | 3 a day | 15 a day | 50 a day | 300 a day |

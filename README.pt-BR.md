@@ -62,7 +62,7 @@ Meetingly é um assistente de IA gratuito e open-source para entrevistas de empr
 
 | | Grátis | Lite | Pro | Unlimited |
 |---|---|---|---|---|
-| Preço | $0 | $9.99 / mês | $19.99 / mês, 7 dias grátis | $39.99 / mês |
+| Preço | $0 | $9.99 / mês, 7 dias grátis | $19.99 / mês | $39.99 / mês |
 | Respostas | 50 por dia | 150 por dia | 300 por dia | Ilimitadas (uso justo) |
 | Resposta automática (responde às perguntas à medida que são feitas) | — (pressione Responder) | Incluído | Incluído | Incluído |
 | Análise de tela | 3 por dia | 15 por dia | 50 por dia | 300 por dia |

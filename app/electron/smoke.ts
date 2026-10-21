@@ -2,15 +2,17 @@ import { app, BrowserWindow, clipboard, screen } from "electron"
 import { spawn } from "node:child_process"
 import fs from "node:fs"
 import http from "node:http"
+import path from "node:path"
 import type { AddressInfo } from "node:net"
 import type { AsrModel } from "./services/asrModel"
 import { LocalAsrSocket } from "./services/localAsr"
-import type { AudioSource, WindowKind } from "../shared/types"
+import type { AudioSource, SessionState, WindowKind } from "../shared/types"
 import type { ChatService } from "./services/chat"
 import type { CloudSync } from "./services/cloud"
-import type { MeetingStore } from "./services/meetings"
-import type { RecordingSession } from "./services/session"
-import type { SettingsStore } from "./services/settings"
+import { MeetingStore } from "./services/meetings"
+import type { ReportGenerator } from "./services/reports"
+import { RecordingSession } from "./services/session"
+import { SettingsStore } from "./services/settings"
 import type { WindowManager } from "./windows/WindowManager"
 import { SUGGESTIONS_WIDTH } from "./windows/config"
 import { copySelection } from "./copy"
@@ -51,6 +53,8 @@ interface SmokeDeps {
  *   "asr"     on-device transcription: stream IGPT_SMOKE_WAV (16 kHz mono, played on the IGPT_SMOKE_SIDE
  *             channel, default "them") through the
  *             speech worker in real time and report partials, finals and latency.
+ *   "switch"  the meeting language changes mid-session with the real on-device engine: IGPT_SMOKE_WAV (English)
+ *             plays, the language switches to Russian, IGPT_SMOKE_WAV2 (Russian) plays (see switchSmoke).
  */
 export async function runSmokeTest(mode: string, { windows, chat, session, settings, cloud, meetings, asrModel }: SmokeDeps): Promise<void> {
   const errors: string[] = []
@@ -146,6 +150,7 @@ export async function runSmokeTest(mode: string, { windows, chat, session, setti
 
   let asrProbe: Record<string, unknown> & { ok: boolean } | undefined
   if (mode === "asr") asrProbe = await asrSmoke(asrModel, process.env.IGPT_SMOKE_WAV ?? "", process.env.IGPT_SMOKE_LANG ?? "en-US")
+  if (mode === "switch") asrProbe = await switchSmoke(asrModel)
 
   const report = {
     mode,
@@ -795,6 +800,78 @@ function readWav16k(file: string): Int16Array {
     off += 8 + size + (size % 2)
   }
   throw new Error("no audio data in " + file)
+}
+
+/**
+ * Switching the meeting language mid-session, with the real on-device engine. English plays, the language changes
+ * to Russian in the settings, Russian plays. A control session plays the Russian without the switch. Both are
+ * sessions of their own (not the panel's), so no microphone or system audio is captured.
+ */
+async function switchSmoke(model: AsrModel): Promise<Record<string, unknown> & { ok: boolean }> {
+  const dir = fs.mkdtempSync(path.join(app.getPath("temp"), "igpt-switch-"))
+  const run = async (switchLanguage: boolean) => {
+    const settings = new SettingsStore(path.join(dir, `${switchLanguage ? "switch" : "control"}.json`))
+    settings.update({ audioLanguage: "en", transcriptionEngine: "local" })
+    const session = new RecordingSession({
+      settings,
+      meetings: new MeetingStore(path.join(dir, "meetings.json")),
+      reports: { generate: async () => null } as unknown as ReportGenerator,
+      asrModel: model,
+      cloudTranscription: () => false
+    })
+    settings.onChange(() => session.syncEngine())
+    const heard: Record<"before" | "after", string[]> = { before: [], after: [] }
+    let phase: "before" | "after" = "before"
+    session.on("transcript", (e: { text: string; isFinal: boolean }) => {
+      if (e.isFinal) heard[phase].push(e.text)
+    })
+    await session.start()
+    await playWav(session, process.env.IGPT_SMOKE_WAV ?? "")
+    phase = "after"
+    let reopenMs: number | null = null
+    if (switchLanguage) {
+      const switchedAt = Date.now()
+      const reopened = new Promise<boolean>((resolve) => {
+        const onState = (s: SessionState) => {
+          if (!s.connected) return
+          session.off("state", onState)
+          resolve(true)
+        }
+        session.on("state", onState)
+      })
+      settings.update({ audioLanguage: "ru" })
+      if (await Promise.race([reopened, sleep(60000).then(() => false)])) reopenMs = Date.now() - switchedAt
+    }
+    await playWav(session, process.env.IGPT_SMOKE_WAV2 ?? "")
+    const meeting = await session.finish()
+    return { before: heard.before.join(" "), after: heard.after.join(" "), reopenMs, meetingLanguage: meeting?.language ?? null }
+  }
+  try {
+    const switched = await run(true)
+    const control = await run(false)
+    const cyrillic = (s: string) => /[а-яё]/i.test(s)
+    return {
+      ok: /[a-z]/i.test(switched.before) && !cyrillic(switched.before) && cyrillic(switched.after) && switched.reopenMs !== null && switched.meetingLanguage === "ru",
+      switched,
+      control
+    }
+  } catch (err) {
+    return { ok: false, error: (err as Error).message }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+/** Play a recording into a session at real-time pace on the system-audio side, then 2.5 s of silence. */
+async function playWav(session: RecordingSession, wav: string): Promise<void> {
+  const pcm = readWav16k(wav)
+  const frames = pcm.length + 40000
+  const stereo = new Int16Array(frames * 2)
+  for (let i = 0; i < pcm.length; i++) stereo[2 * i + 1] = pcm[i]
+  for (let f = 0; f < frames; f += 1600) {
+    session.sendAudio(stereo.slice(2 * f, 2 * Math.min(frames, f + 1600)).buffer)
+    await sleep(100)
+  }
 }
 
 /** Feed a recording through the speech worker at real-time pace (100 ms chunks), plus 1.5 s of silence. */

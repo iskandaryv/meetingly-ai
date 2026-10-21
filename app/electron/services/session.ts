@@ -30,6 +30,8 @@ interface Deps {
   createSocket?: (deviceId: string, language: string) => TranscriptionSocket
   /** A finished session was saved (main writes it as a text file); errors are the caller's to handle. */
   onFinished?: (meeting: Meeting) => void
+  /** The user discarded the session (main deletes the transcript saved so far). */
+  onDiscarded?: () => void
 }
 
 /** What the session needs from a transcription engine (Deepgram over the relay, or on-device Nemotron). */
@@ -63,6 +65,10 @@ export class RecordingSession extends EventEmitter {
   /** Finished segments not yet closed into an utterance, per speaker channel. */
   private pending = new Map<string, TranscriptSegment[]>()
   private lastUtterance: Utterance | null = null
+  /** The meeting language and engine the current transcription engine was opened with (see syncEngine). */
+  private engineKey = ""
+  /** True while a transcription engine is starting. */
+  private opening = false
 
   constructor(private readonly deps: Deps) {
     super()
@@ -100,6 +106,8 @@ export class RecordingSession extends EventEmitter {
     try {
       await this.openSocket()
       this.setStatus("recording")
+      // The meeting language may have changed while the engine started (the speech model downloads on first use).
+      this.syncEngine()
     } catch (err) {
       this.socket = null
       this.startedAt = null
@@ -119,7 +127,10 @@ export class RecordingSession extends EventEmitter {
     if (!this.socket?.isOpen) {
       this.setStatus("connecting")
       this.openSocket()
-        .then(() => this.setStatus("recording"))
+        .then(() => {
+          this.setStatus("recording")
+          this.syncEngine()
+        })
         .catch((err) => this.setStatus("idle", (err as Error).message))
     } else {
       this.setStatus("recording")
@@ -136,27 +147,11 @@ export class RecordingSession extends EventEmitter {
   /** Stop and save. Returns null when nothing was transcribed. */
   async finish(): Promise<Meeting | null> {
     if (this.status === "idle") return null
-    const startTime = this.startedAt ?? Date.now()
-    const endTime = Date.now()
-    const segments = [...this.segments]
+    const meeting = this.toMeeting(Date.now())
     this.teardown()
     this.setStatus("idle")
 
-    if (segments.length === 0) return null
-    const text = formatTranscript(segments)
-    const meeting: Meeting = {
-      id: `meeting_${startTime}_${Math.random().toString(36).slice(2, 8)}`,
-      title: titleFromTranscript(segments.map((s) => s.text).join(" ")),
-      startTime,
-      endTime,
-      duration: endTime - startTime,
-      transcript: segments,
-      fullTranscriptText: text,
-      language: this.deps.settings.get().audioLanguage,
-      status: "processing",
-      createdAt: endTime,
-      updatedAt: endTime
-    }
+    if (!meeting) return null
     this.deps.meetings.save(meeting)
     this.deps.onFinished?.(meeting)
     // Report generation runs in the background; the meeting syncs to the web dashboard when it's done.
@@ -164,30 +159,87 @@ export class RecordingSession extends EventEmitter {
     return meeting
   }
 
+  /** The session so far, saved nowhere: main writes it to the transcript file every minute. Null when idle or nothing was heard yet. */
+  draft(): Meeting | null {
+    return this.status === "idle" ? null : this.toMeeting(Date.now())
+  }
+
   cancel(): SessionState {
+    const active = this.status !== "idle"
     this.teardown()
     this.segments = []
     this.pending.clear()
     this.setStatus("idle")
+    if (active) this.deps.onDiscarded?.()
     return this.state()
+  }
+
+  /**
+   * Settings changed. When the meeting language (or the engine) is no longer the one the running engine was opened
+   * with, it is reopened: the transcript so far stays, and only the moment the new engine takes to start goes unheard.
+   */
+  syncEngine(): void {
+    if (this.status !== "recording" && this.status !== "paused") return
+    if (this.opening || this.reconnectTimer || this.engineChoice().key === this.engineKey) return
+    // Words heard in the old language don't start an utterance (and an auto-answer) together with the new ones.
+    this.pending.clear()
+    const opened = this.openSocket()
+    const socket = this.socket
+    opened.then(
+      () => this.syncEngine(),
+      (err) => {
+        // Stopped, or replaced by another start (resume) in the meantime: nothing to recover.
+        if (this.status === "idle" || this.socket !== socket) return
+        console.warn("[session] could not switch the speech engine:", (err as Error).message)
+        this.scheduleReconnect()
+      }
+    )
+  }
+
+  /** The transcript so far as a meeting; null when nothing was transcribed. */
+  private toMeeting(endTime: number): Meeting | null {
+    if (this.segments.length === 0) return null
+    const startTime = this.startedAt ?? endTime
+    const segments = [...this.segments]
+    return {
+      id: `meeting_${startTime}_${Math.random().toString(36).slice(2, 8)}`,
+      title: titleFromTranscript(segments.map((s) => s.text).join(" ")),
+      startTime,
+      endTime,
+      duration: endTime - startTime,
+      transcript: segments,
+      fullTranscriptText: formatTranscript(segments),
+      language: this.deps.settings.get().audioLanguage,
+      status: "processing",
+      createdAt: endTime,
+      updatedAt: endTime
+    }
+  }
+
+  /** The engine and meeting language the settings ask for now. */
+  private engineChoice() {
+    const settings = this.deps.settings.get()
+    const language = getLanguage(settings.audioLanguage)
+    // Cloud transcription runs through Meetingly's server and is part of Unlimited: on any other plan (or with
+    // only an own key) the session stays on this computer, whatever the setting says.
+    const cloudAllowed = (this.deps.cloudTranscription?.() ?? true) && !(settings.ownKey !== null && !settings.cloud)
+    const local = Boolean(this.deps.asrModel) && (settings.transcriptionEngine === "local" || !cloudAllowed)
+    return { language, local, key: `${language.code}:${local ? "local" : "cloud"}` }
   }
 
   private async openSocket(): Promise<void> {
     this.socket?.removeAllListeners()
     this.socket?.close()
-    const settings = this.deps.settings.get()
-    const language = getLanguage(settings.audioLanguage)
+    const { language, local, key } = this.engineChoice()
     const deviceId = this.deps.settings.deviceId()
-    // Cloud transcription runs through Meetingly's server and is part of Unlimited: on any other plan (or with
-    // only an own key) the session stays on this computer, whatever the setting says.
-    const cloudAllowed = (this.deps.cloudTranscription?.() ?? true) && !(settings.ownKey !== null && !settings.cloud)
-    const local = Boolean(this.deps.asrModel) && (settings.transcriptionEngine === "local" || !cloudAllowed)
     const socket: TranscriptionSocket = this.deps.createSocket
       ? this.deps.createSocket(deviceId, language.deepgram)
       : local
         ? new LocalAsrSocket({ language: language.asr, model: this.deps.asrModel! })
         : new DeepgramSocket({ deviceId, language: language.deepgram, headers: relayIdentity(this.deps.settings) })
     this.socket = socket
+    this.engineKey = key
+    this.opening = true
 
     socket.on("transcript", (event: TranscriptEvent) => this.onTranscript(event))
     socket.on("error", (err: Error) => console.warn(local ? "[asr]" : "[deepgram]", err.message))
@@ -200,7 +252,11 @@ export class RecordingSession extends EventEmitter {
       this.emitState()
       this.scheduleReconnect()
     })
-    await socket.connect()
+    try {
+      await socket.connect()
+    } finally {
+      if (this.socket === socket) this.opening = false
+    }
     this.reconnects = 0
     this.notice = null
     this.emitState()
@@ -221,6 +277,7 @@ export class RecordingSession extends EventEmitter {
       if (this.status === "idle") return
       try {
         await this.openSocket()
+        this.syncEngine()
       } catch (err) {
         console.warn("[session] reconnect failed:", (err as Error).message)
         this.scheduleReconnect()

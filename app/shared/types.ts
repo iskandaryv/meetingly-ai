@@ -1,10 +1,10 @@
 // Types shared by the Electron main process and the renderer.
 
-/** The toolbar and the attached panel (answers + live transcript). Everything else is on the web dashboard. */
+/** The toolbar and the attached panel (answers, live transcript, settings). The rest is on the web dashboard. */
 export type WindowKind = "main" | "chat"
 
 /** Tabs of the attached panel (window kind "chat"). */
-export type PanelTab = "answers" | "transcript"
+export type PanelTab = "answers" | "transcript" | "settings"
 
 export type LanguageCode = "en" | "ar" | "bg" | "zh" | "hr" | "cs" | "da" | "nl" | "et" | "fi" | "fr" | "de" | "hi" | "hu" | "it" | "ja" | "ko" | "no" | "pl" | "pt" | "ro" | "ru" | "sk" | "es" | "sv" | "tr" | "uk" | "vi"
 

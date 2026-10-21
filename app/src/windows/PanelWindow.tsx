@@ -1,19 +1,26 @@
 import { useEffect, useRef, useState } from "react"
-import { Camera, Check, CircleHelp, Copy, Eraser, KeyRound, ListChecks, MessageSquareQuote, MessageSquareReply, Mic, PanelLeft, RefreshCw, SendHorizontal, Volume2, X } from "lucide-react"
+import { Camera, Check, CircleHelp, Copy, Eraser, ExternalLink, FolderOpen, KeyRound, ListChecks, MessageSquareQuote, MessageSquareReply, Mic, PanelLeft, RefreshCw, SendHorizontal, Volume2, X } from "lucide-react"
 import {
+  ANSWER_LENGTHS,
   AUDIO_SOURCE_LABELS,
+  AUTO_ANSWER_LABELS,
   autoAnswerAllowed,
+  LANGUAGES,
   OWN_KEY_PRESETS,
   QUICK_ACTIONS,
   segmentLabel,
   suggestionsVisible,
+  type AnswerLength,
   type AudioSource,
+  type AutoAnswerMode,
   type ChatChunk,
   type ChatMessage,
+  type LanguageCode,
   type OwnKeyView,
   type PanelTab,
   type PlanState,
   type QuickActionId,
+  type SettingsView,
   type SuggestionsState
 } from "@shared/types"
 import { t } from "@shared/i18n"
@@ -28,9 +35,9 @@ import { Select, Toggle } from "@/components/ui/fields"
 import { Markdown } from "@/components/Markdown"
 
 /**
- * The panel attached under the toolbar: answers and the live transcript as two tabs, with
+ * The panel attached under the toolbar: answers, the live transcript and settings as tabs, with
  * suggested questions on the left while listening. It also owns audio capture, which keeps
- * running on either tab and while hidden.
+ * running on every tab and while hidden.
  */
 export function PanelWindow() {
   const session = useSessionState()
@@ -73,6 +80,7 @@ export function PanelWindow() {
               {t("Transcript")}
               {session.status === "recording" && <span className="ml-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />}
             </TabButton>
+            <TabButton active={tab === "settings"} onClick={() => choose("settings")}>{t("Settings")}</TabButton>
           </div>
           <div className="no-drag ml-auto flex items-center gap-0.5">
             {session.status !== "idle" && settings && (
@@ -107,9 +115,9 @@ export function PanelWindow() {
               >
                 {handsFree ? t("Auto-answer on") : t("Auto-answer off")}
               </button>
-            ) : (
+            ) : tab === "transcript" ? (
               <Levels levels={capture.levels} />
-            )}
+            ) : null}
             <Button variant="ghost" size="icon-sm" className="h-7 w-7" onClick={() => api.invoke("windows:hide", "chat")} title={t("Close (Esc)")}>
               <X className="h-3.5 w-3.5" />
             </Button>
@@ -147,6 +155,7 @@ export function PanelWindow() {
                 onSuggestions={(on) => void update({ suggestions: on })}
               />
             </div>
+            {tab === "settings" && settings && <SettingsTab settings={settings} update={update} plan={plan} autoAllowed={autoAllowed} />}
           </div>
         </div>
       </div>
@@ -726,13 +735,101 @@ function Transcript(props: {
   )
 }
 
+const PICK = "h-7 w-[190px] shrink-0 bg-black/30 px-2 py-0 text-[11.5px]"
+
+/**
+ * What changes from one meeting to the next, without the browser and without an account. Instructions, shortcuts,
+ * the plan and past meetings stay on the web dashboard. Changes here sync to the account like changes made there.
+ */
+function SettingsTab({ settings, update, plan, autoAllowed }: {
+  settings: SettingsView
+  update: (patch: Partial<SettingsView>) => Promise<void>
+  plan: PlanState
+  autoAllowed: boolean
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="scroll min-h-0 flex-1 divide-y divide-white/[0.06] px-2.5">
+        <SettingRow label={t("Meeting language")} hint={t("The language spoken in the meeting.")}>
+          <Select value={settings.audioLanguage} onChange={(e) => void update({ audioLanguage: e.target.value as LanguageCode })} className={PICK} aria-label={t("Meeting language")}>
+            {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+          </Select>
+        </SettingRow>
+        <SettingRow label={t("Answer language")} hint={t("For answers and the meeting report.")}>
+          <Select value={settings.outputLanguage} onChange={(e) => void update({ outputLanguage: e.target.value as LanguageCode })} className={PICK} aria-label={t("Answer language")}>
+            {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+          </Select>
+        </SettingRow>
+        <SettingRow label={t("Audio source")} hint={t("System audio is the call; the microphone is you.")}>
+          <Select value={settings.audioSource} onChange={(e) => void update({ audioSource: e.target.value as AudioSource })} className={PICK} aria-label={t("Audio source")}>
+            {(Object.keys(AUDIO_SOURCE_LABELS) as AudioSource[]).map((s) => <option key={s} value={s}>{t(AUDIO_SOURCE_LABELS[s])}</option>)}
+          </Select>
+        </SettingRow>
+        {settings.audioSource !== "system" && (
+          <SettingRow label={t("Microphone")}>
+            <MicPicker value={settings.audioDeviceId} onChange={(id) => void update({ audioDeviceId: id })} className={PICK} />
+          </SettingRow>
+        )}
+        <SettingRow label={t("Auto-answer")} hint={t("Answers questions heard in the meeting by itself.")}>
+          {autoAllowed ? (
+            <Select value={settings.autoAnswer} onChange={(e) => void update({ autoAnswer: e.target.value as AutoAnswerMode })} className={PICK} aria-label={t("Auto-answer")}>
+              {(Object.keys(AUTO_ANSWER_LABELS) as AutoAnswerMode[]).map((m) => <option key={m} value={m}>{t(AUTO_ANSWER_LABELS[m])}</option>)}
+            </Select>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void api.invoke(plan.status === "signed-out" ? "cloud:link-start" : "plan:upgrade").catch(() => {})}
+              title={t("Lite and Pro answer questions from the meeting automatically. On Free, press Answer when a question is heard.")}
+              className="flex h-7 w-[190px] shrink-0 items-center gap-1.5 rounded-md border border-white/15 px-2 text-left text-[11.5px] text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <span className="text-sky-300">{t("Get Lite")}</span>
+            </button>
+          )}
+        </SettingRow>
+        <SettingRow label={t("Answer length")}>
+          <Select value={settings.answerLength} onChange={(e) => void update({ answerLength: e.target.value as AnswerLength })} className={PICK} aria-label={t("Answer length")}>
+            {(Object.keys(ANSWER_LENGTHS) as AnswerLength[]).map((l) => <option key={l} value={l}>{t(ANSWER_LENGTHS[l].label)}</option>)}
+          </Select>
+        </SettingRow>
+        <SettingRow label={t("Suggested questions")} hint={t("Off: just the transcript, nothing is sent to the AI for them.")}>
+          <Toggle checked={settings.suggestions} onChange={(on) => void update({ suggestions: on })} label={t("Suggested questions")} />
+        </SettingRow>
+        <SettingRow label={t("Stealth mode")} hint={t("Hidden from screen sharing, recordings and screenshots.")}>
+          <Toggle checked={settings.stealth} onChange={(on) => void update({ stealth: on })} label={t("Stealth mode")} />
+        </SettingRow>
+      </div>
+      <div className="flex items-center gap-1 border-t border-white/10 p-1.5">
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => void api.invoke("transcripts:reveal")} title={t("Every session is saved as a text file in Documents/Meetingly.")}>
+          <FolderOpen className="h-3 w-3" /> {t("Saved transcripts")}
+        </Button>
+        <span className="min-w-0 flex-1 truncate text-center text-[10.5px] text-white/30" title={`Meetingly ${settings.version}`}>v{settings.version}</span>
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => void api.invoke("cloud:open-web")} title={t("Instructions, shortcuts, plan and past meetings")}>
+          {t("More settings on the web")} <ExternalLink className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function SettingRow({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-[40px] items-center gap-3 py-1.5">
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[12px] font-medium text-white/90" title={label}>{label}</div>
+        {hint && <p className="line-clamp-2 text-[10.5px] leading-snug text-white/40">{hint}</p>}
+      </div>
+      {children}
+    </div>
+  )
+}
+
 /** The microphone to listen with; the list is read again whenever it is opened, so new devices show up. */
-function MicPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+function MicPicker({ value, onChange, className }: { value: string; onChange: (id: string) => void; className?: string }) {
   const [devices, setDevices] = useState<AudioInputDevice[]>([])
   const refresh = () => void listAudioInputs().then(setDevices).catch(() => setDevices([]))
   useEffect(refresh, [])
   return (
-    <Select value={value} onChange={(e) => onChange(e.target.value)} onFocus={refresh} className="h-7 min-w-0 flex-1 bg-black/30 px-2 py-0 text-[11px]" title={t("Microphone")}>
+    <Select value={value} onChange={(e) => onChange(e.target.value)} onFocus={refresh} className={className ?? "h-7 min-w-0 flex-1 bg-black/30 px-2 py-0 text-[11px]"} title={t("Microphone")}>
       <option value="">{t("Default microphone")}</option>
       {devices.map((d) => (
         <option key={d.id} value={d.id}>

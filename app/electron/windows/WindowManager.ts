@@ -10,7 +10,7 @@ const KINDS: WindowKind[] = ["main", "chat"]
 
 /**
  * Creates and positions the windows: the toolbar (main) and the panel attached right under it
- * (window kind "chat": answers and live transcript as tabs). Settings live on the web dashboard.
+ * (window kind "chat": answers, live transcript and settings as tabs). The rest of the settings live on the web dashboard.
  *
  * Events: "state" (WindowsState)
  */

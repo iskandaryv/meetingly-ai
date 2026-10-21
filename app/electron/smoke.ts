@@ -39,7 +39,7 @@ interface SmokeDeps {
  *             so the screen can be captured.
  *   "answers" auto-answer against the real model: English and Russian questions must get
  *             direct answers, small talk must be skipped (nothing shown in chat).
- *   "shots"   capture the toolbar and both panel tabs (with sample answers) as PNGs into
+ *   "shots"   capture the toolbar and every panel tab (with sample answers) as PNGs into
  *             IGPT_SMOKE_SHOTS. capturePage works even with content protection on.
  *   "demo"    frames of answers streaming in the panel, for the README animation (see demoFrames).
  *   "copy"    selecting an answer in the panel and pressing Ctrl+C copies it (the Ctrl+C shortcut must not
@@ -317,6 +317,9 @@ async function shots(windows: WindowManager, settings: SmokeDeps["settings"], di
   }
   await sleep(600)
   await save("transcript")
+  windows.showPanel("settings")
+  await sleep(600)
+  await save("settings")
 }
 
 /**

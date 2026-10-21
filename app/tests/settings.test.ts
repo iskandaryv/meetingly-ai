@@ -16,6 +16,15 @@ afterEach(() => {
 })
 
 describe("SettingsStore", () => {
+  it("transcribes the system language on a new install, and keeps a saved choice", () => {
+    const file = tmpFile()
+    const meta = { version: "1.2.9", platform: "win32", locale: "ru-RU" }
+    expect(new SettingsStore(file, meta).get().audioLanguage).toBe("ru")
+    expect(new SettingsStore(tmpFile(), { ...meta, locale: "xx-YY" }).get().audioLanguage).toBe("en")
+    new SettingsStore(file, meta).update({ audioLanguage: "en" })
+    expect(new SettingsStore(file, { ...meta, locale: "de-DE" }).get().audioLanguage).toBe("en")
+  })
+
   it("starts from defaults and persists updates", () => {
     const file = tmpFile()
     const store = new SettingsStore(file)

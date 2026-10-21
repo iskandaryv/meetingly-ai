@@ -113,7 +113,8 @@ export class SettingsStore extends EventEmitter {
     } catch (err) {
       console.error("[settings] failed to read settings, using defaults:", err)
     }
-    return normalize({ ...DEFAULT_SETTINGS })
+    // A new install transcribes the system language, like the interface; the panel's Settings tab changes it.
+    return normalize({ ...DEFAULT_SETTINGS, audioLanguage: this.uiLocale() })
   }
 
   private persist(): void {

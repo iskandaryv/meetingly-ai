@@ -12,7 +12,7 @@ import { ReportGenerator } from "./services/reports"
 import { RecordingSession } from "./services/session"
 import { AsrModel } from "./services/asrModel"
 import { SettingsStore } from "./services/settings"
-import { writeTranscriptFile } from "./services/transcriptFiles"
+import { TranscriptAutosave } from "./services/transcriptFiles"
 import { setLocale } from "../shared/i18n"
 import { autoAnswerAllowed } from "../shared/types"
 import { SuggestionService } from "./services/suggestions"
@@ -49,7 +49,8 @@ function bootstrap(): void {
   const settings = new SettingsStore(path.join(userData, "settings.json"), {
     version: app.getVersion(),
     platform: process.platform,
-    locale: app.getLocale()
+    // Smoke runs can render another interface language (IGPT_SMOKE_LOCALE=ru) to check that the labels fit.
+    locale: (process.env.IGPT_SMOKE && process.env.IGPT_SMOKE_LOCALE) || app.getLocale()
   })
   setLocale(settings.uiLocale())
   const box = keychainBox(safeStorage)
@@ -58,9 +59,11 @@ function bootstrap(): void {
   const reports = new ReportGenerator({ llm, meetings, settings })
   const asrModel = new AsrModel(process.env.MEETINGLY_MODEL_DIR || path.join(userData, "models"))
   // Cloud transcription is part of Unlimited; every other plan transcribes on this computer.
-  // Each finished session is also a .txt in Documents/Meetingly (a temp folder for smoke runs): readable without an account.
+  // Each session is also a .txt in Documents/Meetingly (a temp folder for smoke runs): readable without an account.
   const transcriptDir = process.env.IGPT_SMOKE ? path.join(userData, "transcripts") : path.join(app.getPath("documents"), "Meetingly")
   let lastTranscript: string | null = null
+  // While listening, the transcript so far is saved every minute into the file Finish completes.
+  const autosave = new TranscriptAutosave(transcriptDir, () => session.draft())
   const openTranscripts = () => {
     fs.mkdirSync(transcriptDir, { recursive: true })
     void shell.openPath(transcriptDir)
@@ -77,13 +80,22 @@ function bootstrap(): void {
     cloudTranscription: () => plan.getState().plan === "unlimited",
     onFinished: (meeting) => {
       try {
-        lastTranscript = writeTranscriptFile(transcriptDir, meeting)
+        lastTranscript = autosave.finish(meeting)
         logger.info("session", `transcript saved to ${lastTranscript}`)
       } catch (err) {
         logger.warn("session", `could not save the transcript file: ${(err as Error).message}`)
       }
-    }
+    },
+    // Discard keeps nothing, including the minute-by-minute copy.
+    onDiscarded: () => autosave.discard()
   })
+  setInterval(() => {
+    try {
+      autosave.save()
+    } catch (err) {
+      logger.warn("session", `could not save the transcript so far: ${(err as Error).message}`)
+    }
+  }, 60_000)
   const windows = new WindowManager(path.join(__dirname, "preload.js"))
   const chat = new ChatService({
     settings,
@@ -134,6 +146,8 @@ function bootstrap(): void {
     instrument({ logger, settings, session, chat, windows })
     applySettings()
     settings.onChange(applySettings)
+    // A new meeting language applies at once, mid-session too.
+    settings.onChange(() => session.syncEngine())
     // A meeting left mid-report by a crash or a quit would sit on "processing" forever.
     void reports.resumeUnfinished()
     // Reconnect to the linked account, if any. Never blocks startup.
@@ -194,7 +208,10 @@ function bootstrap(): void {
   app.on("will-quit", () => {
     logger.info("app", "quitting")
     shortcuts.unregister()
-    session.cancel()
+    // Quitting mid-session saves it like Finish: the meeting and its .txt now, the report on the next start
+    // (reports.resumeUnfinished). Smoke runs end with a quit and must leave nothing behind.
+    if (process.env.IGPT_SMOKE) session.cancel()
+    else void session.finish()
   })
 }
 

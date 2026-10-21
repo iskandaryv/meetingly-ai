@@ -1,10 +1,10 @@
 import { useState } from "react"
-import { Camera, Captions, Check, EyeOff, LayoutDashboard, MessageSquare, Mic, Pause, Play, Power, UserRound, X } from "lucide-react"
+import { Camera, Captions, Check, EyeOff, MessageSquare, Mic, Pause, Play, Power, Settings, UserRound, X } from "lucide-react"
 import { DEFAULT_SHORTCUTS } from "@shared/types"
 import { t } from "@shared/i18n"
 import { api, shortcutLabel } from "@/lib/api"
 import { useCloudState, useElapsed, useEvent, useFitWindow, useSessionState, useSettings, useWindowsState } from "@/lib/hooks"
-import type { UpdateState } from "@shared/types"
+import type { PanelTab, UpdateState } from "@shared/types"
 import { Button } from "@/components/ui/button"
 import { Dot } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -59,7 +59,7 @@ export function MainWindow() {
       await api.invoke("panel:show", "answers")
       await api.invoke("chat:screenshot")
     })
-  const showing = (tab: "answers" | "transcript") => windows.chat && windows.panelTab === tab
+  const showing = (tab: PanelTab) => windows.chat && windows.panelTab === tab
   // The panel shows the code to confirm in the browser, so it opens first.
   const signIn = () =>
     run(async () => {
@@ -127,8 +127,9 @@ export function MainWindow() {
         <Button variant="ghost" size="icon" onClick={screenshot} title={t("Analyze screen ({shortcut})", { shortcut: shortcutLabel(KEYS.screenshot) })}>
           <Camera className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={() => api.invoke("cloud:open-web")} title={t("Open web dashboard ({shortcut})", { shortcut: shortcutLabel(KEYS.dashboard) })}>
-          <LayoutDashboard className="h-4 w-4" />
+        {/* Settings for the next meeting open in the panel; its Settings tab links to the web dashboard for the rest. */}
+        <Button variant={showing("settings") ? "secondary" : "ghost"} size="icon" onClick={() => api.invoke("panel:toggle", "settings")} title={t("Settings")}>
+          <Settings className="h-4 w-4" />
         </Button>
         {signedOut && (
           <Button variant="ghost" size="icon" className="relative" onClick={signIn} title={t("Sign up free or sign in: 50 AI answers a day")}>

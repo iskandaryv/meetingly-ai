@@ -38,7 +38,7 @@ Meetingly는 Windows, macOS, Linux에서 채용 면접과 실시간 회의에 �
 
 - **진짜 답변을 즉시.** 상대방이 질문하면 *Answer*를 누르세요(Pro의 자동 답변에 맡겨도 됩니다): 말할 수 있는 굵은 한 줄과, 자세히 설명할 수 있는 몇 가지 핵심 포인트가 제공됩니다. 코칭도, "…을 언급해도 됩니다" 같은 말도 없습니다.
 - **추천 질문.** 사이드 컬럼이 대화를 따라가며 한 번 클릭으로 쓸 수 있는 질문을 제공합니다. 방금 받은 질문, 나온 용어, 다음에 나올 가능성이 큰 질문입니다.
-- **내 컴퓨터에서 음성 인식.** NVIDIA Nemotron이 기본적으로 28개 언어를 로컬에서 전사합니다. Unlimited는 오디오를 Deepgram으로 보내는 선택적 클라우드 전사도 제공합니다.
+- **컴퓨터에서 음성을 인식하세요.** NVIDIA Nemotron은 사람들이 말하는 동안 28개 언어를 로컬에서 받아씁니다. 문장이 끝나면 두 번째 모델이 더 정확하게 다시 작성합니다. Parakeet Ultra는 유럽 언어 20개를, Qwen3-ASR은 중국어, 일본어, 한국어, 베트남어를 지원합니다. Unlimited는 오디오를 Deepgram으로 전송하는 선택적 클라우드 음성 변환도 제공합니다.
 - **나와 상대를 분리.** 내 마이크와 통화 오디오를 따로 텍스트로 변환해, 기록이 채팅처럼 읽힙니다.
 - **화면 분석.** 한 번 클릭으로 화면의 내용(코딩 과제, 슬라이드, 질문)을 읽고 답합니다.
 - **화면 공유 콘텐츠 보호.** Windows와 macOS의 OS 보호 기능을 사용합니다. 일부 캡처 방식에서는 여전히 창이 포함될 수 있으며, Linux는 동일한 보호 기능을 제공하지 않습니다.
@@ -177,7 +177,7 @@ Windows와 macOS에서는 창이 운영 체제의 화면 캡처 보호를 사용
 
 ### 완전히 오프라인으로 실행할 수 있나요?
 
-음성 인식은 이미 내 컴퓨터에서 실행됩니다. NVIDIA Nemotron을 한 번 다운로드합니다(약 560 MB). 답변을 로컬 Ollama 모델로 지정하면 아무것도 컴퓨터 밖으로 나가지 않습니다.
+음성 인식은 이미 컴퓨터에서 실행됩니다. NVIDIA Nemotron(약 560MB)과 회의 언어로 각 문장을 다시 작성하는 모델(550~650MB)을 각각 한 번만 다운로드하면 됩니다. 답변에 로컬 Ollama 모델을 지정하면 어떤 내용도 컴퓨터 밖으로 나가지 않습니다.
 
 ### 어떤 언어를 지원하나요?
 
@@ -186,6 +186,10 @@ Windows와 macOS에서는 창이 운영 체제의 화면 캡처 보호를 사용
 ### 내 데이터는 어디에 저장되나요?
 
 전사와 보고서는 컴퓨터에 저장됩니다. 무료 계정을 사용하면 Instructions, 설정, 회의 보고서도 다른 컴퓨터와 동기화됩니다. 오디오는 저장되지 않습니다. 자세한 내용: [개인정보 처리방침](https://meetinglyai.com/privacy).
+
+## 크레딧
+
+기기 내 음성 인식은 [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp)를 통해 [NVIDIA Nemotron 3.5 ASR Streaming](https://huggingface.co/handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf)(OpenMDW-1.1), Moondream의 [Parakeet Ultra](https://huggingface.co/moondream/parakeet-ultra)(CC-BY-4.0), Qwen 팀과 Alibaba의 [Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-0.6B)(Apache-2.0)로 실행됩니다.
 
 ## 기여하기
 

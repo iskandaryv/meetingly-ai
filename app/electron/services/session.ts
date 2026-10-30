@@ -3,6 +3,7 @@ import { relayIdentity } from "./relayAuth"
 import {
   getLanguage,
   segmentLabel,
+  type LanguageCode,
   type Meeting,
   type SessionState,
   type SessionStatus,
@@ -12,7 +13,7 @@ import {
 } from "../../shared/types"
 import { DeepgramSocket } from "./deepgram"
 import type { AsrModel } from "./asrModel"
-import { LocalAsrSocket } from "./localAsr"
+import { LocalAsrSocket, type RefineOptions } from "./localAsr"
 import type { MeetingStore } from "./meetings"
 import type { ReportGenerator } from "./reports"
 import type { SettingsStore } from "./settings"
@@ -26,6 +27,8 @@ interface Deps {
   asrModel?: AsrModel
   /** Whether the account's plan includes cloud transcription (Unlimited); otherwise the setting is ignored. */
   cloudTranscription?: () => boolean
+  /** The second pass for a meeting language, when its model is on disk (refine.ts); on-device sessions only. */
+  refine?: (language: LanguageCode) => RefineOptions | null
   /** Injectable for tests. */
   createSocket?: (deviceId: string, language: string) => TranscriptionSocket
   /** A finished session was saved (main writes it as a text file); errors are the caller's to handle. */
@@ -41,6 +44,8 @@ export interface TranscriptionSocket extends EventEmitter {
   readonly stereo?: boolean
   connect(): Promise<void>
   sendAudio(pcm16: ArrayBuffer): void
+  /** Hands on at once anything finished but still being worked on (on-device: utterances in their second pass). */
+  flush?(): void
   close(): void
 }
 
@@ -147,6 +152,7 @@ export class RecordingSession extends EventEmitter {
   /** Stop and save. Returns null when nothing was transcribed. */
   async finish(): Promise<Meeting | null> {
     if (this.status === "idle") return null
+    this.socket?.flush?.()
     const meeting = this.toMeeting(Date.now())
     this.teardown()
     this.setStatus("idle")
@@ -235,7 +241,7 @@ export class RecordingSession extends EventEmitter {
     const socket: TranscriptionSocket = this.deps.createSocket
       ? this.deps.createSocket(deviceId, language.deepgram)
       : local
-        ? new LocalAsrSocket({ language: language.asr, model: this.deps.asrModel! })
+        ? new LocalAsrSocket({ language: language.asr, model: this.deps.asrModel!, refine: this.deps.refine?.(language.code) ?? null })
         : new DeepgramSocket({ deviceId, language: language.deepgram, headers: relayIdentity(this.deps.settings) })
     this.socket = socket
     this.engineKey = key

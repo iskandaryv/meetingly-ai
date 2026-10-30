@@ -6,13 +6,18 @@
  * blocks the app and a native crash cannot take the app down.
  *
  * Protocol (parentPort messages):
- *   in : { type: "start", libDir, modelPath, language, threads }
+ *   in : { type: "start", libDir, modelPath, language, threads, keepAudio }
  *        { type: "audio", pcm: ArrayBuffer }   16 kHz stereo signed 16-bit, interleaved:
  *                                              left = microphone (you), right = system audio (them)
  *        { type: "stop" }
- *   out: { type: "ready" } | { type: "partial", channel, text } | { type: "final", channel, text, speechFinal }
+ *   out: { type: "ready" } | { type: "partial", channel, text } | { type: "final", channel, text, speechFinal, audio? }
  *        channel: 0 = microphone, 1 = system audio. One model, one speech session per channel.
+ *        audio (with keepAudio): the utterance as 16 kHz mono 16-bit PCM, for the second pass.
  *        { type: "error", message } | { type: "log", message }
+ *
+ * The same file runs the second pass (refine.ts) in a process of its own, with a whole-utterance model:
+ *   in : { type: "start-refine", libDir, modelPath, threads } | { type: "refine", id, pcm: ArrayBuffer, language } | { type: "stop" }
+ *   out: { type: "ready" } | { type: "refined", id, text, ms } (text "" when it failed) | { type: "error" | "log", message }
  *
  * Audio goes to the model continuously; an utterance ends when the transcript
  * stops growing (0.7 s after a finished sentence, 1.5 s otherwise; see Segmenter).
@@ -20,10 +25,10 @@
 import path from "node:path"
 import os from "node:os"
 import koffi from "koffi"
+import { AudioHistory, SAMPLE_RATE, utteranceWindow } from "./services/asrAudio"
 
 const parentPort = (process as unknown as { parentPort: Electron.ParentPort }).parentPort
 
-const SAMPLE_RATE = 16000
 const BLOCK_SAMPLES = 2560 // 160 ms per model call
 const END_AFTER_SENTENCE_MS = 700 // a finished sentence (. ? !) followed by this much quiet ends an utterance
 const END_SILENCE_MS = 1500 // any text followed by this much quiet ends it too (mid-sentence pauses survive)
@@ -31,6 +36,8 @@ const MAX_UTTERANCE_MS = 30000
 const PARTIAL_EVERY_MS = 150
 const ATT_CONTEXT_RIGHT = 6 // 480 ms lookahead: near-offline accuracy at live latency
 const EXT_KIND_PARAKEET_STREAM = 1414744912
+/** Audio kept per channel for the second pass: the longest utterance plus room for its pre-roll. */
+const HISTORY_MS = 40_000
 
 type Fn = (...args: any[]) => any
 /** One speech stream (its own session) on the shared model. */
@@ -47,10 +54,17 @@ interface Model {
   close(): void
 }
 
+/** A whole-utterance model (the second pass). */
+interface OfflineModel {
+  run(pcm: Float32Array, language: string): string
+  close(): void
+}
+
 /** Below this RMS a block is digital silence (an idle loopback channel) and is not fed to the model. */
 const SILENCE_RMS = 1e-4
 
 let model: Model | null = null
+let offline: OfflineModel | null = null
 
 function post(msg: Record<string, unknown>): void {
   parentPort.postMessage(msg)
@@ -62,7 +76,8 @@ function libFile(dir: string): string {
   return path.join(dir, "libtranscribe.so")
 }
 
-function loadModel(libDir: string, modelPath: string, language: string, threads: number): Model {
+/** The native library's functions (registered once per process: one model kind per process). */
+function bind(libDir: string) {
   // Windows resolves ggml*.dll next to transcribe.dll only if the directory is on the search path.
   if (process.platform === "win32") process.env.PATH = `${libDir};${process.env.PATH ?? ""}`
   const lib = koffi.load(libFile(libDir))
@@ -91,19 +106,8 @@ function loadModel(libDir: string, modelPath: string, language: string, threads:
   const statusString = fn("const char *transcribe_status_string(int status)")
   const modelParamsInit = fn("void transcribe_model_load_params_init(_Out_ transcribe_model_load_params *p)")
   const modelLoad = fn("int transcribe_model_load_file(const char *path, transcribe_model_load_params *p, _Out_ void **out)")
-  const modelFree = fn("void transcribe_model_free(void *model)")
   const sessionParamsInit = fn("void transcribe_session_params_init(_Out_ transcribe_session_params *p)")
   const sessionInit = fn("int transcribe_session_init(void *model, transcribe_session_params *p, _Out_ void **out)")
-  const sessionFree = fn("void transcribe_session_free(void *session)")
-  const runParamsInit = fn("void transcribe_run_params_init(_Out_ transcribe_run_params *p)")
-  const streamParamsInit = fn("void transcribe_stream_params_init(_Out_ transcribe_stream_params *p)")
-  const streamBegin = fn("int transcribe_stream_begin(void *session, transcribe_run_params *rp, transcribe_stream_params *sp)")
-  const streamFeed = fn("int transcribe_stream_feed(void *session, float *pcm, int n, _Inout_ transcribe_stream_update *u)")
-  const streamFinalize = fn("int transcribe_stream_finalize(void *session, _Inout_ transcribe_stream_update *u)")
-  const streamGetText = fn("int transcribe_stream_get_text(void *session, _Inout_ transcribe_stream_text *t)")
-  const streamReset = fn("void transcribe_stream_reset(void *session)")
-  const streamUpdateInit = fn("void transcribe_stream_update_init(_Out_ transcribe_stream_update *u)")
-  const streamTextInit = fn("void transcribe_stream_text_init(_Out_ transcribe_stream_text *t)")
 
   // Native log output (per-chunk timings) goes to this process's stdio, which the app does not attach.
   const check = (status: number, what: string) => {
@@ -111,12 +115,50 @@ function loadModel(libDir: string, modelPath: string, language: string, threads:
   }
   check(initBackends(libDir), "loading compute backends")
 
-  const mp: Record<string, unknown> = {}
-  modelParamsInit(mp)
-  mp.backend = Number(process.env.MEETINGLY_ASR_BACKEND ?? 1) // 1 = CPU: predictable on every machine
-  const modelOut = [null]
-  check(modelLoad(modelPath, mp, modelOut), "loading the speech model")
-  const handle = modelOut[0]
+  return {
+    ParakeetExt,
+    check,
+    load(modelPath: string): unknown {
+      const mp: Record<string, unknown> = {}
+      modelParamsInit(mp)
+      mp.backend = Number(process.env.MEETINGLY_ASR_BACKEND ?? 1) // 1 = CPU: predictable on every machine
+      const out = [null]
+      check(modelLoad(modelPath, mp, out), "loading the speech model")
+      return out[0]
+    },
+    session(handle: unknown, threads: number): unknown {
+      const spar: Record<string, unknown> = {}
+      sessionParamsInit(spar)
+      spar.n_threads = threads
+      const out = [null]
+      check(sessionInit(handle, spar, out), "opening a speech session")
+      return out[0]
+    },
+    modelFree: fn("void transcribe_model_free(void *model)"),
+    sessionFree: fn("void transcribe_session_free(void *session)"),
+    runParamsInit: fn("void transcribe_run_params_init(_Out_ transcribe_run_params *p)"),
+    streamParamsInit: fn("void transcribe_stream_params_init(_Out_ transcribe_stream_params *p)"),
+    streamBegin: fn("int transcribe_stream_begin(void *session, transcribe_run_params *rp, transcribe_stream_params *sp)"),
+    streamFeed: fn("int transcribe_stream_feed(void *session, float *pcm, int n, _Inout_ transcribe_stream_update *u)"),
+    streamFinalize: fn("int transcribe_stream_finalize(void *session, _Inout_ transcribe_stream_update *u)"),
+    streamGetText: fn("int transcribe_stream_get_text(void *session, _Inout_ transcribe_stream_text *t)"),
+    streamReset: fn("void transcribe_stream_reset(void *session)"),
+    streamUpdateInit: fn("void transcribe_stream_update_init(_Out_ transcribe_stream_update *u)"),
+    streamTextInit: fn("void transcribe_stream_text_init(_Out_ transcribe_stream_text *t)"),
+    run: fn("int transcribe_run(void *session, float *pcm, int n, transcribe_run_params *rp)"),
+    fullText: fn("const char *transcribe_full_text(void *session)")
+  }
+}
+
+/** Tags some model families leave in their text (<en-US>, <|zh|>, <|NEUTRAL|>…), and doubled spaces. */
+function cleanText(text: string): string {
+  return text.replace(/<[a-z]{2}-[A-Z]{2}>|<\|[^|>]*\|>/g, "").replace(/\s+/g, " ").trim()
+}
+
+function loadModel(libDir: string, modelPath: string, language: string, threads: number): Model {
+  const lib = bind(libDir)
+  const { ParakeetExt, check } = lib
+  const handle = lib.load(modelPath)
 
   // Stream extension: 480 ms lookahead. Kept alive for the life of the model.
   const ext = koffi.alloc(ParakeetExt, 1)
@@ -125,53 +167,47 @@ function loadModel(libDir: string, modelPath: string, language: string, threads:
 
   // Calls into the sessions are sequential (this thread), which the library requires per model.
   const openStream = (): Engine => {
-  const spar: Record<string, unknown> = {}
-  sessionParamsInit(spar)
-  spar.n_threads = threads
-  const sessionOut = [null]
-  check(sessionInit(handle, spar, sessionOut), "opening a speech session")
-  const session = sessionOut[0]
+  const session = lib.session(handle, threads)
   sessions.push(session)
 
   const readText = (): string => {
     const t: Record<string, unknown> = {}
-    streamTextInit(t)
-    check(streamGetText(session, t), "reading the transcript")
+    lib.streamTextInit(t)
+    check(lib.streamGetText(session, t), "reading the transcript")
     // full_text is the model's whole hypothesis with its own spacing; gluing committed + tentative
     // dropped the space at the seam ("I'mI'm").
-    const full = String(t.full_text ?? "") || String(t.committed_text ?? "") + String(t.tentative_text ?? "")
-    return full.replace(/<[a-z]{2}-[A-Z]{2}>/g, "").replace(/\s+/g, " ").trim()
+    return cleanText(String(t.full_text ?? "") || String(t.committed_text ?? "") + String(t.tentative_text ?? ""))
   }
 
   const begin = () => {
     const rp: Record<string, unknown> = {}
-    runParamsInit(rp)
+    lib.runParamsInit(rp)
     rp.language = language
     const sp: Record<string, unknown> = {}
-    streamParamsInit(sp)
+    lib.streamParamsInit(sp)
     sp.family = ext
-    check(streamBegin(session, rp, sp), "starting the stream")
+    check(lib.streamBegin(session, rp, sp), "starting the stream")
   }
   begin()
 
   return {
     feed(pcm) {
       const u: Record<string, unknown> = {}
-      streamUpdateInit(u)
-      check(streamFeed(session, pcm, pcm.length, u), "transcribing")
+      lib.streamUpdateInit(u)
+      check(lib.streamFeed(session, pcm, pcm.length, u), "transcribing")
     },
     finalize() {
       const u: Record<string, unknown> = {}
-      streamUpdateInit(u)
-      check(streamFinalize(session, u), "finishing the utterance")
+      lib.streamUpdateInit(u)
+      check(lib.streamFinalize(session, u), "finishing the utterance")
       const text = readText()
-      streamReset(session)
+      lib.streamReset(session)
       return text
     },
     text: readText,
     begin,
     close() {
-      try { streamReset(session) } catch { /* already reset */ }
+      try { lib.streamReset(session) } catch { /* already reset */ }
     }
   }
   }
@@ -179,9 +215,30 @@ function loadModel(libDir: string, modelPath: string, language: string, threads:
   return {
     openStream,
     close() {
-      for (const session of sessions) sessionFree(session)
-      modelFree(handle)
+      for (const session of sessions) lib.sessionFree(session)
+      lib.modelFree(handle)
       koffi.free(ext)
+    }
+  }
+}
+
+/** A whole-utterance model for the second pass: one session, one utterance at a time. */
+function loadOffline(libDir: string, modelPath: string, threads: number): OfflineModel {
+  const lib = bind(libDir)
+  const handle = lib.load(modelPath)
+  const session = lib.session(handle, threads)
+  return {
+    run(pcm, language) {
+      const rp: Record<string, unknown> = {}
+      lib.runParamsInit(rp)
+      rp.language = language
+      rp.timestamps = 0 // none: only the text is used
+      lib.check(lib.run(session, pcm, pcm.length, rp), "transcribing the utterance again")
+      return cleanText(String(lib.fullText(session) ?? ""))
+    },
+    close() {
+      lib.sessionFree(session)
+      lib.modelFree(handle)
     }
   }
 }
@@ -202,9 +259,15 @@ class Segmenter {
   private lastChangeMs = 0
   private utteranceStartMs = -1
   private lastPartialMs = -PARTIAL_EVERY_MS
+  /** With the second pass on: this channel's recent audio, where the last utterance ended and where text appeared. */
+  private readonly history: AudioHistory | null
+  private prevEnd = 0
+  private firstText = -1
   stats = { chunks: 0, feeds: 0, skipped: 0, utterances: 0 }
 
-  constructor(private readonly asr: Engine, private readonly channel: number) {}
+  constructor(private readonly asr: Engine, private readonly channel: number, keepAudio = false) {
+    this.history = keepAudio ? new AudioHistory(Math.round((HISTORY_MS / 1000) * SAMPLE_RATE)) : null
+  }
 
   push(pcm16: Int16Array): void {
     this.stats.chunks++
@@ -215,13 +278,20 @@ class Segmenter {
     if (this.blockSamples >= BLOCK_SAMPLES) this.flushBlock()
   }
 
-  private flushBlock(): void {
+  /** The block collected so far as one array (emptied). */
+  private takeBlock(): Float32Array {
     const joined = new Float32Array(this.blockSamples)
     let o = 0
     for (const b of this.block) { joined.set(b, o); o += b.length }
     this.block = []
     this.blockSamples = 0
+    return joined
+  }
+
+  private flushBlock(): void {
+    const joined = this.takeBlock()
     this.audioMs += (joined.length / SAMPLE_RATE) * 1000
+    this.history?.push(joined)
     let sum = 0
     for (let i = 0; i < joined.length; i++) sum += joined[i] * joined[i]
     if (Math.sqrt(sum / joined.length) < SILENCE_RMS) {
@@ -234,7 +304,10 @@ class Segmenter {
 
     const text = this.asr.text()
     if (text !== this.text) {
-      if (!this.text && text) this.utteranceStartMs = this.audioMs
+      if (!this.text && text) {
+        this.utteranceStartMs = this.audioMs
+        this.firstText = this.history?.total ?? -1
+      }
       this.text = text
       this.lastChangeMs = this.audioMs
       if (text && this.audioMs - this.lastPartialMs >= PARTIAL_EVERY_MS) {
@@ -251,21 +324,24 @@ class Segmenter {
 
   endUtterance(speechFinal: boolean): void {
     if (this.blockSamples > 0) {
-      const rest = this.block
-      this.block = []
-      this.blockSamples = 0
-      const joined = new Float32Array(rest.reduce((n, b) => n + b.length, 0))
-      let o = 0
-      for (const b of rest) { joined.set(b, o); o += b.length }
-      this.asr.feed(joined)
+      const rest = this.takeBlock()
+      this.history?.push(rest)
+      this.asr.feed(rest)
     }
     const text = this.asr.finalize()
     this.asr.begin()
     this.text = ""
     this.utteranceStartMs = -1
+    let audio: ArrayBuffer | undefined
+    if (this.history) {
+      const [start, end] = utteranceWindow({ end: this.history.total, prevEnd: this.prevEnd, firstText: this.firstText })
+      if (text) audio = this.history.slice16(start, end).buffer as ArrayBuffer
+      this.prevEnd = end
+    }
+    this.firstText = -1
     if (text) {
       this.stats.utterances++
-      post({ type: "final", channel: this.channel, text, speechFinal })
+      post({ type: "final", channel: this.channel, text, speechFinal, audio })
     }
   }
 }
@@ -279,9 +355,28 @@ parentPort.on("message", (event: { data: any }) => {
       const started = Date.now()
       const threads = Math.max(2, Math.min(4, Number(msg.threads) || Math.floor(os.cpus().length / 2)))
       model = loadModel(msg.libDir, msg.modelPath, msg.language, threads)
-      segmenters = [new Segmenter(model.openStream(), 0), new Segmenter(model.openStream(), 1)]
-      post({ type: "log", message: `model ready in ${Date.now() - started} ms, ${threads} threads, ${msg.language}, 2 channels` })
+      const keep = Boolean(msg.keepAudio)
+      segmenters = [new Segmenter(model.openStream(), 0, keep), new Segmenter(model.openStream(), 1, keep)]
+      post({ type: "log", message: `model ready in ${Date.now() - started} ms, ${threads} threads, ${msg.language}, 2 channels${keep ? ", second pass on" : ""}` })
       post({ type: "ready" })
+    } else if (msg.type === "start-refine") {
+      const started = Date.now()
+      const threads = Math.max(1, Math.min(4, Number(msg.threads) || 2))
+      offline = loadOffline(msg.libDir, msg.modelPath, threads)
+      post({ type: "log", message: `second pass ready in ${Date.now() - started} ms, ${threads} threads, ${path.basename(msg.modelPath)}` })
+      post({ type: "ready" })
+    } else if (msg.type === "refine") {
+      const started = Date.now()
+      let text = ""
+      try {
+        const pcm = msg.pcm instanceof ArrayBuffer ? new Int16Array(msg.pcm) : new Int16Array(msg.pcm.buffer, msg.pcm.byteOffset, msg.pcm.byteLength >> 1)
+        const f = new Float32Array(pcm.length)
+        for (let i = 0; i < pcm.length; i++) f[i] = pcm[i] / 32768
+        if (offline && f.length > 0) text = offline.run(f, msg.language)
+      } catch (err) {
+        post({ type: "log", message: `second pass failed: ${(err as Error).message}` })
+      }
+      post({ type: "refined", id: msg.id, text, ms: Date.now() - started })
     } else if (msg.type === "audio" && segmenters.length === 2) {
       const pcm = msg.pcm instanceof ArrayBuffer ? new Int16Array(msg.pcm) : new Int16Array(msg.pcm.buffer, msg.pcm.byteOffset, msg.pcm.byteLength >> 1)
       const frames = pcm.length >> 1
@@ -295,9 +390,11 @@ parentPort.on("message", (event: { data: any }) => {
       segmenters[1].push(right)
     } else if (msg.type === "stop") {
       for (const sg of segmenters) sg.endUtterance(true)
-      post({ type: "log", message: `stats ${JSON.stringify(segmenters.map((sg) => sg.stats))}` })
+      if (segmenters.length) post({ type: "log", message: `stats ${JSON.stringify(segmenters.map((sg) => sg.stats))}` })
       model?.close()
+      offline?.close()
       model = null
+      offline = null
       segmenters = []
       process.exit(0)
     }

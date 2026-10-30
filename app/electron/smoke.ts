@@ -6,7 +6,8 @@ import path from "node:path"
 import type { AddressInfo } from "node:net"
 import type { AsrModel } from "./services/asrModel"
 import { LocalAsrSocket } from "./services/localAsr"
-import type { AudioSource, SessionState, WindowKind } from "../shared/types"
+import type { RefineModels } from "./services/refine"
+import { getLanguage, type AudioSource, type LanguageCode, type SessionState, type WindowKind } from "../shared/types"
 import type { ChatService } from "./services/chat"
 import type { CloudSync } from "./services/cloud"
 import { MeetingStore } from "./services/meetings"
@@ -55,6 +56,7 @@ interface SmokeDeps {
  *             speech worker in real time and report partials, finals and latency.
  *   "switch"  the meeting language changes mid-session with the real on-device engine: IGPT_SMOKE_WAV (English)
  *             plays, the language switches to Russian, IGPT_SMOKE_WAV2 (Russian) plays (see switchSmoke).
+ *   "refine"  the second pass end to end, without windows: see runRefineSmoke.
  */
 export async function runSmokeTest(mode: string, { windows, chat, session, settings, cloud, meetings, asrModel }: SmokeDeps): Promise<void> {
   const errors: string[] = []
@@ -872,6 +874,83 @@ async function playWav(session: RecordingSession, wav: string): Promise<void> {
     session.sendAudio(stereo.slice(2 * f, 2 * Math.min(frames, f + 1600)).buffer)
     await sleep(100)
   }
+}
+
+/** Test sets (FLEURS language folders, AMI meeting microphones) and the meeting language they are in. */
+const SET_LANGUAGE: Record<string, LanguageCode> = {
+  en_us: "en", ro_ro: "ro", ru_ru: "ru", es_419: "es", cmn_hans_cn: "zh", ja_jp: "ja", ko_kr: "ko",
+  ar_eg: "ar", hi_in: "hi", tr_tr: "tr", vi_vn: "vi", ihm: "en", sdm: "en", de_de: "de", fr_fr: "fr", it_it: "it",
+  pt_br: "pt", pl_pl: "pl", uk_ua: "uk", nl_nl: "nl", cs_cz: "cs", sv_se: "sv", bg_bg: "bg", hu_hu: "hu", fi_fi: "fi",
+  da_dk: "da", hr_hr: "hr", sk_sk: "sk", et_ee: "et"
+}
+
+/**
+ * The second pass end to end, as in a call: recorded sentences of a language play one after another on the
+ * system-audio side, 2 s apart, through the live model and the second pass, at IGPT_SMOKE_SPEED times real time
+ * (default 2). Writes what each produced, with the references, to IGPT_SMOKE_OUT for scoring.
+ *   IGPT_SMOKE_MANIFEST  [{ file, ref, set }]   IGPT_SMOKE_SETS  "ro_ro,en_us"   IGPT_SMOKE_CLIPS  per set (default 12)
+ * Runs without windows (main.ts), so nothing shows on the desktop.
+ */
+export async function runRefineSmoke({ asrModel, refineModels }: { asrModel: AsrModel; refineModels: RefineModels }): Promise<void> {
+  const manifestPath = process.env.IGPT_SMOKE_MANIFEST ?? ""
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as { file: string; ref: string; set: string }[]
+  const base = path.dirname(manifestPath)
+  const sets = (process.env.IGPT_SMOKE_SETS ?? "en_us").split(",").filter(Boolean)
+  const perSet = Number(process.env.IGPT_SMOKE_CLIPS ?? 12)
+  const speed = Number(process.env.IGPT_SMOKE_SPEED ?? 2)
+  const results: Record<string, unknown>[] = []
+  for (const set of sets) {
+    const code = SET_LANGUAGE[set]
+    const clips = manifest.filter((m) => m.set === set).slice(0, perSet)
+    const refine = code ? refineModels.forLanguage(code) : null
+    const socket = new LocalAsrSocket({ language: getLanguage(code ?? "en").asr, model: asrModel, refine })
+    const live: string[] = []
+    const finals: { text: string; at: number }[] = []
+    let ended = 0
+    socket.on("live-final", (f: { text: string }) => {
+      live.push(f.text)
+      ended = Date.now()
+    })
+    socket.on("transcript", (e: { text: string; isFinal: boolean }) => {
+      if (e.isFinal) finals.push({ text: e.text, at: Date.now() - ended })
+    })
+    const started = Date.now()
+    try {
+      await socket.connect()
+      for (let i = 0; i < 300 && refine && !socket.refining; i++) await sleep(100)
+      const refining = socket.refining
+      const gap = new Int16Array(32000)
+      const parts = clips.flatMap((c) => [readWav16k(path.resolve(base, c.file)), gap])
+      const total = parts.reduce((n, p) => n + p.length, 0) + 48000
+      const stereo = new Int16Array(total * 2)
+      let o = 0
+      for (const p of parts) {
+        for (let i = 0; i < p.length; i++) stereo[2 * (o + i) + 1] = p[i]
+        o += p.length
+      }
+      for (let f = 0; f < total; f += 1600) {
+        socket.sendAudio(stereo.slice(2 * f, 2 * Math.min(total, f + 1600)).buffer)
+        await sleep(100 / speed)
+      }
+      for (let i = 0; i < 200 && socket.waiting > 0; i++) await sleep(100)
+      results.push({
+        set, language: code, refine: refine ? path.basename(refine.modelPath) : null, refining, clips: clips.length,
+        audioSeconds: +(total / 16000).toFixed(1), wallSeconds: +((Date.now() - started) / 1000).toFixed(1),
+        stats: { ...socket.stats }, refs: clips.map((c) => c.ref), live, finals: finals.map((f) => f.text),
+        finalDelayMs: finals.map((f) => f.at)
+      })
+    } catch (err) {
+      results.push({ set, error: (err as Error).message })
+    } finally {
+      socket.close()
+      await sleep(2000)
+    }
+  }
+  const out = process.env.IGPT_SMOKE_OUT
+  if (out) fs.writeFileSync(out, JSON.stringify(results, null, 1))
+  const ok = results.every((r) => !r.error && (r.finals as string[]).length > 0)
+  console.log(`SMOKE_REPORT ${JSON.stringify({ mode: "refine", ok, sets: results.map((r) => ({ set: r.set, refine: r.refine, refining: r.refining, stats: r.stats, error: r.error })) })}`)
+  app.exit(ok ? 0 : 1)
 }
 
 /** Feed a recording through the speech worker at real-time pace (100 ms chunks), plus 1.5 s of silence. */

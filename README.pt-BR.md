@@ -38,7 +38,7 @@ Meetingly é um assistente de IA gratuito e open-source para entrevistas de empr
 
 - **Respostas reais, na hora.** Quando a outra pessoa perguntar algo, pressione *Responder* (ou deixe o recurso de resposta automática do Pro fazer isso): uma frase em negrito que você pode dizer, seguida de alguns pontos-chave para desenvolver. Sem coaching, sem “você poderia mencionar…”.
 - **Perguntas sugeridas.** Uma coluna lateral acompanha a conversa e oferece perguntas com um clique: a pergunta que acabaram de fazer, termos que surgiram, a provável próxima pergunta.
-- **Reconhecimento de fala no seu computador.** NVIDIA Nemotron transcreve localmente em 28 idiomas por padrão. Unlimited também oferece transcrição opcional na nuvem, que envia áudio para Deepgram.
+- **Reconhecimento de fala no seu computador.** NVIDIA Nemotron transcreve localmente em 28 idiomas enquanto as pessoas falam. Quando uma frase termina, um segundo modelo a reescreve com mais precisão: Parakeet Ultra para 20 idiomas europeus, Qwen3-ASR para chinês, japonês, coreano e vietnamita. Unlimited também oferece transcrição opcional na nuvem, que envia o áudio para o Deepgram.
 - **Você e Eles, separados.** Seu microfone e o áudio da chamada são transcritos separadamente, então a transcrição parece um chat.
 - **Análise de tela.** Um clique lê o que está na sua tela (uma tarefa de código, um slide, uma pergunta) e responde.
 - **Proteção de conteúdo no compartilhamento de tela.** Usa a proteção do sistema operacional no Windows e macOS. Alguns métodos de captura ainda podem incluir a janela; Linux não oferece a mesma proteção.
@@ -177,7 +177,7 @@ Sim. Pressione Listen e o Meetingly transcreve a chamada no seu computador em 28
 
 ### Ele pode rodar totalmente offline?
 
-O reconhecimento de fala já roda no seu computador: NVIDIA Nemotron, baixado uma vez (cerca de 560 MB). Direcione as respostas para um modelo Ollama local e nada sai do seu computador.
+O reconhecimento de fala já é executado no seu computador: NVIDIA Nemotron (cerca de 560 MB) e o modelo que reescreve cada frase no idioma da sua reunião (550 a 650 MB), cada um baixado uma única vez. Direcione as respostas para um modelo local do Ollama e nada sairá do seu computador.
 
 ### Quais idiomas ele suporta?
 
@@ -186,6 +186,10 @@ O reconhecimento de fala já roda no seu computador: NVIDIA Nemotron, baixado um
 ### Onde meus dados são armazenados?
 
 Transcrições e relatórios são salvos no seu computador. Com uma conta gratuita, suas instruções, configurações e relatórios de reuniões também sincronizam com seus outros computadores. O áudio não é armazenado. Detalhes: [política de privacidade](https://meetinglyai.com/privacy).
+
+## Créditos
+
+O reconhecimento de fala no dispositivo é executado por meio do [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) com o [NVIDIA Nemotron 3.5 ASR Streaming](https://huggingface.co/handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf) (OpenMDW-1.1), o [Parakeet Ultra](https://huggingface.co/moondream/parakeet-ultra) da Moondream (CC-BY-4.0) e o [Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-0.6B) da equipe do Qwen, Alibaba (Apache-2.0).
 
 ## Contribuindo
 

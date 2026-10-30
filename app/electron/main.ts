@@ -11,6 +11,7 @@ import { MeetingStore } from "./services/meetings"
 import { ReportGenerator } from "./services/reports"
 import { RecordingSession } from "./services/session"
 import { AsrModel } from "./services/asrModel"
+import { RefineModels } from "./services/refine"
 import { SettingsStore } from "./services/settings"
 import { TranscriptAutosave } from "./services/transcriptFiles"
 import { setLocale } from "../shared/i18n"
@@ -22,7 +23,7 @@ import { keychainBox, sealLegacyOwnKey } from "./services/secretBox"
 import { ShortcutManager } from "./shortcuts"
 import { createTray } from "./tray"
 import { WindowManager } from "./windows/WindowManager"
-import { runSmokeTest } from "./smoke"
+import { runRefineSmoke, runSmokeTest } from "./smoke"
 import { startAutoUpdates } from "./updater"
 
 // Smoke runs use their own profile so they neither collide with a running install
@@ -57,7 +58,10 @@ function bootstrap(): void {
   const llm = new Llm(settings, undefined, box)
   const meetings = new MeetingStore(path.join(userData, "meetings.json"))
   const reports = new ReportGenerator({ llm, meetings, settings })
-  const asrModel = new AsrModel(process.env.MEETINGLY_MODEL_DIR || path.join(userData, "models"))
+  const modelDir = process.env.MEETINGLY_MODEL_DIR || path.join(userData, "models")
+  const asrModel = new AsrModel(modelDir)
+  // The second pass: a more accurate model writes each finished utterance again (refine.ts).
+  const refineModels = new RefineModels(modelDir)
   // Cloud transcription is part of Unlimited; every other plan transcribes on this computer.
   // Each session is also a .txt in Documents/Meetingly (a temp folder for smoke runs): readable without an account.
   const transcriptDir = process.env.IGPT_SMOKE ? path.join(userData, "transcripts") : path.join(app.getPath("documents"), "Meetingly")
@@ -77,6 +81,7 @@ function bootstrap(): void {
     meetings,
     reports,
     asrModel,
+    refine: (language) => refineModels.forLanguage(language),
     cloudTranscription: () => plan.getState().plan === "unlimited",
     onFinished: (meeting) => {
       try {
@@ -135,6 +140,8 @@ function bootstrap(): void {
   }
 
   app.whenReady().then(() => {
+    // The second pass, end to end on recordings: no windows, nothing on screen (smoke.ts).
+    if (process.env.IGPT_SMOKE === "refine") return void runRefineSmoke({ asrModel, refineModels })
     try {
       sealLegacyOwnKey(settings, box)
     } catch {
@@ -168,6 +175,15 @@ function bootstrap(): void {
         onState: (state) => windows.broadcast("update:state", state)
       })
     }
+    // The meeting language's second-pass model comes after the live one (which the first Listen needs), and again
+    // whenever the meeting language changes.
+    const prefetchRefine = () => {
+      const s = settings.get()
+      // Cloud transcription is Unlimited only: on any other plan the session runs on this computer anyway.
+      const onDevice = s.transcriptionEngine === "local" || plan.getState().plan !== "unlimited"
+      if (onDevice && asrModel.isReady() && !process.env.IGPT_SMOKE) refineModels.prefetch(s.audioLanguage)
+    }
+    settings.onChange(prefetchRefine)
     // Fetch the on-device speech model in the background so the first Listen does not wait for it.
     if (settings.get().transcriptionEngine === "local" && !asrModel.isReady() && !process.env.IGPT_SMOKE) {
       let last = -10
@@ -178,9 +194,14 @@ function bootstrap(): void {
         }
       })
       void asrModel.ensure().then(
-        () => logger.info("asr", "model ready"),
+        () => {
+          logger.info("asr", "model ready")
+          prefetchRefine()
+        },
         (err) => logger.warn("asr", "model download failed", err)
       )
+    } else {
+      prefetchRefine()
     }
 
     // MEETINGLY_AUTOSTART=listen opens the live transcript and starts recording once the windows are up

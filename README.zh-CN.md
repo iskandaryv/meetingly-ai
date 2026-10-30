@@ -38,7 +38,7 @@ Meetingly 是一款免费开源的 AI 助手，适用于 Windows、macOS 和 Lin
 
 - **即时给出真实答案。** 对方提问时，按下 *Answer*（或让 Pro 自动回答）：先给出一句你可以直接说的加粗回答，再提供几个可展开的要点。不提供指导，也不会说“你可以提到……”。
 - **问题建议。** 侧边栏会跟随对话并提供一键提问：刚刚被问到的问题、出现过的术语、可能的下一个问题。
-- **在你的电脑上进行语音识别。** NVIDIA Nemotron 默认支持 28 种语言的本地转写。Unlimited 还提供可选的云端转写，会将音频发送到 Deepgram。
+- **在你的电脑上进行语音识别。** 人们说话时，NVIDIA Nemotron 会在本地转录 28 种语言。句子结束后，第二个模型会更准确地重新转写：Parakeet Ultra 支持 20 种欧洲语言，Qwen3-ASR 支持中文、日语、韩语和越南语。Unlimited 还提供可选的云端转录，会将音频发送到 Deepgram。
 - **你和对方，分开记录。** 你的麦克风和通话音频会分别转写，因此转写稿读起来像聊天记录。
 - **屏幕分析。** 一键读取屏幕内容（编程题、幻灯片、问题）并给出答案。
 - **屏幕共享内容保护。** 在 Windows 和 macOS 上使用操作系统保护。某些捕获方式仍可能包含该窗口；Linux 不提供同等保护。
@@ -177,7 +177,7 @@ docs/     images for this page
 
 ### 它能完全离线运行吗？
 
-语音识别已经在你的电脑上运行：NVIDIA Nemotron，只需下载一次（约 560 MB）。将答案指向本地 Ollama 模型，就不会有任何内容离开你的电脑。
+语音识别已在你的电脑上运行：NVIDIA Nemotron（约 560 MB）加上用会议语言重新转写每个句子的模型（550 至 650 MB），每个模型只需下载一次。将回答指向本地 Ollama 模型，任何内容都不会离开你的电脑。
 
 ### 它支持哪些语言？
 
@@ -186,6 +186,10 @@ docs/     images for this page
 ### 我的数据存储在哪里？
 
 转录和报告会保存在你的电脑上。使用免费账户时，你的 Instructions、设置和会议报告也会同步到你的其他电脑。音频不会被存储。详情：[隐私政策](https://meetinglyai.com/privacy)。
+
+## 致谢
+
+设备端语音识别通过 [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) 运行，使用 [NVIDIA Nemotron 3.5 ASR Streaming](https://huggingface.co/handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf)（OpenMDW-1.1）、Moondream 开发的 [Parakeet Ultra](https://huggingface.co/moondream/parakeet-ultra)（CC-BY-4.0）以及 Qwen 团队、Alibaba 开发的 [Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-0.6B)（Apache-2.0）。
 
 ## 贡献
 

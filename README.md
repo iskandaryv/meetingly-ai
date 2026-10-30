@@ -38,7 +38,7 @@ Meetingly is a free, open-source AI assistant for job interviews and live meetin
 
 - **Real answers, instantly.** When the other side asks something, press *Answer* (or let Pro's auto-answer do it): one bold line you can say, then a few catch points to expand on. No coaching, no "you could mention…".
 - **Suggested questions.** A side column follows the conversation and offers one-click questions: the question you were just asked, terms that came up, the likely next question.
-- **Speech recognition on your computer.** NVIDIA Nemotron transcribes locally in 28 languages by default. Unlimited also offers optional cloud transcription, which sends audio to Deepgram.
+- **Speech recognition on your computer.** NVIDIA Nemotron transcribes locally in 28 languages as people speak. When a sentence ends, a second model writes it again more accurately: Parakeet Ultra for 20 European languages, Qwen3-ASR for Chinese, Japanese, Korean and Vietnamese. Unlimited also offers optional cloud transcription, which sends audio to Deepgram.
 - **You and Them, separated.** Your microphone and the call audio are transcribed apart, so the transcript reads like a chat.
 - **Screen analysis.** One click reads what is on your screen (a coding task, a slide, a question) and answers it.
 - **Screen-share content protection.** Uses OS protection on Windows and macOS. Some capture methods can still include the window; Linux does not offer the same protection.
@@ -177,7 +177,7 @@ Yes. Press Listen and Meetingly transcribes the call on your computer in 28 lang
 
 ### Can it run fully offline?
 
-Speech recognition already runs on your computer: NVIDIA Nemotron, downloaded once (about 560 MB). Point the answers at a local Ollama model and nothing leaves your computer.
+Speech recognition already runs on your computer: NVIDIA Nemotron (about 560 MB) plus the model that rewrites each sentence in your meeting language (550 to 650 MB), each downloaded once. Point the answers at a local Ollama model and nothing leaves your computer.
 
 ### Which languages does it support?
 
@@ -186,6 +186,10 @@ Speech recognition already runs on your computer: NVIDIA Nemotron, downloaded on
 ### Where is my data stored?
 
 Transcripts and reports are saved on your computer. With a free account, your instructions, settings and meeting reports also sync to your other computers. Audio is not stored. Details: [privacy policy](https://meetinglyai.com/privacy).
+
+## Credits
+
+On-device speech recognition runs through [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) with [NVIDIA Nemotron 3.5 ASR Streaming](https://huggingface.co/handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf) (OpenMDW-1.1), [Parakeet Ultra](https://huggingface.co/moondream/parakeet-ultra) by Moondream (CC-BY-4.0) and [Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-0.6B) by the Qwen team, Alibaba (Apache-2.0).
 
 ## Contributing
 

@@ -187,6 +187,8 @@ docs/     images for this page
 
 转录和报告会保存在你的电脑上。使用免费账户时，你的 Instructions、设置和会议报告也会同步到你的其他电脑。音频不会被存储。详情：[隐私政策](https://meetinglyai.com/privacy)。
 
+要让会议不上传到我们的服务器，请在应用的 Settings 标签页中开启 *Keep meetings on this computer*：转录在你的电脑上运行，不会生成会议报告，会议也不会同步到你的账户。只有你使用的回答和建议问题会发送给 AI。
+
 ## 致谢
 
 设备端语音识别通过 [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) 运行，使用 [NVIDIA Nemotron 3.5 ASR Streaming](https://huggingface.co/handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf)（OpenMDW-1.1）、Moondream 开发的 [Parakeet Ultra](https://huggingface.co/moondream/parakeet-ultra)（CC-BY-4.0）以及 Qwen 团队、Alibaba 开发的 [Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-0.6B)（Apache-2.0）。

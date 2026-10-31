@@ -16,6 +16,13 @@ afterEach(() => {
 })
 
 describe("SettingsStore", () => {
+  it("keeps meetings on this computer only when turned on", () => {
+    const file = tmpFile()
+    expect(new SettingsStore(file).get().keepMeetingsLocal).toBe(false)
+    new SettingsStore(file).update({ keepMeetingsLocal: true })
+    expect(new SettingsStore(file).get().keepMeetingsLocal).toBe(true)
+  })
+
   it("transcribes the system language on a new install, and keeps a saved choice", () => {
     const file = tmpFile()
     const meta = { version: "1.2.9", platform: "win32", locale: "ru-RU" }

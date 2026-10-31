@@ -327,6 +327,10 @@ async function shots(windows: WindowManager, settings: SmokeDeps["settings"], di
   windows.showPanel("settings")
   await sleep(600)
   await save("settings")
+  // The rest of the list, scrolled to its end.
+  await windows.get("chat")?.webContents.executeJavaScript(`document.querySelectorAll(".scroll").forEach((e) => { if (e.offsetParent) e.scrollTop = e.scrollHeight })`)
+  await sleep(300)
+  await save("settings-end")
 }
 
 /**

@@ -165,6 +165,7 @@ export function normalize(s: Settings): Settings {
     audioLanguage: LANGUAGES.some((l) => l.code === s.audioLanguage) ? s.audioLanguage : "en",
     transcriptionEngine: s.transcriptionEngine === "cloud" ? "cloud" : "local",
     suggestions: s.suggestions !== false,
+    keepMeetingsLocal: s.keepMeetingsLocal === true,
     autoLaunch: s.autoLaunch === true,
     stealth: s.stealth !== false
   }

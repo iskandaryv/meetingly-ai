@@ -6,7 +6,8 @@ import { afterEach, describe, expect, it } from "vitest"
 import { RecordingSession, type TranscriptionSocket } from "../electron/services/session"
 import { SettingsStore } from "../electron/services/settings"
 import { MeetingStore } from "../electron/services/meetings"
-import type { ReportGenerator } from "../electron/services/reports"
+import { ReportGenerator } from "../electron/services/reports"
+import type { Llm } from "../electron/services/llm"
 
 const dirs: string[] = []
 afterEach(() => {
@@ -53,10 +54,12 @@ function setup(opts: { manual?: boolean } = {}) {
   const sockets: FakeSocket[] = []
   let discarded = 0
   const finished: string[] = []
+  const reported: string[] = []
+  const meetings = new MeetingStore(path.join(dir, "meetings.json"))
   const session = new RecordingSession({
     settings,
-    meetings: new MeetingStore(path.join(dir, "meetings.json")),
-    reports: { generate: async () => null } as unknown as ReportGenerator,
+    meetings,
+    reports: { generate: async (id: string) => (reported.push(id), null) } as unknown as ReportGenerator,
     createSocket: (_device, language) => {
       const socket = new FakeSocket(language, opts.manual === true && sockets.length === 0)
       sockets.push(socket)
@@ -66,7 +69,7 @@ function setup(opts: { manual?: boolean } = {}) {
     onDiscarded: () => discarded++
   })
   settings.onChange(() => session.syncEngine())
-  return { settings, session, sockets, finished, discarded: () => discarded }
+  return { settings, session, sockets, finished, reported, meetings, discarded: () => discarded }
 }
 
 const tick = () => new Promise((r) => setTimeout(r, 0))
@@ -127,6 +130,40 @@ describe("RecordingSession", () => {
     expect(draft?.fullTranscriptText).toBe("Them: First point. Second point.")
     await session.finish()
     expect(session.draft()).toBeNull()
+  })
+
+  it("keeps a meeting on this computer: no report, marked local, completed; reports run again when it's off", async () => {
+    const { settings, session, sockets, reported, meetings } = setup()
+    settings.update({ keepMeetingsLocal: true })
+    await session.start()
+    sockets[0].say("Confidential numbers.")
+    const kept = await session.finish()
+    expect(kept?.localOnly).toBe(true)
+    expect(kept?.status).toBe("completed")
+    expect(meetings.get(kept!.id)?.localOnly).toBe(true)
+    expect(reported).toEqual([])
+
+    settings.update({ keepMeetingsLocal: false })
+    await session.start()
+    sockets[1].say("Normal call.")
+    const normal = await session.finish()
+    expect(normal?.localOnly).toBeUndefined()
+    expect(reported).toEqual([normal!.id])
+  })
+
+  it("never sends a kept meeting to the AI for a report, even when asked", async () => {
+    const { settings, session, sockets, meetings } = setup()
+    settings.update({ keepMeetingsLocal: true })
+    await session.start()
+    sockets[0].say("Secret plan.")
+    const kept = await session.finish()
+    let calls = 0
+    const llm = { chat: async () => (calls++, { text: "**TITLE:**\nx" }) } as unknown as Llm
+    const reports = new ReportGenerator({ llm, meetings, settings })
+    await reports.generate(kept!.id)
+    await reports.resumeUnfinished()
+    expect(calls).toBe(0)
+    expect(meetings.get(kept!.id)?.summary).toBeUndefined()
   })
 
   it("tells main about a discard, not about a finish or an idle cancel", async () => {

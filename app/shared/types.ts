@@ -189,6 +189,11 @@ export interface Settings {
   answerLength: AnswerLength
   /** Show suggested questions on the left of the panel while listening. */
   suggestions: boolean
+  /**
+   * Nothing from a meeting leaves this computer: transcription runs here, no report is made and meetings don't sync
+   * to the account (only the .txt in Documents/Meetingly). Answers the user asks for still go to the AI. Not synced.
+   */
+  keepMeetingsLocal: boolean
   stealth: boolean
   autoLaunch: boolean
   prompts: Prompt[]
@@ -292,6 +297,7 @@ export const DEFAULT_SETTINGS: Settings = {
   answerLength: "auto",
   // Off until turned on (the button left of the panel's close button), so a session can be a plain transcript.
   suggestions: false,
+  keepMeetingsLocal: false,
   stealth: true,
   autoLaunch: false,
   prompts: [DEFAULT_PROMPT],
@@ -444,6 +450,8 @@ export interface Meeting {
   language: LanguageCode
   status: MeetingStatus
   summary?: MeetingSummary
+  /** Recorded with "Keep meetings on this computer": never sent anywhere, not even after the setting is turned off. */
+  localOnly?: boolean
   createdAt: number
   updatedAt: number
 }

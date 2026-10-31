@@ -187,6 +187,8 @@ El reconocimiento de voz ya se ejecuta en tu ordenador: NVIDIA Nemotron (unos 56
 
 Las transcripciones y los informes se guardan en tu ordenador. Con una cuenta gratuita, tus Instructions, ajustes e informes de reuniones también se sincronizan con tus otros ordenadores. El audio no se almacena. Detalles: [política de privacidad](https://meetinglyai.com/privacy).
 
+Para mantener las reuniones fuera de nuestros servidores, activa *Keep meetings on this computer* en la pestaña Settings de la aplicación: la transcripción se ejecuta en tu ordenador, no se genera ningún informe de la reunión y las reuniones no se sincronizan con tu cuenta. Solo se envían a la AI las respuestas y preguntas sugeridas que utilices.
+
 ## Créditos
 
 El reconocimiento de voz en el dispositivo funciona mediante [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) con [NVIDIA Nemotron 3.5 ASR Streaming](https://huggingface.co/handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf) (OpenMDW-1.1), [Parakeet Ultra](https://huggingface.co/moondream/parakeet-ultra) de Moondream (CC-BY-4.0) y [Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-0.6B) del equipo de Qwen, Alibaba (Apache-2.0).

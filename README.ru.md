@@ -187,6 +187,8 @@ docs/     images for this page
 
 Расшифровки и отчёты сохраняются на вашем компьютере. В бесплатном аккаунте ваши инструкции, настройки и отчёты о встречах также синхронизируются с другими вашими компьютерами. Аудио не хранится. Подробности: [политика конфиденциальности](https://meetinglyai.com/privacy).
 
+Чтобы встречи не попадали на наши серверы, включите *Хранить встречи на этом компьютере* на вкладке настроек приложения: транскрибация выполняется на вашем компьютере, отчёт о встрече не создаётся, а встречи не синхронизируются с вашей учётной записью. В ИИ отправляются только используемые вами ответы и предложенные вопросы.
+
 ## Благодарности
 
 Распознавание речи на устройстве работает через [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) с использованием [NVIDIA Nemotron 3.5 ASR Streaming](https://huggingface.co/handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf) (OpenMDW-1.1), [Parakeet Ultra](https://huggingface.co/moondream/parakeet-ultra) от Moondream (CC-BY-4.0) и [Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-0.6B) от команды Qwen, Alibaba (Apache-2.0).

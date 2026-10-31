@@ -158,11 +158,14 @@ export class RecordingSession extends EventEmitter {
     this.setStatus("idle")
 
     if (!meeting) return null
-    this.deps.meetings.save(meeting)
-    this.deps.onFinished?.(meeting)
+    // Kept on this computer: no report (it would send the transcript to the AI) and never synced (cloud.ts).
+    const local = this.deps.settings.get().keepMeetingsLocal
+    const saved: Meeting = local ? { ...meeting, status: "completed", localOnly: true } : meeting
+    this.deps.meetings.save(saved)
+    this.deps.onFinished?.(saved)
     // Report generation runs in the background; the meeting syncs to the web dashboard when it's done.
-    void this.deps.reports.generate(meeting.id).catch((err) => console.error("[session] report failed:", err))
-    return meeting
+    if (!local) void this.deps.reports.generate(saved.id).catch((err) => console.error("[session] report failed:", err))
+    return saved
   }
 
   /** The session so far, saved nowhere: main writes it to the transcript file every minute. Null when idle or nothing was heard yet. */
@@ -229,7 +232,7 @@ export class RecordingSession extends EventEmitter {
     // Cloud transcription runs through Meetingly's server and is part of Unlimited: on any other plan (or with
     // only an own key) the session stays on this computer, whatever the setting says.
     const cloudAllowed = (this.deps.cloudTranscription?.() ?? true) && !(settings.ownKey !== null && !settings.cloud)
-    const local = Boolean(this.deps.asrModel) && (settings.transcriptionEngine === "local" || !cloudAllowed)
+    const local = Boolean(this.deps.asrModel) && (settings.transcriptionEngine === "local" || !cloudAllowed || settings.keepMeetingsLocal)
     return { language, local, key: `${language.code}:${local ? "local" : "cloud"}` }
   }
 

@@ -187,6 +187,8 @@ Windows와 macOS에서는 창이 운영 체제의 화면 캡처 보호를 사용
 
 전사와 보고서는 컴퓨터에 저장됩니다. 무료 계정을 사용하면 Instructions, 설정, 회의 보고서도 다른 컴퓨터와 동기화됩니다. 오디오는 저장되지 않습니다. 자세한 내용: [개인정보 처리방침](https://meetinglyai.com/privacy).
 
+회의를 저희 서버에 저장하지 않으려면 앱의 Settings 탭에서 *Keep meetings on this computer*를 켜세요. 녹음 내용은 컴퓨터에서 처리되며, 회의 보고서가 생성되지 않고 회의가 계정과 동기화되지 않습니다. 사용한 답변과 추천 질문만 AI로 전송됩니다.
+
 ## 크레딧
 
 기기 내 음성 인식은 [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp)를 통해 [NVIDIA Nemotron 3.5 ASR Streaming](https://huggingface.co/handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf)(OpenMDW-1.1), Moondream의 [Parakeet Ultra](https://huggingface.co/moondream/parakeet-ultra)(CC-BY-4.0), Qwen 팀과 Alibaba의 [Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-0.6B)(Apache-2.0)로 실행됩니다.

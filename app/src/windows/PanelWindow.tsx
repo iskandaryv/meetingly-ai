@@ -794,6 +794,9 @@ function SettingsTab({ settings, update, plan, autoAllowed }: {
         <SettingRow label={t("Suggested questions")} hint={t("Off: just the transcript, nothing is sent to the AI for them.")}>
           <Toggle checked={settings.suggestions} onChange={(on) => void update({ suggestions: on })} label={t("Suggested questions")} />
         </SettingRow>
+        <SettingRow label={t("Keep meetings on this computer")} hint={t("No meeting report and no sync to your account. Answers and suggested questions still use the AI.")}>
+          <Toggle checked={settings.keepMeetingsLocal} onChange={(on) => void update({ keepMeetingsLocal: on })} label={t("Keep meetings on this computer")} />
+        </SettingRow>
         <SettingRow label={t("Stealth mode")} hint={t("Hidden from screen sharing, recordings and screenshots.")}>
           <Toggle checked={settings.stealth} onChange={(on) => void update({ stealth: on })} label={t("Stealth mode")} />
         </SettingRow>

@@ -187,6 +187,8 @@ Speech recognition already runs on your computer: NVIDIA Nemotron (about 560 MB)
 
 Transcripts and reports are saved on your computer. With a free account, your instructions, settings and meeting reports also sync to your other computers. Audio is not stored. Details: [privacy policy](https://meetinglyai.com/privacy).
 
+To keep meetings off our servers, turn on *Keep meetings on this computer* in the app's Settings tab: transcription runs on your computer, no meeting report is made and meetings don't sync to your account. Only the answers and suggested questions you use go to the AI.
+
 ## Credits
 
 On-device speech recognition runs through [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) with [NVIDIA Nemotron 3.5 ASR Streaming](https://huggingface.co/handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf) (OpenMDW-1.1), [Parakeet Ultra](https://huggingface.co/moondream/parakeet-ultra) by Moondream (CC-BY-4.0) and [Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-0.6B) by the Qwen team, Alibaba (Apache-2.0).

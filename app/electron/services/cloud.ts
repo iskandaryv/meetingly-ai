@@ -437,6 +437,7 @@ export class CloudSync extends EventEmitter {
   /** Uploads meetings the account doesn't have yet, and ones changed here after the account's copy. */
   private async pushMeetings(): Promise<void> {
     for (const m of this.deps.meetings.list()) {
+      if (m.localOnly) continue // recorded with "Keep meetings on this computer": never uploaded
       if (m.status === "processing" && m.remoteId) continue // wait for the report
       const remote = this.remoteUpdated.get(m.id)
       if (m.remoteId && (remote === undefined || m.updatedAt <= remote + 1000)) continue

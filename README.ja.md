@@ -187,6 +187,8 @@ Windows と macOS では、ウィンドウは OS の画面キャプチャ保護�
 
 文字起こしとレポートはあなたのコンピューターに保存されます。無料アカウントでは、Instructions、設定、会議レポートも他のコンピューターに同期されます。音声は保存されません。詳細: [プライバシーポリシー](https://meetinglyai.com/privacy)。
 
+会議を当社のサーバーに保存しないようにするには、アプリの［設定］タブで *Keep meetings on this computer* をオンにしてください。文字起こしはお使いのコンピューター上で実行され、会議レポートは作成されず、会議がアカウントと同期されることもありません。AIに送信されるのは、使用した回答と提案された質問のみです。
+
 ## クレジット
 
 デバイス上の音声認識は、[NVIDIA Nemotron 3.5 ASR Streaming](https://huggingface.co/handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf)（OpenMDW-1.1）と、Moondreamによる[Parakeet Ultra](https://huggingface.co/moondream/parakeet-ultra)（CC-BY-4.0）、Qwen teamおよびAlibabaによる[Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-0.6B)（Apache-2.0）を使用し、[transcribe.cpp](https://github.com/handy-computer/transcribe.cpp)を通じて実行されます。

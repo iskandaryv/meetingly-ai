@@ -180,7 +180,7 @@ function bootstrap(): void {
     const prefetchRefine = () => {
       const s = settings.get()
       // Cloud transcription is Unlimited only: on any other plan the session runs on this computer anyway.
-      const onDevice = s.transcriptionEngine === "local" || plan.getState().plan !== "unlimited"
+      const onDevice = s.transcriptionEngine === "local" || s.keepMeetingsLocal || plan.getState().plan !== "unlimited"
       if (onDevice && asrModel.isReady() && !process.env.IGPT_SMOKE) refineModels.prefetch(s.audioLanguage)
     }
     settings.onChange(prefetchRefine)

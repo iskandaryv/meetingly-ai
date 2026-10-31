@@ -29,7 +29,7 @@ export class ReportGenerator {
    * would never finish on their own. Retry them once at startup.
    */
   async resumeUnfinished(): Promise<void> {
-    const stuck = this.deps.meetings.list().filter((m) => m.status === "processing")
+    const stuck = this.deps.meetings.list().filter((m) => m.status === "processing" && !m.localOnly)
     if (stuck.length === 0) return
     console.log(`[reports] resuming ${stuck.length} unfinished report(s)`)
     for (const meeting of stuck) {
@@ -44,6 +44,8 @@ export class ReportGenerator {
   async generate(meetingId: string): Promise<Meeting | null> {
     const meeting = this.deps.meetings.get(meetingId)
     if (!meeting) return null
+    // Kept on this computer: the transcript never goes to the AI for a report.
+    if (meeting.localOnly) return meeting
     if (!meeting.fullTranscriptText.trim()) {
       this.deps.meetings.save({ ...meeting, status: "failed" })
       return this.deps.meetings.get(meetingId)

@@ -14,12 +14,15 @@ vi.mock("koffi", () => ({
   }
 }))
 vi.mock("electron", () => ({
-  screen: { dipToScreenPoint: vi.fn() }
+  screen: { dipToScreenPoint: vi.fn(), dipToScreenRect: vi.fn(), getAllDisplays: vi.fn() }
 }))
 
 beforeEach(() => {
   vi.clearAllMocks()
   native.setWindowPos.mockReturnValue(true)
+  vi.mocked(screen.getAllDisplays).mockReturnValue([
+    { bounds: { x: 0, y: 0, width: 2000, height: 1200 }, scaleFactor: 1 } as never
+  ])
 })
 
 describe.skipIf(process.platform !== "win32")("native Windows window movement", () => {
@@ -52,5 +55,32 @@ describe.skipIf(process.platform !== "win32")("native Windows window movement", 
     vi.mocked(screen.dipToScreenPoint).mockReturnValue({ x: 10, y: 20 })
     const window = { getNativeWindowHandle: () => Buffer.alloc(8) }
     expect(() => moveWindow(window as never, 10, 20)).toThrow("SetWindowPos failed")
+  })
+
+  it("keeps moving beyond a secondary mixed-DPI display instead of jumping to primary scale", () => {
+    vi.mocked(screen.getAllDisplays).mockReturnValue([
+      { bounds: { x: 0, y: 0, width: 1920, height: 1080 }, scaleFactor: 1 },
+      { bounds: { x: 1920, y: 0, width: 640, height: 720 }, scaleFactor: 1.5 }
+    ] as never)
+    // Inside the secondary display, the point API uses its 150% scaling;
+    // just outside it, that API would incorrectly fall back to the 100% primary.
+    vi.mocked(screen.dipToScreenPoint).mockImplementation(({ x, y }) =>
+      x < 2560 ? { x: 1920 + Math.round((x - 1920) * 1.5), y: Math.round(y * 1.5) } : { x, y }
+    )
+    vi.mocked(screen.dipToScreenRect).mockImplementation((_window, rect) => ({
+      ...rect,
+      x: 1920 + Math.round((rect.x - 1920) * 1.5),
+      y: Math.round(rect.y * 1.5)
+    }))
+    const win = { getNativeWindowHandle: () => Buffer.alloc(8) }
+
+    moveWindow(win as never, 2559, 100)
+    moveWindow(win as never, 2560, 100)
+    moveWindow(win as never, 2600, 100)
+    const nativeXs = (native.setWindowPos.mock.calls as unknown as unknown[][]).map((args) => args[2])
+    expect(nativeXs).toEqual([2879, 2880, 2940])
+    expect(screen.dipToScreenPoint).toHaveBeenCalledTimes(1)
+    expect(screen.dipToScreenRect).toHaveBeenCalledTimes(2)
+    expect(screen.dipToScreenRect).toHaveBeenCalledWith(win, { x: 2560, y: 100, width: 0, height: 0 })
   })
 })

@@ -5,19 +5,13 @@ import { moveWindow } from "../electron/windows/moveWindow"
 
 vi.mock("electron", () => ({
   app: { on: vi.fn() },
-  screen: {
-    getCursorScreenPoint: vi.fn(),
-    getDisplayNearestPoint: vi.fn(),
-    getDisplayMatching: vi.fn()
-  }
+  screen: { getDisplayMatching: vi.fn(), getCursorScreenPoint: vi.fn() }
 }))
 vi.mock("../electron/copy", () => ({ attachContextMenu: vi.fn() }))
 vi.mock("../electron/windows/moveWindow", () => ({
   // Stand-in for the Win32 position-only move (without invoking Electron's resizing APIs).
   moveWindow: vi.fn((win: { setPosition: (x: number, y: number) => void }, x: number, y: number) => win.setPosition(x, y))
 }))
-
-const workArea = { x: 0, y: 0, width: 1200, height: 900 }
 
 function toolbar() {
   const bounds = { x: 250, y: 200, width: 300, height: 44 }
@@ -34,8 +28,9 @@ function toolbar() {
 
 beforeEach(() => {
   vi.resetAllMocks()
-  vi.mocked(screen.getDisplayNearestPoint).mockReturnValue({ workArea } as ReturnType<typeof screen.getDisplayNearestPoint>)
-  vi.mocked(screen.getDisplayMatching).mockReturnValue({ workArea } as ReturnType<typeof screen.getDisplayMatching>)
+  vi.mocked(screen.getDisplayMatching).mockReturnValue({
+    workArea: { x: 0, y: 0, width: 1200, height: 900 }
+  } as ReturnType<typeof screen.getDisplayMatching>)
 })
 
 describe("dragging the attached panel", () => {
@@ -49,11 +44,10 @@ describe("dragging the attached panel", () => {
 
   it.each([
     { dpi: "100%", rendererDx: 100, rendererDy: 70 },
-    { dpi: "150%", rendererDx: 150, rendererDy: 105 }
-  ])("moves the toolbar using DIP, not renderer pixels at $dpi", ({ rendererDx, rendererDy }) => {
-    vi.mocked(screen.getCursorScreenPoint)
-      .mockReturnValueOnce({ x: 400, y: 300 })
-      .mockReturnValueOnce({ x: 500, y: 370 })
+    { dpi: "125%", rendererDx: 100, rendererDy: 70 },
+    { dpi: "150%", rendererDx: 100, rendererDy: 70 },
+    { dpi: "175%", rendererDx: 100, rendererDy: 70 }
+  ])("moves by the event-time DIP delta at $dpi", ({ rendererDx, rendererDy }) => {
     const { manager, bounds } = toolbar()
     manager.dragMain("start", 0, 0)
     manager.dragMain("move", rendererDx, rendererDy)
@@ -61,27 +55,24 @@ describe("dragging the attached panel", () => {
   })
 
   it("allows the toolbar to move beyond the screen without clamping", () => {
-    vi.mocked(screen.getCursorScreenPoint)
-      .mockReturnValueOnce({ x: 400, y: 300 })
-      .mockReturnValueOnce({ x: 1800, y: 1300 })
     const { manager, bounds } = toolbar()
     manager.dragMain("start", 0, 0)
     manager.dragMain("move", 1400, 1000)
     expect({ x: bounds.x, y: bounds.y }).toEqual({ x: 1650, y: 1200 })
   })
 
-  it("keeps renderer offsets as a fallback when native cursor access is unavailable", () => {
-    vi.mocked(screen.getCursorScreenPoint).mockImplementation(() => { throw new Error("cursor unavailable") })
+  it("preserves the entire movement when the main process handles drag start late", () => {
+    vi.mocked(screen.getCursorScreenPoint).mockImplementation(() => { throw new Error("Cursor moved after release") })
     const { manager, bounds } = toolbar()
+    // The pointer can already be at an unrelated position when these queued IPC events execute.
     manager.dragMain("start", 0, 0)
     manager.dragMain("move", 100, 70)
+    manager.dragMain("end", 0, 0)
     expect({ x: bounds.x, y: bounds.y }).toEqual({ x: 350, y: 270 })
+    expect(screen.getCursorScreenPoint).not.toHaveBeenCalled()
   })
 
   it("stops moving after the drag ends", () => {
-    vi.mocked(screen.getCursorScreenPoint)
-      .mockReturnValueOnce({ x: 400, y: 300 })
-      .mockReturnValueOnce({ x: 500, y: 370 })
     const { manager } = toolbar()
     manager.dragMain("start", 0, 0)
     manager.dragMain("end", 0, 0)
@@ -90,10 +81,6 @@ describe("dragging the attached panel", () => {
   })
 
   it("moves repeatedly without reading or writing window sizes", () => {
-    vi.mocked(screen.getCursorScreenPoint)
-      .mockReturnValueOnce({ x: 400, y: 300 })
-      .mockReturnValueOnce({ x: 450, y: 320 })
-      .mockReturnValueOnce({ x: 500, y: 370 })
     const { manager, bounds, window } = toolbar()
     manager.dragMain("start", 0, 0)
     manager.dragMain("move", 50, 20)
@@ -105,9 +92,6 @@ describe("dragging the attached panel", () => {
   })
 
   it("moves the attached panel without changing its size", () => {
-    vi.mocked(screen.getCursorScreenPoint)
-      .mockReturnValueOnce({ x: 400, y: 300 })
-      .mockReturnValueOnce({ x: 450, y: 320 })
     const { manager } = toolbar()
     const childBounds = { x: 136, y: 240, width: 528, height: 380 }
     const child = {
@@ -125,10 +109,6 @@ describe("dragging the attached panel", () => {
   })
 
   it("keeps the panel attached when dragged beyond an edge and back again", () => {
-    vi.mocked(screen.getCursorScreenPoint)
-      .mockReturnValueOnce({ x: 400, y: 300 })
-      .mockReturnValueOnce({ x: 1800, y: 1300 })
-      .mockReturnValueOnce({ x: 450, y: 350 })
     const { manager, bounds } = toolbar()
     const childBounds = { x: 136, y: 240, width: 528, height: 380 }
     const child = {

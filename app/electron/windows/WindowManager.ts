@@ -184,37 +184,24 @@ export class WindowManager extends EventEmitter {
     this.layoutChildren()
   }
 
-  private dragOrigin: { x: number; y: number; cursor: { x: number; y: number } | null } | null = null
-
-  private cursorPosition(): { x: number; y: number } | null {
-    // Electron cannot read the cursor on Wayland. Keep renderer deltas as a fallback.
-    try {
-      return screen.getCursorScreenPoint()
-    } catch {
-      return null
-    }
-  }
+  private dragOrigin: { x: number; y: number } | null = null
 
   /**
    * The panel can't be moved on its own (it hangs under the toolbar), so dragging its header moves the toolbar,
-   * and the panel follows. Native cursor coordinates and window positions are both in DIP; renderer
-   * screenX/screenY may be in physical pixels when Windows display scaling is not 100%.
+   * and the panel follows. Use event-time renderer deltas (CSS pixels / DIP) instead of sampling
+   * the live cursor when the IPC handler runs: the main process may handle events after the pointer moved.
    */
   dragMain(phase: "start" | "move" | "end", dx: number, dy: number): void {
     const main = this.get("main")
     if (!main) return
     if (phase === "start") {
       const b = main.getBounds()
-      this.dragOrigin = { x: b.x, y: b.y, cursor: this.cursorPosition() }
+      this.dragOrigin = { x: b.x, y: b.y }
       return
     }
     if (!this.dragOrigin) return
     if (phase === "move") {
-      const cursor = this.cursorPosition()
-      const offset = cursor && this.dragOrigin.cursor
-        ? { x: cursor.x - this.dragOrigin.cursor.x, y: cursor.y - this.dragOrigin.cursor.y }
-        : { x: dx, y: dy }
-      moveWindow(main, this.dragOrigin.x + offset.x, this.dragOrigin.y + offset.y)
+      moveWindow(main, this.dragOrigin.x + dx, this.dragOrigin.y + dy)
       this.layoutChildren()
     } else {
       this.dragOrigin = null

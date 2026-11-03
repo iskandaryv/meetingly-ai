@@ -187,23 +187,46 @@ export class WindowManager extends EventEmitter {
     this.layoutChildren()
   }
 
-  private dragOrigin: { x: number; y: number } | null = null
+  private dragOrigin: { x: number; y: number; width: number; height: number; cursor: { x: number; y: number } | null } | null = null
+
+  private cursorPosition(): { x: number; y: number } | null {
+    // Electron cannot read the cursor on Wayland. Keep renderer deltas as a fallback.
+    try {
+      return screen.getCursorScreenPoint()
+    } catch {
+      return null
+    }
+  }
 
   /**
    * The panel can't be moved on its own (it hangs under the toolbar), so dragging its header moves the toolbar,
-   * and the panel follows. Offsets are from where the pointer went down, so nothing accumulates.
+   * and the panel follows. Native cursor coordinates and window positions are both in DIP; renderer
+   * screenX/screenY may be in physical pixels when Windows display scaling is not 100%.
    */
   dragMain(phase: "start" | "move" | "end", dx: number, dy: number): void {
     const main = this.get("main")
     if (!main) return
     if (phase === "start") {
       const b = main.getBounds()
-      this.dragOrigin = { x: b.x, y: b.y }
+      this.dragOrigin = { x: b.x, y: b.y, width: b.width, height: b.height, cursor: this.cursorPosition() }
       return
     }
     if (!this.dragOrigin) return
     if (phase === "move") {
-      main.setPosition(Math.round(this.dragOrigin.x + dx), Math.round(this.dragOrigin.y + dy))
+      const cursor = this.cursorPosition()
+      const offset = cursor && this.dragOrigin.cursor
+        ? { x: cursor.x - this.dragOrigin.cursor.x, y: cursor.y - this.dragOrigin.cursor.y }
+        : { x: dx, y: dy }
+      const b = main.getBounds()
+      const area = cursor ? screen.getDisplayNearestPoint(cursor).workArea : screen.getDisplayMatching(b).workArea
+      // At fractional Windows DPI, setPosition may grow a transparent frameless window by
+      // a pixel per move. Preserve the initial size explicitly, even across many drag events.
+      main.setBounds({
+        x: clamp(Math.round(this.dragOrigin.x + offset.x), area.x, area.x + area.width - this.dragOrigin.width),
+        y: clamp(Math.round(this.dragOrigin.y + offset.y), area.y, area.y + area.height - this.dragOrigin.height),
+        width: this.dragOrigin.width,
+        height: this.dragOrigin.height
+      })
       this.layoutChildren()
     } else {
       this.dragOrigin = null
@@ -388,7 +411,10 @@ export class WindowManager extends EventEmitter {
       if (win && win.isVisible()) {
         const pos = this.positionFor(kind)
         const b = win.getBounds()
-        if (b.x !== pos.x || b.y !== pos.y) win.setPosition(pos.x, pos.y)
+        if (b.x !== pos.x || b.y !== pos.y) {
+          // Explicitly preserve size: setPosition may enlarge a frameless window at 150% DPI.
+          win.setBounds({ ...b, x: pos.x, y: pos.y })
+        }
       }
     }
   }

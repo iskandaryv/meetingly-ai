@@ -34,6 +34,14 @@ beforeEach(() => {
 })
 
 describe("dragging the attached panel", () => {
+  it("allows keyboard movement beyond the work area without resizing", () => {
+    const { manager, bounds } = toolbar()
+    manager.moveMain(20, 20)
+    expect(bounds).toEqual({ x: 1210, y: 1160, width: 300, height: 44 })
+    manager.moveMain(-20, -20)
+    expect(bounds).toEqual({ x: 250, y: 200, width: 300, height: 44 })
+  })
+
   it.each([
     { dpi: "100%", rendererDx: 100, rendererDy: 70 },
     { dpi: "150%", rendererDx: 150, rendererDy: 105 }
@@ -47,14 +55,14 @@ describe("dragging the attached panel", () => {
     expect({ x: bounds.x, y: bounds.y }).toEqual({ x: 350, y: 270 })
   })
 
-  it("keeps the toolbar on the current display when the cursor moves outside", () => {
+  it("allows the toolbar to move beyond the screen without clamping", () => {
     vi.mocked(screen.getCursorScreenPoint)
       .mockReturnValueOnce({ x: 400, y: 300 })
       .mockReturnValueOnce({ x: 1800, y: 1300 })
     const { manager, bounds } = toolbar()
     manager.dragMain("start", 0, 0)
     manager.dragMain("move", 1400, 1000)
-    expect({ x: bounds.x, y: bounds.y }).toEqual({ x: 900, y: 856 })
+    expect({ x: bounds.x, y: bounds.y }).toEqual({ x: 1650, y: 1200 })
   })
 
   it("keeps renderer offsets as a fallback when native cursor access is unavailable", () => {
@@ -110,5 +118,31 @@ describe("dragging the attached panel", () => {
     manager.dragMain("move", 50, 20)
     expect(child.setBounds).toHaveBeenCalledWith({ x: 186, y: 260, width: 528, height: 380 })
     expect(childBounds).toEqual({ x: 186, y: 260, width: 528, height: 380 })
+  })
+
+  it("keeps the panel attached when dragged beyond an edge and back again", () => {
+    vi.mocked(screen.getCursorScreenPoint)
+      .mockReturnValueOnce({ x: 400, y: 300 })
+      .mockReturnValueOnce({ x: 1800, y: 1300 })
+      .mockReturnValueOnce({ x: 450, y: 350 })
+    const { manager, bounds } = toolbar()
+    const childBounds = { x: 136, y: 240, width: 528, height: 380 }
+    const child = {
+      isDestroyed: () => false,
+      isVisible: () => true,
+      getBounds: () => ({ ...childBounds }),
+      setBounds: vi.fn((next: Partial<typeof childBounds>) => Object.assign(childBounds, next))
+    }
+    ;(manager as unknown as { windows: Map<string, unknown> }).windows.set("chat", child)
+
+    manager.dragMain("start", 0, 0)
+    manager.dragMain("move", 1400, 1000)
+    expect({ x: bounds.x, y: bounds.y }).toEqual({ x: 1650, y: 1200 })
+    expect(childBounds).toEqual({ x: 1536, y: 1240, width: 528, height: 380 })
+
+    manager.dragMain("move", 50, 50)
+    expect({ x: bounds.x, y: bounds.y }).toEqual({ x: 300, y: 250 })
+    expect(childBounds).toEqual({ x: 186, y: 290, width: 528, height: 380 })
+    manager.dragMain("end", 0, 0)
   })
 })

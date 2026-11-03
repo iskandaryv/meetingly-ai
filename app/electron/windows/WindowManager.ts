@@ -179,11 +179,7 @@ export class WindowManager extends EventEmitter {
     const main = this.get("main")
     if (!main) return
     const b = main.getBounds()
-    const area = screen.getDisplayMatching(b).workArea
-    main.setPosition(
-      clamp(b.x + dx * MOVE_STEP, area.x, area.x + area.width - b.width),
-      clamp(b.y + dy * MOVE_STEP, area.y, area.y + area.height - b.height)
-    )
+    main.setBounds({ ...b, x: b.x + dx * MOVE_STEP, y: b.y + dy * MOVE_STEP })
     this.layoutChildren()
   }
 
@@ -217,13 +213,11 @@ export class WindowManager extends EventEmitter {
       const offset = cursor && this.dragOrigin.cursor
         ? { x: cursor.x - this.dragOrigin.cursor.x, y: cursor.y - this.dragOrigin.cursor.y }
         : { x: dx, y: dy }
-      const b = main.getBounds()
-      const area = cursor ? screen.getDisplayNearestPoint(cursor).workArea : screen.getDisplayMatching(b).workArea
       // At fractional Windows DPI, setPosition may grow a transparent frameless window by
       // a pixel per move. Preserve the initial size explicitly, even across many drag events.
       main.setBounds({
-        x: clamp(Math.round(this.dragOrigin.x + offset.x), area.x, area.x + area.width - this.dragOrigin.width),
-        y: clamp(Math.round(this.dragOrigin.y + offset.y), area.y, area.y + area.height - this.dragOrigin.height),
+        x: Math.round(this.dragOrigin.x + offset.x),
+        y: Math.round(this.dragOrigin.y + offset.y),
         width: this.dragOrigin.width,
         height: this.dragOrigin.height
       })
@@ -378,7 +372,7 @@ export class WindowManager extends EventEmitter {
     }
   }
 
-  /** Where a child window belongs relative to the toolbar, clamped to the screen. */
+  /** Where a child window belongs relative to the toolbar. */
   private positionFor(kind: WindowKind): { x: number; y: number } {
     const main = this.get("main")
     const spec = WINDOW_SPECS[kind]
@@ -398,10 +392,7 @@ export class WindowManager extends EventEmitter {
     // The panel: attached, centered under the toolbar with only a hairline seam.
     const x = m.x + (m.width - size.width) / 2
     const y = m.y + m.height - PANEL_OVERLAP
-    return {
-      x: Math.round(clamp(x, area.x, area.x + area.width - size.width)),
-      y: Math.round(clamp(y, area.y, area.y + area.height - size.height))
-    }
+    return { x: Math.round(x), y: Math.round(y) }
   }
 
   private layoutChildren(): void {

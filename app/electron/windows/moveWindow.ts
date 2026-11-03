@@ -25,14 +25,15 @@ export function moveWindow(win: BrowserWindow, x: number, y: number): void {
 
   // For points outside every display, dipToScreenPoint can fall back to the primary
   // monitor's scale, causing a jump when a window leaves a secondary mixed-DPI display.
-  // Anchor off-screen conversion to the window's current display instead.
+  // Use the display nearest to the target rectangle, not the window's current
+  // display: one pointer update can move across another monitor entirely.
   const insideDisplay = screen.getAllDisplays().some(({ bounds }) =>
     x >= bounds.x && x < bounds.x + bounds.width &&
     y >= bounds.y && y < bounds.y + bounds.height
   )
   const physical = insideDisplay
     ? screen.dipToScreenPoint({ x, y })
-    : screen.dipToScreenRect(win, { x, y, width: 0, height: 0 })
+    : screen.dipToScreenRect(null, { x, y, width: 0, height: 0 })
   const hwnd = koffi.decode(win.getNativeWindowHandle(), "void *")
   if (!setWindowPos(hwnd, null, physical.x, physical.y, 0, 0, FLAGS)) {
     throw new Error("Could not move Meetingly window (SetWindowPos failed)")

@@ -67,10 +67,12 @@ describe.skipIf(process.platform !== "win32")("native Windows window movement", 
     vi.mocked(screen.dipToScreenPoint).mockImplementation(({ x, y }) =>
       x < 2560 ? { x: 1920 + Math.round((x - 1920) * 1.5), y: Math.round(y * 1.5) } : { x, y }
     )
-    vi.mocked(screen.dipToScreenRect).mockImplementation((_window, rect) => ({
+    vi.mocked(screen.dipToScreenRect).mockImplementation((window, rect) => ({
       ...rect,
-      x: 1920 + Math.round((rect.x - 1920) * 1.5),
-      y: Math.round(rect.y * 1.5)
+      // The target display is 150%, but an unchanged window on the 100%
+      // primary display would still use scale 1 if passed instead of null.
+      x: 1920 + Math.round((rect.x - 1920) * (window === null ? 1.5 : 1)),
+      y: Math.round(rect.y * (window === null ? 1.5 : 1))
     }))
     const win = { getNativeWindowHandle: () => Buffer.alloc(8) }
 
@@ -81,6 +83,28 @@ describe.skipIf(process.platform !== "win32")("native Windows window movement", 
     expect(nativeXs).toEqual([2879, 2880, 2940])
     expect(screen.dipToScreenPoint).toHaveBeenCalledTimes(1)
     expect(screen.dipToScreenRect).toHaveBeenCalledTimes(2)
-    expect(screen.dipToScreenRect).toHaveBeenCalledWith(win, { x: 2560, y: 100, width: 0, height: 0 })
+    expect(screen.dipToScreenRect).toHaveBeenCalledWith(null, { x: 2560, y: 100, width: 0, height: 0 })
+  })
+
+  it("selects the target display when jumping directly from primary beyond secondary", () => {
+    vi.mocked(screen.getAllDisplays).mockReturnValue([
+      { bounds: { x: 0, y: 0, width: 1920, height: 1080 }, scaleFactor: 1 },
+      { bounds: { x: 1920, y: 0, width: 640, height: 720 }, scaleFactor: 1.5 }
+    ] as never)
+    vi.mocked(screen.dipToScreenRect).mockImplementation((window, rect) => ({
+      ...rect,
+      x: 1920 + Math.round((rect.x - 1920) * (window === null ? 1.5 : 1)),
+      y: Math.round(rect.y * (window === null ? 1.5 : 1))
+    }))
+    const win = { getNativeWindowHandle: () => Buffer.alloc(8) }
+
+    // The window is still on the 100% primary display at the instant of this call.
+    moveWindow(win as never, 2600, 100)
+
+    expect(screen.dipToScreenRect).toHaveBeenCalledWith(null, { x: 2600, y: 100, width: 0, height: 0 })
+    expect(native.setWindowPos).toHaveBeenCalledWith(
+      "native-window-handle", null, 2940, 150, 0, 0, 0x215
+    )
+    expect(screen.dipToScreenPoint).not.toHaveBeenCalled()
   })
 })

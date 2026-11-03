@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events"
 import type { EventChannel, EventMap } from "../../shared/ipc"
 import type { PanelTab, WindowKind, WindowsState } from "../../shared/types"
 import { MAIN_TOP_MARGIN, MOVE_STEP, PANEL_OVERLAP, WINDOW_SPECS } from "./config"
+import { moveWindow } from "./moveWindow"
 import { attachContextMenu } from "../copy"
 
 const KINDS: WindowKind[] = ["main", "chat"]
@@ -179,11 +180,11 @@ export class WindowManager extends EventEmitter {
     const main = this.get("main")
     if (!main) return
     const b = main.getBounds()
-    main.setBounds({ ...b, x: b.x + dx * MOVE_STEP, y: b.y + dy * MOVE_STEP })
+    moveWindow(main, b.x + dx * MOVE_STEP, b.y + dy * MOVE_STEP)
     this.layoutChildren()
   }
 
-  private dragOrigin: { x: number; y: number; width: number; height: number; cursor: { x: number; y: number } | null } | null = null
+  private dragOrigin: { x: number; y: number; cursor: { x: number; y: number } | null } | null = null
 
   private cursorPosition(): { x: number; y: number } | null {
     // Electron cannot read the cursor on Wayland. Keep renderer deltas as a fallback.
@@ -204,7 +205,7 @@ export class WindowManager extends EventEmitter {
     if (!main) return
     if (phase === "start") {
       const b = main.getBounds()
-      this.dragOrigin = { x: b.x, y: b.y, width: b.width, height: b.height, cursor: this.cursorPosition() }
+      this.dragOrigin = { x: b.x, y: b.y, cursor: this.cursorPosition() }
       return
     }
     if (!this.dragOrigin) return
@@ -213,14 +214,7 @@ export class WindowManager extends EventEmitter {
       const offset = cursor && this.dragOrigin.cursor
         ? { x: cursor.x - this.dragOrigin.cursor.x, y: cursor.y - this.dragOrigin.cursor.y }
         : { x: dx, y: dy }
-      // At fractional Windows DPI, setPosition may grow a transparent frameless window by
-      // a pixel per move. Preserve the initial size explicitly, even across many drag events.
-      main.setBounds({
-        x: Math.round(this.dragOrigin.x + offset.x),
-        y: Math.round(this.dragOrigin.y + offset.y),
-        width: this.dragOrigin.width,
-        height: this.dragOrigin.height
-      })
+      moveWindow(main, this.dragOrigin.x + offset.x, this.dragOrigin.y + offset.y)
       this.layoutChildren()
     } else {
       this.dragOrigin = null
@@ -231,7 +225,7 @@ export class WindowManager extends EventEmitter {
     const main = this.createMain()
     const b = main.getBounds()
     const area = screen.getPrimaryDisplay().workArea
-    main.setPosition(Math.round(area.x + (area.width - b.width) / 2), area.y + MAIN_TOP_MARGIN)
+    moveWindow(main, Math.round(area.x + (area.width - b.width) / 2), area.y + MAIN_TOP_MARGIN)
     if (this.restoreSet) this.showAll()
     else this.show("main")
     this.layoutChildren()
@@ -352,7 +346,7 @@ export class WindowManager extends EventEmitter {
     // Decorated windows keep wherever the user last put them.
     if (kind !== "main" && !WINDOW_SPECS[kind].decorated) {
       const pos = this.positionFor(kind)
-      win.setPosition(pos.x, pos.y)
+      moveWindow(win, pos.x, pos.y)
     }
     showWindow(win, kind)
     if (kind !== "main") this.layoutChildren()
@@ -403,8 +397,7 @@ export class WindowManager extends EventEmitter {
         const pos = this.positionFor(kind)
         const b = win.getBounds()
         if (b.x !== pos.x || b.y !== pos.y) {
-          // Explicitly preserve size: setPosition may enlarge a frameless window at 150% DPI.
-          win.setBounds({ ...b, x: pos.x, y: pos.y })
+          moveWindow(win, pos.x, pos.y)
         }
       }
     }

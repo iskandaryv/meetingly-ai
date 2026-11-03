@@ -1,6 +1,7 @@
 import { screen } from "electron"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { WindowManager } from "../electron/windows/WindowManager"
+import { moveWindow } from "../electron/windows/moveWindow"
 
 vi.mock("electron", () => ({
   app: { on: vi.fn() },
@@ -11,6 +12,10 @@ vi.mock("electron", () => ({
   }
 }))
 vi.mock("../electron/copy", () => ({ attachContextMenu: vi.fn() }))
+vi.mock("../electron/windows/moveWindow", () => ({
+  // Stand-in for the Win32 position-only move (without invoking Electron's resizing APIs).
+  moveWindow: vi.fn((win: { setPosition: (x: number, y: number) => void }, x: number, y: number) => win.setPosition(x, y))
+}))
 
 const workArea = { x: 0, y: 0, width: 1200, height: 900 }
 
@@ -77,14 +82,14 @@ describe("dragging the attached panel", () => {
     vi.mocked(screen.getCursorScreenPoint)
       .mockReturnValueOnce({ x: 400, y: 300 })
       .mockReturnValueOnce({ x: 500, y: 370 })
-    const { manager, window } = toolbar()
+    const { manager } = toolbar()
     manager.dragMain("start", 0, 0)
     manager.dragMain("end", 0, 0)
     manager.dragMain("move", 100, 70)
-    expect(window.setBounds).not.toHaveBeenCalled()
+    expect(moveWindow).not.toHaveBeenCalled()
   })
 
-  it("preserves the toolbar dimensions across repeated drag events", () => {
+  it("moves repeatedly without reading or writing window sizes", () => {
     vi.mocked(screen.getCursorScreenPoint)
       .mockReturnValueOnce({ x: 400, y: 300 })
       .mockReturnValueOnce({ x: 450, y: 320 })
@@ -92,10 +97,9 @@ describe("dragging the attached panel", () => {
     const { manager, bounds, window } = toolbar()
     manager.dragMain("start", 0, 0)
     manager.dragMain("move", 50, 20)
-    // Simulate an OS-level sizing anomaly during the drag.
-    Object.assign(bounds, { width: 310, height: 50 })
     manager.dragMain("move", 100, 70)
-    expect(window.setBounds).toHaveBeenCalledTimes(2)
+    expect(moveWindow).toHaveBeenCalledTimes(2)
+    expect(window.setBounds).not.toHaveBeenCalled()
     expect({ width: bounds.width, height: bounds.height }).toEqual({ width: 300, height: 44 })
     expect({ x: bounds.x, y: bounds.y }).toEqual({ x: 350, y: 270 })
   })
@@ -110,13 +114,13 @@ describe("dragging the attached panel", () => {
       isDestroyed: () => false,
       isVisible: () => true,
       getBounds: () => ({ ...childBounds }),
-      setBounds: vi.fn((next: Partial<typeof childBounds>) => Object.assign(childBounds, next))
+      setPosition: vi.fn((x: number, y: number) => Object.assign(childBounds, { x, y }))
     }
     ;(manager as unknown as { windows: Map<string, unknown> }).windows.set("chat", child)
 
     manager.dragMain("start", 0, 0)
     manager.dragMain("move", 50, 20)
-    expect(child.setBounds).toHaveBeenCalledWith({ x: 186, y: 260, width: 528, height: 380 })
+    expect(child.setPosition).toHaveBeenCalledWith(186, 260)
     expect(childBounds).toEqual({ x: 186, y: 260, width: 528, height: 380 })
   })
 
@@ -131,7 +135,7 @@ describe("dragging the attached panel", () => {
       isDestroyed: () => false,
       isVisible: () => true,
       getBounds: () => ({ ...childBounds }),
-      setBounds: vi.fn((next: Partial<typeof childBounds>) => Object.assign(childBounds, next))
+      setPosition: vi.fn((x: number, y: number) => Object.assign(childBounds, { x, y }))
     }
     ;(manager as unknown as { windows: Map<string, unknown> }).windows.set("chat", child)
 

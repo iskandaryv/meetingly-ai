@@ -174,6 +174,9 @@ function useDragToolbar() {
     if (!d) return
     cancelAnimationFrame(d.frame)
     drag.current = null
+    // Include the release position even if no pointermove callback ran before pointerup.
+    d.dx = e.screenX - d.x
+    d.dy = e.screenY - d.y
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
     void api.invoke("windows:drag", { phase: "move", dx: d.dx, dy: d.dy }).then(() => api.invoke("windows:drag", { phase: "end", dx: 0, dy: 0 }))
   }

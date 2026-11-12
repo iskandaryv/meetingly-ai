@@ -167,6 +167,7 @@ export function normalize(s: Settings): Settings {
     suggestions: s.suggestions !== false,
     keepMeetingsLocal: s.keepMeetingsLocal === true,
     autoLaunch: s.autoLaunch === true,
+    spokenVariant: s.spokenVariant === true,
     stealth: s.stealth !== false
   }
 }

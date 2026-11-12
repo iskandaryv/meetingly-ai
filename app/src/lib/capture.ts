@@ -42,6 +42,7 @@ export function useAudioCapture(session: SessionState): { levels: AudioLevels; e
     startAudioCapture(
       session.audioSource,
       session.audioDeviceId,
+      session.systemAudioDeviceId,
       (chunk) => void api.invoke("session:audio", chunk).catch(() => {}),
       (l) => setLevels(l)
     )
@@ -61,7 +62,7 @@ export function useAudioCapture(session: SessionState): { levels: AudioLevels; e
     return () => {
       cancelled = true
     }
-  }, [session.status, session.audioSource, session.audioDeviceId])
+  }, [session.status, session.audioSource, session.audioDeviceId, session.systemAudioDeviceId])
 
   useEffect(() => () => captureRef.current?.stop(), [])
   return { levels, error, warnings }

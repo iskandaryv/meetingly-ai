@@ -61,6 +61,29 @@ export function getLanguage(code: string): Language {
  */
 export type AudioSource = "microphone" | "system" | "both"
 
+/**
+ * Linux: a monitor source — what an output device plays, which PulseAudio and PipeWire expose as an
+ * input. Chromium hides these from `enumerateDevices`, so the main process reads the list for us.
+ */
+export interface MonitorSource {
+  /** PulseAudio source name, e.g. `alsa_output.pci-0000_09_00.4.analog-stereo.monitor`. */
+  id: string
+  /** "Monitor of Built-in Audio Analog Stereo", as PulseAudio describes it. */
+  label: string
+}
+
+/** Linux: the capture device the main process created for system audio, named as Chromium lists it. */
+export interface AudioTap {
+  label: string
+}
+
+/**
+ * Linux: description of the source the tap creates. One token on purpose — PulseAudio's proplist splits
+ * on spaces, so a two-word description reaches Chromium truncated to its first word. Also how the panel
+ * finds the device among the microphones.
+ */
+export const SYSTEM_AUDIO_TAP_LABEL = "Meetingly-system-audio"
+
 export const AUDIO_SOURCE_LABELS: Record<AudioSource, string> = {
   both: "Microphone + system audio",
   system: "System audio only",
@@ -185,6 +208,8 @@ export interface Settings {
   transcriptionEngine: TranscriptionEngine
   /** Input device id for "microphone"; empty = system default. */
   audioDeviceId: string
+  /** Linux: PulseAudio source name of the output's monitor for "system"; empty = the default output. */
+  systemAudioDeviceId: string
   autoAnswer: AutoAnswerMode
   answerLength: AnswerLength
   /** Show suggested questions on the left of the panel while listening. */
@@ -292,6 +317,7 @@ export const DEFAULT_SETTINGS: Settings = {
   audioSource: "both",
   transcriptionEngine: "local",
   audioDeviceId: "",
+  systemAudioDeviceId: "",
   // Off until the user turns it on; it needs Pro or Unlimited, or the user's own key (autoAnswerAllowed).
   autoAnswer: "off",
   answerLength: "auto",
@@ -329,6 +355,7 @@ export interface SessionState {
   connected: boolean
   audioSource: AudioSource
   audioDeviceId: string
+  systemAudioDeviceId: string
 }
 
 /**

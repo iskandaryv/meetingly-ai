@@ -87,7 +87,8 @@ export class RecordingSession extends EventEmitter {
       notice: this.notice,
       connected: this.socket?.isOpen ?? false,
       audioSource: s.audioSource,
-      audioDeviceId: s.audioDeviceId
+      audioDeviceId: s.audioDeviceId,
+      systemAudioDeviceId: s.systemAudioDeviceId
     }
   }
 

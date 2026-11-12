@@ -5,7 +5,9 @@ import type { CloudState } from "./cloud"
 import type {
   ChatChunk,
   ChatMessage,
+  AudioTap,
   Meeting,
+  MonitorSource,
   ScreenshotResult,
   SessionState,
   OwnKeyInput,
@@ -59,6 +61,13 @@ export interface InvokeMap {
   "session:transcript": () => string
   /** The most recent finished utterance, if any. */
   "session:last-utterance": () => Utterance | null
+
+  /** Linux: the inputs that carry what the speakers play, to pick the call's device from. */
+  "audio:monitors": () => MonitorSource[]
+  /** Linux: route a monitor into a capture device Chromium can open; null when that is not possible. */
+  "audio:tap-start": (monitor: string) => AudioTap | null
+  /** Linux: drop the capture device made by audio:tap-start. */
+  "audio:tap-stop": () => void
 
   "chat:history": () => ChatMessage[]
   /** Streams the reply through chat:chunk / chat:message events. */
@@ -148,6 +157,9 @@ export const INVOKE_CHANNELS: InvokeChannel[] = [
   "session:audio",
   "session:transcript",
   "session:last-utterance",
+  "audio:monitors",
+  "audio:tap-start",
+  "audio:tap-stop",
   "chat:history",
   "chat:send",
   "chat:answer-last",

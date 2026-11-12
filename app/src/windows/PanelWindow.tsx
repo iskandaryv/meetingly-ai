@@ -791,6 +791,9 @@ function SettingsTab({ settings, update, plan, autoAllowed }: {
             {(Object.keys(ANSWER_LENGTHS) as AnswerLength[]).map((l) => <option key={l} value={l}>{t(ANSWER_LENGTHS[l].label)}</option>)}
           </Select>
         </SettingRow>
+        <SettingRow label={t("Arrow cursor everywhere")} hint={t("Keep the arrow over text and buttons in Meetingly.")}>
+          <Toggle checked={settings.arrowCursor} onChange={(on) => void update({ arrowCursor: on })} label={t("Arrow cursor everywhere")} />
+        </SettingRow>
         <SettingRow label={t("Suggested questions")} hint={t("Off: just the transcript, nothing is sent to the AI for them.")}>
           <Toggle checked={settings.suggestions} onChange={(on) => void update({ suggestions: on })} label={t("Suggested questions")} />
         </SettingRow>

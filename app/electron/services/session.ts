@@ -74,6 +74,12 @@ export class RecordingSession extends EventEmitter {
   private engineKey = ""
   /** True while a transcription engine is starting. */
   private opening = false
+  private speechSuppressedUntil = 0
+
+  /** Playback renews this lease. A crashed renderer cannot leave recording muted forever. */
+  setSpeechActive(playing: boolean): void {
+    this.speechSuppressedUntil = Date.now() + (playing ? 30000 : 500)
+  }
 
   constructor(private readonly deps: Deps) {
     super()
@@ -146,7 +152,9 @@ export class RecordingSession extends EventEmitter {
   /** Capture delivers 16 kHz stereo PCM16: left = microphone (you), right = system audio (them). */
   sendAudio(pcm16: ArrayBuffer): void {
     if (this.status !== "recording" || !this.socket) return
-    this.socket.sendAudio(this.socket.stereo ? pcm16 : downmix(pcm16))
+    // Silence both loopback and microphone leakage before transcription. Keep stream timing intact.
+    const audio = Date.now() < this.speechSuppressedUntil ? new ArrayBuffer(pcm16.byteLength) : pcm16
+    this.socket.sendAudio(this.socket.stereo ? audio : downmix(audio))
   }
 
   /** Stop and save. Returns null when nothing was transcribed. */

@@ -67,6 +67,8 @@ export interface InvokeMap {
   "chat:answer-last": () => boolean
   "chat:clear": () => void
   "chat:screenshot": (prompt?: string) => ScreenshotResult
+  /** Prevent answer audio captured by loopback from triggering another auto-answer. */
+  "chat:speech-state": (playing: boolean) => void
 
   "suggestions:state": () => SuggestionsState
   /** Regenerate the suggestions from the conversation now. */
@@ -153,6 +155,7 @@ export const INVOKE_CHANNELS: InvokeChannel[] = [
   "chat:answer-last",
   "chat:clear",
   "chat:screenshot",
+  "chat:speech-state",
   "suggestions:state",
   "suggestions:refresh",
   "suggestions:use",

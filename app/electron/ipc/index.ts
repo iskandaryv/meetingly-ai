@@ -119,6 +119,11 @@ export function registerIpc(deps: IpcDeps): void {
   handle("chat:answer-last", () => chat.answerLast())
   handle("chat:clear", () => chat.clear())
   handle("chat:screenshot", (_e, prompt) => chat.screenshot(prompt))
+  handle("chat:speech-state", (_e, playing) => {
+    if (typeof playing !== "boolean") throw new Error("Invalid speech state")
+    session.setSpeechActive(playing)
+    chat.setSpeechActive(playing)
+  })
 
   // Suggestions rail
   handle("suggestions:state", () => suggestions.state())

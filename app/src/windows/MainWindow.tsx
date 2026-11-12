@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Camera, Captions, Check, EyeOff, MessageSquare, Mic, Pause, Play, Power, Settings, UserRound, X } from "lucide-react"
 import { DEFAULT_SHORTCUTS } from "@shared/types"
 import { t } from "@shared/i18n"
@@ -59,6 +59,13 @@ export function MainWindow() {
       await api.invoke("panel:show", "answers")
       await api.invoke("chat:screenshot")
     })
+  // Resting the pointer on the button: no click, so the meeting app keeps focus and the panel opens behind it.
+  const hoverShot = useHoverHold(() =>
+    run(async () => {
+      await api.invoke("panel:show", "answers", { background: true })
+      await api.invoke("chat:screenshot")
+    })
+  )
   const showing = (tab: PanelTab) => windows.chat && windows.panelTab === tab
   // The panel shows the code to confirm in the browser, so it opens first.
   const signIn = () =>
@@ -124,8 +131,22 @@ export function MainWindow() {
         <Button variant={showing("answers") ? "secondary" : "ghost"} size="icon" onClick={() => api.invoke("panel:toggle", "answers")} title={t("Answers and chat ({shortcut})", { shortcut: shortcutLabel(KEYS.chat) })}>
           <MessageSquare className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={screenshot} title={t("Analyze screen ({shortcut})", { shortcut: shortcutLabel(KEYS.screenshot) })}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          onClick={screenshot}
+          onMouseEnter={hoverShot.start}
+          onMouseLeave={hoverShot.cancel}
+          title={t("Analyze screen ({shortcut})", { shortcut: shortcutLabel(KEYS.screenshot) })}
+        >
           <Camera className="h-4 w-4" />
+          {/* Fills while the pointer rests on the button; the capture runs when it is full. */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-1.5 bottom-1 h-0.5 origin-left rounded-full bg-sky-300"
+            style={{ transform: `scaleX(${hoverShot.holding ? 1 : 0})`, transition: hoverShot.holding ? `transform ${HOVER_HOLD_MS}ms linear` : "none" }}
+          />
         </Button>
         {/* Settings for the next meeting open in the panel; its Settings tab links to the web dashboard for the rest. */}
         <Button variant={showing("settings") ? "secondary" : "ghost"} size="icon" onClick={() => api.invoke("panel:toggle", "settings")} title={t("Settings")}>
@@ -165,4 +186,43 @@ function Grip() {
 
 function Divider() {
   return <span className="mx-0.5 h-4 w-px bg-white/15" />
+}
+
+const HOVER_HOLD_MS = 3000
+
+/**
+ * Runs `action` once the pointer has rested on an element for HOVER_HOLD_MS. The toolbar is never activated by
+ * hovering, so this works while another app has focus. After firing, the pointer must leave before it fires again.
+ */
+function useHoverHold(action: () => void) {
+  const [holding, setHolding] = useState(false)
+  const timer = useRef<number | undefined>(undefined)
+  const armed = useRef(true)
+  const latest = useRef(action)
+  latest.current = action
+
+  const clear = () => {
+    if (timer.current !== undefined) window.clearTimeout(timer.current)
+    timer.current = undefined
+  }
+  useEffect(() => clear, [])
+
+  return {
+    holding,
+    start: () => {
+      if (!armed.current || timer.current !== undefined) return
+      setHolding(true)
+      timer.current = window.setTimeout(() => {
+        timer.current = undefined
+        armed.current = false
+        setHolding(false)
+        latest.current()
+      }, HOVER_HOLD_MS)
+    },
+    cancel: () => {
+      clear()
+      armed.current = true
+      setHolding(false)
+    }
+  }
 }

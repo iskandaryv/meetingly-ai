@@ -135,10 +135,10 @@ export class WindowManager extends EventEmitter {
     let win = this.get(kind)
     if (!win) {
       win = this.create(kind, this.positionFor(kind))
-      win.once("ready-to-show", () => this.reveal(kind))
+      win.once("ready-to-show", () => this.reveal(kind, opts.background))
       return
     }
-    this.reveal(kind)
+    this.reveal(kind, opts.background)
   }
 
   hide(kind: WindowKind): void {
@@ -329,7 +329,7 @@ export class WindowManager extends EventEmitter {
     return win
   }
 
-  private reveal(kind: WindowKind): void {
+  private reveal(kind: WindowKind, background = false): void {
     const win = this.get(kind)
     if (!win) return
     // Decorated windows keep wherever the user last put them.
@@ -337,7 +337,7 @@ export class WindowManager extends EventEmitter {
       const pos = this.positionFor(kind)
       win.setPosition(pos.x, pos.y)
     }
-    showWindow(win, kind)
+    showWindow(win, kind, background)
     if (kind !== "main") this.layoutChildren()
     this.emitState()
   }
@@ -402,8 +402,8 @@ export class WindowManager extends EventEmitter {
  * Show a window the way its kind expects. The toolbar appears without being activated, so Ctrl+B or Ctrl+Space never
  * take keyboard focus from the meeting app (Electron's show() activates the window); a focusable panel takes focus.
  */
-function showWindow(win: BrowserWindow, kind: WindowKind): void {
-  if (kind !== "main" && WINDOW_SPECS[kind].focusable) {
+function showWindow(win: BrowserWindow, kind: WindowKind, background = false): void {
+  if (!background && kind !== "main" && WINDOW_SPECS[kind].focusable) {
     win.show()
     win.focus()
   } else {

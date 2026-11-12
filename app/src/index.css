@@ -45,6 +45,14 @@ a {
   cursor: text;
 }
 
+/* Optional visual preference: selection and clicking still work, but the pointer stays an arrow. */
+html[data-arrow-cursor="true"],
+html[data-arrow-cursor="true"] *,
+html[data-arrow-cursor="true"] *::before,
+html[data-arrow-cursor="true"] *::after {
+  cursor: default !important;
+}
+
 /* Thin scrollbars that stay out of the way. */
 .scroll {
   overflow-y: auto;

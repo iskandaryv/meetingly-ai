@@ -27,7 +27,8 @@ import { t } from "@shared/i18n"
 import { api, shortcutLabel } from "@/lib/api"
 import { useAudioCapture, useLiveTranscript, type Interim, type TranscriptLine } from "@/lib/capture"
 import { useCloudState, useEvent, usePlanState, useSessionState, useSettings, useSuggestions } from "@/lib/hooks"
-import { listAudioInputs, type AudioInputDevice, type AudioLevels } from "@/lib/audio"
+import { listAudioInputs, listMonitors, type AudioInputDevice, type AudioLevels } from "@/lib/audio"
+import type { MonitorSource } from "@shared/types"
 import { cn, copyText } from "@/lib/utils"
 import { markdownToPlain } from "@/lib/plain-text"
 import { Button } from "@/components/ui/button"
@@ -151,6 +152,8 @@ export function PanelWindow() {
                 onSource={(s) => void update({ audioSource: s })}
                 deviceId={settings?.audioDeviceId ?? ""}
                 onDevice={(id) => void update({ audioDeviceId: id })}
+                systemDeviceId={settings?.systemAudioDeviceId ?? ""}
+                onSystemDevice={(id) => void update({ systemAudioDeviceId: id })}
                 suggestions={settings?.suggestions ?? false}
                 onSuggestions={(on) => void update({ suggestions: on })}
               />
@@ -674,11 +677,13 @@ function Transcript(props: {
   onSource: (s: AudioSource) => void
   deviceId: string
   onDevice: (id: string) => void
+  systemDeviceId: string
+  onSystemDevice: (id: string) => void
   /** Suggested questions while listening; off sends nothing to the AI for them. */
   suggestions: boolean
   onSuggestions: (on: boolean) => void
 }) {
-  const { status, connected, source, notice, lines, interim, onSource, deviceId, onDevice, suggestions, onSuggestions } = props
+  const { status, connected, source, notice, lines, interim, onSource, deviceId, onDevice, systemDeviceId, onSystemDevice, suggestions, onSuggestions } = props
   const ref = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState(false)
   const live = [interim.them, interim.you, interim.other].filter(Boolean).join(" ")
@@ -720,6 +725,7 @@ function Transcript(props: {
           {(Object.keys(AUDIO_SOURCE_LABELS) as AudioSource[]).map((s) => <option key={s} value={s}>{t(AUDIO_SOURCE_LABELS[s])}</option>)}
         </Select>
         {source !== "system" && <MicPicker value={deviceId} onChange={onDevice} />}
+        {source === "system" && api.platform === "linux" && <MonitorPicker value={systemDeviceId} onChange={onSystemDevice} />}
         <label
           className="flex shrink-0 cursor-pointer items-center gap-1.5 px-1.5 text-[11px] text-white/55"
           title={t("Suggested questions while listening. Off: just the transcript, nothing is sent to the AI for suggestions.")}
@@ -768,6 +774,11 @@ function SettingsTab({ settings, update, plan, autoAllowed }: {
         {settings.audioSource !== "system" && (
           <SettingRow label={t("Microphone")}>
             <MicPicker value={settings.audioDeviceId} onChange={(id) => void update({ audioDeviceId: id })} className={PICK} />
+          </SettingRow>
+        )}
+        {settings.platform === "linux" && settings.audioSource !== "microphone" && (
+          <SettingRow label={t("System audio device")} hint={t("The monitor of the output device you hear the call on.")}>
+            <MonitorPicker value={settings.systemAudioDeviceId} onChange={(id) => void update({ systemAudioDeviceId: id })} className={PICK} />
           </SettingRow>
         )}
         <SettingRow label={t("Auto-answer")} hint={t("Answers questions heard in the meeting by itself.")}>
@@ -840,6 +851,27 @@ function MicPicker({ value, onChange, className }: { value: string; onChange: (i
         </option>
       ))}
       {value && !devices.some((d) => d.id === value) && <option value={value}>{t("Previously selected device (unplugged)")}</option>}
+    </Select>
+  )
+}
+
+/**
+ * Linux only: which output device's monitor the call is read from. Empty follows the default output,
+ * so switching headsets does not need a trip to Settings.
+ */
+function MonitorPicker({ value, onChange, className }: { value: string; onChange: (id: string) => void; className?: string }) {
+  const [monitors, setMonitors] = useState<MonitorSource[]>([])
+  const refresh = () => void listMonitors().then(setMonitors).catch(() => setMonitors([]))
+  useEffect(refresh, [])
+  return (
+    <Select value={value} onChange={(e) => onChange(e.target.value)} onFocus={refresh} className={className ?? "h-7 min-w-0 flex-1 bg-black/30 px-2 py-0 text-[11px]"} title={t("System audio device")}>
+      <option value="">{t("Default output (automatic)")}</option>
+      {monitors.map((m) => (
+        <option key={m.id} value={m.id}>
+          {m.label}
+        </option>
+      ))}
+      {value && !monitors.some((m) => m.id === value) && <option value={value}>{t("Previously selected device (unplugged)")}</option>}
     </Select>
   )
 }

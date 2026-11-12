@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest"
+import { INVOKE_CHANNELS } from "../shared/ipc"
 import { rendererSettingsPatch, trustedFrame } from "../electron/ipc/guard"
 
 describe("IPC boundaries", () => {
+  it("forwards every channel the panel invokes (the preload drops the rest silently)", () => {
+    // Adding a channel to InvokeMap is not enough: the preload only forwards what this array lists.
+    for (const channel of ["audio:monitors", "audio:tap-start", "audio:tap-stop"]) {
+      expect(INVOKE_CHANNELS).toContain(channel)
+    }
+  })
   it("refuses subframes, missing frames and unowned renderers", () => {
     const main = {}
     expect(trustedFrame(true, main, main)).toBe(true)

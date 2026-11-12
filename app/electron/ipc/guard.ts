@@ -6,7 +6,7 @@ export function trustedFrame(owned: boolean, senderFrame: unknown, mainFrame: un
 }
 
 const EDITABLE = new Set([
-  "outputLanguage", "audioLanguage", "audioSource", "transcriptionEngine", "audioDeviceId",
+  "outputLanguage", "audioLanguage", "audioSource", "transcriptionEngine", "audioDeviceId", "systemAudioDeviceId",
   "autoAnswer", "answerLength", "suggestions", "keepMeetingsLocal", "stealth", "autoLaunch", "prompts", "activePromptId", "shortcuts"
 ])
 

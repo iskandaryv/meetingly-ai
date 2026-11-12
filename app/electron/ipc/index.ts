@@ -8,6 +8,7 @@ import type { Logger } from "../services/logger"
 import type { MeetingStore } from "../services/meetings"
 import type { ReportGenerator } from "../services/reports"
 import type { RecordingSession } from "../services/session"
+import type { SystemAudioTap } from "../services/audioTap"
 import type { SettingsStore } from "../services/settings"
 import type { SuggestionService } from "../services/suggestions"
 import { suggestionsVisible } from "../../shared/types"
@@ -19,6 +20,7 @@ export interface IpcDeps {
   settings: SettingsStore
   windows: WindowManager
   session: RecordingSession
+  audioTap: SystemAudioTap
   chat: ChatService
   suggestions: SuggestionService
   meetings: MeetingStore
@@ -61,7 +63,7 @@ export function openOwnKeyForm(windows: WindowManager): void {
 }
 
 export function registerIpc(deps: IpcDeps): void {
-  const { settings, windows, session, chat, suggestions, meetings, logger, cloud, plan, ownKey, transcripts } = deps
+  const { settings, windows, session, audioTap, chat, suggestions, meetings, logger, cloud, plan, ownKey, transcripts } = deps
   const handle = <K extends InvokeChannel>(channel: K, fn: Handler<K>) => registerHandler(channel, fn, windows)
 
   // Settings
@@ -109,6 +111,11 @@ export function registerIpc(deps: IpcDeps): void {
   handle("session:audio", (_e, pcm16) => session.sendAudio(pcm16))
   handle("session:transcript", () => session.transcriptText())
   handle("session:last-utterance", () => session.getLastUtterance())
+
+  // System audio (Linux: the output's monitor, made capturable by the main process)
+  handle("audio:monitors", () => audioTap.monitors())
+  handle("audio:tap-start", (_e, monitor) => audioTap.start(monitor))
+  handle("audio:tap-stop", () => audioTap.stop())
 
   // Chat
   handle("chat:history", () => chat.getHistory())

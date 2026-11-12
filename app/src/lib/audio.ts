@@ -1,4 +1,5 @@
-import type { AudioSource } from "@shared/types"
+import type { AudioSource, MonitorSource } from "@shared/types"
+import { SYSTEM_AUDIO_TAP_LABEL } from "@shared/types"
 import { api, log } from "./api"
 
 export interface AudioLevels {
@@ -33,12 +34,15 @@ const LEVEL_INTERVAL_MS = 120
  * "microphone": the default or chosen input device (also how BlackHole on macOS
  *               and "Monitor of …" devices on Linux are used).
  * "system":     what the user hears. Windows: Chromium loopback. macOS 13+: CoreAudio
- *               tap through the same API. Falls back to the legacy desktop constraint.
+ *               tap through the same API. Linux: the monitor source of the output device,
+ *               read as an input device (Chromium has no loopback there). Falls back to the
+ *               legacy desktop constraint.
  * "both":       the two, one per channel. A source that is not captured stays silent.
  */
 export async function startAudioCapture(
   source: AudioSource,
   deviceId: string,
+  systemDeviceId: string,
   onChunk: (pcm16: ArrayBuffer) => void,
   onLevels?: (levels: AudioLevels) => void
 ): Promise<AudioCapture> {
@@ -55,7 +59,7 @@ export async function startAudioCapture(
   }
   if (source === "system" || source === "both") {
     try {
-      const stream = await getSystemStream()
+      const stream = await getSystemStream(systemDeviceId)
       // Display-media requests carry a video track we never use.
       stream.getVideoTracks().forEach((t) => t.stop())
       streams.push({ kind: "system", stream })
@@ -136,8 +140,24 @@ export async function startAudioCapture(
       nodes.forEach((n) => n.disconnect())
       streams.forEach(({ stream }) => stream.getTracks().forEach((t) => t.stop()))
       void context.close()
+      // Linux: the tap source belongs to this capture; drop it so the system mixer stays as it was.
+      if (streams.some((s) => s.kind === "system")) void api.invoke("audio:tap-stop").catch(() => {})
     }
   }
+}
+
+/** Linux: the outputs the call can be read from ("Monitor of …"), for the Settings picker. */
+export async function listMonitors(): Promise<MonitorSource[]> {
+  return api.invoke("audio:monitors").catch((err: Error) => {
+    log("warn", "audio", "could not list the monitors", err.message)
+    return []
+  })
+}
+
+/** The tap's source, found by the label the main process gave it. */
+async function findInputByLabel(label: string): Promise<string | null> {
+  const devices = await navigator.mediaDevices.enumerateDevices()
+  return devices.find((d) => d.kind === "audioinput" && d.label === label)?.deviceId ?? null
 }
 
 /** Input devices with readable labels. Asks for mic permission once so labels are populated. */
@@ -154,6 +174,8 @@ export async function listAudioInputs(): Promise<AudioInputDevice[]> {
   }
   return devices
     .filter((d) => d.kind === "audioinput" && d.deviceId !== "default" && d.deviceId !== "communications")
+    // The tap is ours and lives only while system audio is captured: it must not show up as a microphone.
+    .filter((d) => d.label !== SYSTEM_AUDIO_TAP_LABEL)
     .map((d, i) => ({
       id: d.deviceId,
       label: d.label || `Microphone ${i + 1}`,
@@ -180,7 +202,38 @@ async function getMicrophoneStream(deviceId: string): Promise<MediaStream> {
   }
 }
 
-async function getSystemStream(): Promise<MediaStream> {
+/**
+ * Linux: the tap is a real capture device (see electron/services/audioTap.ts), so it is read like a
+ * microphone. Voice processing stays off: it is meant for a phone call and would eat the other side.
+ */
+async function getTapStream(deviceId: string): Promise<MediaStream> {
+  return navigator.mediaDevices.getUserMedia({
+    audio: {
+      ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false
+    }
+  })
+}
+
+async function getSystemStream(systemDeviceId: string): Promise<MediaStream> {
+  // Linux: Chromium cannot capture the output, so the main process mirrors its monitor into a source.
+  if (api.platform === "linux") {
+    const tap = await api.invoke("audio:tap-start", systemDeviceId).catch((err: Error) => {
+      log("warn", "audio", "could not start the system audio tap", err.message)
+      return null
+    })
+    if (!tap) throw new Error(systemAudioHint())
+    try {
+      const deviceId = await findInputByLabel(tap.label)
+      if (!deviceId) throw new Error(systemAudioHint())
+      return await getTapStream(deviceId)
+    } catch (err) {
+      await api.invoke("audio:tap-stop").catch(() => {})
+      throw err instanceof Error && err.message === systemAudioHint() ? err : new Error(systemAudioHint())
+    }
+  }
   // Modern path: the main process answers this request with loopback audio (video is our own frame).
   try {
     const stream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true })
@@ -220,7 +273,7 @@ function systemAudioHint(): string {
     case "darwin":
       return "System audio needs macOS 13 or newer and Screen & System Audio Recording permission for Meetingly (System Settings → Privacy & Security). On older macOS, install BlackHole and pick it as the microphone."
     case "linux":
-      return "On Linux, pick the \"Monitor of …\" input device in Settings to capture system audio."
+      return "System audio needs PulseAudio or PipeWire with pactl available, and the call playing on a speaker or headset. Pick the output under Settings → System audio device."
     default:
       return "System audio capture is not available on this machine. It records the Windows default output device."
   }

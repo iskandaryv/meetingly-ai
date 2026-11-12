@@ -25,7 +25,7 @@ export function useSettings(): [SettingsView | null, (patch: Partial<SettingsVie
   return [settings, update]
 }
 
-const IDLE: SessionState = { status: "idle", startedAt: null, notice: null, connected: false, audioSource: "both", audioDeviceId: "" }
+const IDLE: SessionState = { status: "idle", startedAt: null, notice: null, connected: false, audioSource: "both", audioDeviceId: "", systemAudioDeviceId: "" }
 
 export function useSessionState(): SessionState {
   const [state, setState] = useState<SessionState>(IDLE)

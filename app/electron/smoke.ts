@@ -286,7 +286,7 @@ async function shots(windows: WindowManager, settings: SmokeDeps["settings"], di
   windows.setPanelExtra(SUGGESTIONS_WIDTH)
   windows.showPanel("answers")
   await sleep(1500)
-  windows.send("chat", "session:state", { status: "paused", startedAt: now, notice: null, connected: true, audioSource: "both", audioDeviceId: "" })
+  windows.send("chat", "session:state", { status: "paused", startedAt: now, notice: null, connected: true, audioSource: "both", audioDeviceId: "", systemAudioDeviceId: "" })
   windows.send("chat", "suggestions:state", {
     topic: "Scaling the payments database",
     items: [
@@ -716,9 +716,9 @@ async function demoFrames(windows: WindowManager, dir: string): Promise<void> {
   windows.showPanel("answers")
   await sleep(1500)
   windows.send("chat", "chat:cleared", undefined)
-  windows.send("chat", "session:state", { status: "paused", startedAt: now, notice: null, connected: true, audioSource: "both", audioDeviceId: "" })
+  windows.send("chat", "session:state", { status: "paused", startedAt: now, notice: null, connected: true, audioSource: "both", audioDeviceId: "", systemAudioDeviceId: "" })
   // The toolbar shows a call in progress; only the panel captures audio, and it stays paused.
-  windows.send("main", "session:state", { status: "recording", startedAt: now - 754_000, notice: null, connected: true, audioSource: "both", audioDeviceId: "" })
+  windows.send("main", "session:state", { status: "recording", startedAt: now - 754_000, notice: null, connected: true, audioSource: "both", audioDeviceId: "", systemAudioDeviceId: "" })
   const scenes = [
     {
       topic: "Scaling the payments database",

@@ -10,6 +10,7 @@ import { Llm } from "./services/llm"
 import { MeetingStore } from "./services/meetings"
 import { ReportGenerator } from "./services/reports"
 import { RecordingSession } from "./services/session"
+import { SystemAudioTap } from "./services/audioTap"
 import { AsrModel } from "./services/asrModel"
 import { RefineModels } from "./services/refine"
 import { SettingsStore } from "./services/settings"
@@ -57,6 +58,8 @@ function bootstrap(): void {
   const box = keychainBox(safeStorage)
   const llm = new Llm(settings, undefined, box)
   const meetings = new MeetingStore(path.join(userData, "meetings.json"))
+  // Linux: makes the output's monitor capturable as an input device (Chromium cannot see monitor sources).
+  const audioTap = new SystemAudioTap()
   const reports = new ReportGenerator({ llm, meetings, settings })
   const modelDir = process.env.MEETINGLY_MODEL_DIR || path.join(userData, "models")
   const asrModel = new AsrModel(modelDir)
@@ -149,7 +152,7 @@ function bootstrap(): void {
     }
     if (process.platform === "darwin") app.dock?.hide()
     installSystemAudioHandler()
-    registerIpc({ settings, windows, session, chat, suggestions, meetings, reports, logger, cloud, plan, ownKey, transcripts })
+    registerIpc({ settings, windows, session, audioTap, chat, suggestions, meetings, reports, logger, cloud, plan, ownKey, transcripts })
     instrument({ logger, settings, session, chat, windows })
     applySettings()
     settings.onChange(applySettings)
@@ -229,6 +232,8 @@ function bootstrap(): void {
   app.on("will-quit", () => {
     logger.info("app", "quitting")
     shortcuts.unregister()
+    // The remap source is ours: leaving it behind would add a fake input device to the system mixer.
+    void audioTap.stop()
     // Quitting mid-session saves it like Finish: the meeting and its .txt now, the report on the next start
     // (reports.resumeUnfinished). Smoke runs end with a quit and must leave nothing behind.
     if (process.env.IGPT_SMOKE) session.cancel()

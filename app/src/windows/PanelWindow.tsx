@@ -30,6 +30,7 @@ import { useCloudState, useEvent, usePlanState, useSessionState, useSettings, us
 import { listAudioInputs, type AudioInputDevice, type AudioLevels } from "@/lib/audio"
 import { cn, copyText } from "@/lib/utils"
 import { markdownToPlain } from "@/lib/plain-text"
+import { splitAnswerVariants } from "@/lib/answer-variants"
 import { Button } from "@/components/ui/button"
 import { Select, Toggle } from "@/components/ui/fields"
 import { Markdown } from "@/components/Markdown"
@@ -347,7 +348,7 @@ function Answers({ listening, handsFree, autoAllowed, plan }: { listening: boole
         {history.map((m) => <Message key={m.id} message={m} />)}
         {stream && (
           <div className={ANSWER}>
-            <Markdown text={stream.text} />
+            <AnswerBody text={stream.text} />
             <span className="ml-0.5 inline-block h-3.5 w-[2px] animate-pulse bg-white/70 align-middle" />
           </div>
         )}
@@ -602,6 +603,17 @@ function OwnKeyForm({ current, onClose }: { current: OwnKeyView | null; onClose:
 /** Answer bubbles: deep navy so they stand apart from everything else; what was heard is a quiet line above. */
 const ANSWER = "rounded-lg bg-[#132238] px-3 py-2 ring-1 ring-inset ring-sky-300/10"
 
+function AnswerBody({ text }: { text: string }) {
+  const { standard, spoken } = splitAnswerVariants(text)
+  return <>
+    <Markdown text={standard} />
+    {spoken && <div className="mt-2 border-t border-white/10 pt-2">
+      <div className="mb-1 text-[10.5px] font-medium text-sky-200/70">{t("Spoken version")}</div>
+      <Markdown text={spoken} />
+    </div>}
+  </>
+}
+
 function Message({ message }: { message: ChatMessage }) {
   const [copied, setCopied] = useState(false)
   if (message.role === "user") {
@@ -616,7 +628,8 @@ function Message({ message }: { message: ChatMessage }) {
     return <p className="selectable ml-10 rounded-lg bg-white/[0.08] px-3 py-1.5 text-[12.5px] text-white/90">{message.text}</p>
   }
   const copy = async () => {
-    if (await copyText(markdownToPlain(message.text))) {
+    const parts = splitAnswerVariants(message.text)
+    if (await copyText(markdownToPlain(parts.standard + (parts.spoken ? `\n\n${t("Spoken version")}: ${parts.spoken}` : "")))) {
       setCopied(true)
       setTimeout(() => setCopied(false), 1200)
     }
@@ -624,7 +637,7 @@ function Message({ message }: { message: ChatMessage }) {
   return (
     <div className={cn("group relative", message.kind === "error" ? "rounded-lg bg-rose-500/15 px-3 py-2 text-rose-200" : ANSWER)}>
       {message.kind === "screenshot" && <div className="mb-0.5 flex items-center gap-1 text-[10.5px] text-sky-200/50"><Camera className="h-3 w-3" /> {t("Screen")}</div>}
-      {message.kind === "error" ? <p className="selectable text-[12.5px]">{message.text}</p> : <Markdown text={message.text} />}
+      {message.kind === "error" ? <p className="selectable text-[12.5px]">{message.text}</p> : <AnswerBody text={message.text} />}
       {message.kind !== "error" && (
         <button
           type="button"
@@ -785,6 +798,9 @@ function SettingsTab({ settings, update, plan, autoAllowed }: {
               <span className="text-sky-300">{t("Get Lite")}</span>
             </button>
           )}
+        </SettingRow>
+        <SettingRow label={t("Spoken answer version")} hint={t("Show the usual answer and a natural spoken paragraph in one AI reply.")}>
+          <Toggle checked={settings.spokenVariant} onChange={(on) => void update({ spokenVariant: on })} label={t("Spoken answer version")} />
         </SettingRow>
         <SettingRow label={t("Answer length")}>
           <Select value={settings.answerLength} onChange={(e) => void update({ answerLength: e.target.value as AnswerLength })} className={PICK} aria-label={t("Answer length")}>

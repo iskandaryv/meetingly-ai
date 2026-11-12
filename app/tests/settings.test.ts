@@ -16,6 +16,15 @@ afterEach(() => {
 })
 
 describe("SettingsStore", () => {
+  it("keeps spokenVariant off for new and existing settings, and persists opt-in", () => {
+    const file = tmpFile()
+    expect(new SettingsStore(file).get().spokenVariant).toBe(false)
+    fs.writeFileSync(file, JSON.stringify({ outputLanguage: "en", spokenVariant: "yes" }))
+    expect(new SettingsStore(file).get().spokenVariant).toBe(false)
+    new SettingsStore(file).update({ spokenVariant: true })
+    expect(new SettingsStore(file).get().spokenVariant).toBe(true)
+  })
+
   it("keeps meetings on this computer only when turned on", () => {
     const file = tmpFile()
     expect(new SettingsStore(file).get().keepMeetingsLocal).toBe(false)

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Camera, Check, CircleHelp, Copy, Eraser, ExternalLink, FolderOpen, KeyRound, ListChecks, MessageSquareQuote, MessageSquareReply, Mic, PanelLeft, RefreshCw, SendHorizontal, Volume2, X } from "lucide-react"
+import { Camera, Check, CircleHelp, Copy, Eraser, ExternalLink, FolderOpen, KeyRound, ListChecks, MessageSquareQuote, MessageSquareReply, Mic, PanelLeft, RefreshCw, SendHorizontal, Square, Volume2, X } from "lucide-react"
 import {
   ANSWER_LENGTHS,
   AUDIO_SOURCE_LABELS,
@@ -30,6 +30,7 @@ import { useCloudState, useEvent, usePlanState, useSessionState, useSettings, us
 import { listAudioInputs, type AudioInputDevice, type AudioLevels } from "@/lib/audio"
 import { cn, copyText } from "@/lib/utils"
 import { markdownToPlain } from "@/lib/plain-text"
+import { AnswerSpeech } from "@/lib/answer-speech"
 import { Button } from "@/components/ui/button"
 import { Select, Toggle } from "@/components/ui/fields"
 import { Markdown } from "@/components/Markdown"
@@ -138,7 +139,7 @@ export function PanelWindow() {
           <div className="flex min-w-0 flex-1 flex-col">
             {/* Both tabs stay mounted: a reply keeps streaming and scroll positions survive tab switches. */}
             <div className={cn("min-h-0 flex-1 flex-col", tab === "answers" ? "flex" : "hidden")}>
-              <Answers listening={session.status !== "idle"} handsFree={handsFree} autoAllowed={autoAllowed} plan={plan} />
+              <Answers listening={session.status !== "idle"} handsFree={handsFree} autoAllowed={autoAllowed} plan={plan} settings={settings} />
             </div>
             <div className={cn("min-h-0 flex-1 flex-col", tab === "transcript" ? "flex" : "hidden")}>
               <Transcript
@@ -293,14 +294,28 @@ function Suggestions({ state, plan, onOff }: { state: SuggestionsState; plan: Pl
   )
 }
 
-function Answers({ listening, handsFree, autoAllowed, plan }: { listening: boolean; handsFree: boolean; autoAllowed: boolean; plan: PlanState }) {
+function Answers({ listening, handsFree, autoAllowed, plan, settings }: { listening: boolean; handsFree: boolean; autoAllowed: boolean; plan: PlanState; settings: SettingsView | null }) {
   const [history, setHistory] = useState<ChatMessage[]>([])
   const [stream, setStream] = useState<ChatChunk | null>(null)
   const [busy, setBusy] = useState(false)
   const [input, setInput] = useState("")
   const [heard, setHeard] = useState<string | null>(null)
+  const [speakingId, setSpeakingId] = useState<string | null>(null)
+  const [speechError, setSpeechError] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [speech] = useState(() => new AnswerSpeech(
+    (playing) => api.invoke("chat:speech-state", playing),
+    (id, error) => { setSpeakingId(id); setSpeechError(error) }
+  ))
+  const stopSpeech = () => speech.stop()
+  const speak = (message: ChatMessage) => {
+    void speech.play(message.id, markdownToPlain(message.text), settings?.outputLanguage ?? "en")
+  }
+  useEffect(() => () => speech.stop(), [speech])
+  useEffect(() => {
+    if (!settings?.readAnswersAloud) speech.stop()
+  }, [settings?.readAnswersAloud, speech])
 
   useEffect(() => {
     void api.invoke("chat:history").then(setHistory)
@@ -310,12 +325,14 @@ function Answers({ listening, handsFree, autoAllowed, plan }: { listening: boole
   useEvent("chat:message", (m) => {
     setHistory((h) => [...h, m])
     setStream(null)
+    if (m.role === "assistant" && m.kind !== "error" && settings?.readAnswersAloud) speak(m)
   })
   useEvent("chat:chunk", (c) => setStream((s) => (s && s.id === c.id ? { id: c.id, text: s.text + c.text } : c)))
   useEvent("chat:busy", setBusy)
   useEvent("chat:cleared", () => {
     setHistory([])
     setStream(null)
+    stopSpeech()
   })
   useEvent("session:utterance", (u) => setHeard(u.text))
   useEvent("session:state", (s) => {
@@ -344,7 +361,7 @@ function Answers({ listening, handsFree, autoAllowed, plan }: { listening: boole
                 : t("Ask anything, or press Listen and then Answer when a question is heard.")}
           </p>
         )}
-        {history.map((m) => <Message key={m.id} message={m} />)}
+        {history.map((m) => <Message key={m.id} message={m} speaking={speakingId === m.id} onSpeak={() => speakingId === m.id ? stopSpeech() : speak(m)} />)}
         {stream && (
           <div className={ANSWER}>
             <Markdown text={stream.text} />
@@ -352,6 +369,7 @@ function Answers({ listening, handsFree, autoAllowed, plan }: { listening: boole
           </div>
         )}
         {busy && !stream && <p className="animate-pulse px-1 text-[11px] text-white/45">{t("Thinking…")}</p>}
+        {speechError && <p className="px-1 text-[11px] text-amber-200">{t("Speech playback is unavailable on this computer.")}</p>}
       </div>
 
       {listening && heard && (
@@ -602,7 +620,7 @@ function OwnKeyForm({ current, onClose }: { current: OwnKeyView | null; onClose:
 /** Answer bubbles: deep navy so they stand apart from everything else; what was heard is a quiet line above. */
 const ANSWER = "rounded-lg bg-[#132238] px-3 py-2 ring-1 ring-inset ring-sky-300/10"
 
-function Message({ message }: { message: ChatMessage }) {
+function Message({ message, speaking, onSpeak }: { message: ChatMessage; speaking: boolean; onSpeak: () => void }) {
   const [copied, setCopied] = useState(false)
   if (message.role === "user") {
     if (message.kind === "auto") {
@@ -626,14 +644,19 @@ function Message({ message }: { message: ChatMessage }) {
       {message.kind === "screenshot" && <div className="mb-0.5 flex items-center gap-1 text-[10.5px] text-sky-200/50"><Camera className="h-3 w-3" /> {t("Screen")}</div>}
       {message.kind === "error" ? <p className="selectable text-[12.5px]">{message.text}</p> : <Markdown text={message.text} />}
       {message.kind !== "error" && (
-        <button
-          type="button"
-          onClick={copy}
-          title={t("Copy")}
-          className="absolute right-1 top-1 rounded p-1 text-white/40 opacity-0 transition-opacity hover:bg-white/10 hover:text-white group-hover:opacity-100"
-        >
-          {copied ? <Check className="h-3 w-3 text-emerald-300" /> : <Copy className="h-3 w-3" />}
-        </button>
+        <div className="absolute right-1 top-1 flex items-center gap-0.5 rounded bg-[#132238]">
+          <button type="button" onClick={onSpeak} aria-label={speaking ? t("Stop playback") : t("Play answer")} title={speaking ? t("Stop playback") : t("Play answer")} className="rounded p-1 text-white/55 hover:bg-white/10 hover:text-white">
+            {speaking ? <Square className="h-3 w-3" /> : <Volume2 className="h-3.5 w-3.5" />}
+          </button>
+          <button
+            type="button"
+            onClick={copy}
+            title={t("Copy")}
+            className="rounded p-1 text-white/40 opacity-0 transition-opacity hover:bg-white/10 hover:text-white group-hover:opacity-100"
+          >
+            {copied ? <Check className="h-3 w-3 text-emerald-300" /> : <Copy className="h-3 w-3" />}
+          </button>
+        </div>
       )}
     </div>
   )
@@ -790,6 +813,9 @@ function SettingsTab({ settings, update, plan, autoAllowed }: {
           <Select value={settings.answerLength} onChange={(e) => void update({ answerLength: e.target.value as AnswerLength })} className={PICK} aria-label={t("Answer length")}>
             {(Object.keys(ANSWER_LENGTHS) as AnswerLength[]).map((l) => <option key={l} value={l}>{t(ANSWER_LENGTHS[l].label)}</option>)}
           </Select>
+        </SettingRow>
+        <SettingRow label={t("Read answers aloud")} hint={t("Automatically play each completed answer. Recording is silenced during playback. Use headphones so the meeting does not hear it.")}>
+          <Toggle checked={settings.readAnswersAloud} onChange={(on) => void update({ readAnswersAloud: on })} label={t("Read answers aloud")} />
         </SettingRow>
         <SettingRow label={t("Suggested questions")} hint={t("Off: just the transcript, nothing is sent to the AI for them.")}>
           <Toggle checked={settings.suggestions} onChange={(on) => void update({ suggestions: on })} label={t("Suggested questions")} />

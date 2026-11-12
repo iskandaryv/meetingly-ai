@@ -2,7 +2,7 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { EventEmitter } from "node:events"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { RecordingSession, type TranscriptionSocket } from "../electron/services/session"
 import { SettingsStore } from "../electron/services/settings"
 import { MeetingStore } from "../electron/services/meetings"
@@ -37,7 +37,7 @@ class FakeSocket extends EventEmitter implements TranscriptionSocket {
   open(): void {
     this.release?.()
   }
-  sendAudio(): void {}
+  sendAudio(_pcm16: ArrayBuffer): void {}
   close(): void {
     this.closed = true
     this.isOpen = false
@@ -75,6 +75,34 @@ function setup(opts: { manual?: boolean } = {}) {
 const tick = () => new Promise((r) => setTimeout(r, 0))
 
 describe("RecordingSession", () => {
+  it.each([false, true])("silences playback before transcription and resumes after the tail (stereo=%s)", async (stereo) => {
+    const { session, sockets } = setup()
+    await session.start()
+    Object.assign(sockets[0], { stereo })
+    const send = vi.spyOn(sockets[0], "sendAudio")
+    const audio = new Int16Array([200, 600, 400, 800]).buffer
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1000)
+    try {
+      session.setSpeechActive(true)
+      session.sendAudio(audio)
+      expect(Array.from(new Int16Array(send.mock.calls[0][0]!))).toEqual(stereo ? [0, 0, 0, 0] : [0, 0])
+      session.setSpeechActive(false)
+      clock.mockReturnValue(1499)
+      session.sendAudio(audio)
+      expect(Array.from(new Int16Array(send.mock.calls[1][0]!))).toEqual(stereo ? [0, 0, 0, 0] : [0, 0])
+      clock.mockReturnValue(1501)
+      session.sendAudio(audio)
+      expect(Array.from(new Int16Array(send.mock.calls[2][0]!))).toEqual(stereo ? [200, 600, 400, 800] : [400, 600])
+      session.setSpeechActive(true)
+      clock.mockReturnValue(32000)
+      session.sendAudio(audio)
+      expect(Array.from(new Int16Array(send.mock.calls[3][0]!))).toEqual(stereo ? [200, 600, 400, 800] : [400, 600])
+    } finally {
+      clock.mockRestore()
+      session.cancel()
+    }
+  })
+
   it("switches the meeting language mid-session and keeps the transcript so far", async () => {
     const { settings, session, sockets } = setup()
     await session.start()

@@ -42,6 +42,7 @@ export class ChatService extends EventEmitter {
   private draining = false
   /** Utterances waiting to be checked; joined, so a question split by a pause stays whole. */
   private queued: string | null = null
+  private speechSuppressedUntil = 0
 
   constructor(private readonly deps: Deps) {
     super()
@@ -61,6 +62,11 @@ export class ChatService extends EventEmitter {
     this.emit("cleared")
   }
 
+  /** Loopback audio may hear our own voice. Ignore it during playback and briefly after it ends. */
+  setSpeechActive(playing: boolean): void {
+    this.speechSuppressedUntil = playing ? Date.now() + 30000 : Date.now() + 2500
+  }
+
   /** `prompt`, when given, is what the model gets while chat shows `text` (quick actions). */
   async send(text: string, opts: { prompt?: string } = {}): Promise<void> {
     const trimmed = text.trim()
@@ -78,6 +84,7 @@ export class ChatService extends EventEmitter {
    * own speech (microphone channel) is context only and never answered.
    */
   async autoAnswer(utterance: Utterance): Promise<void> {
+    if (Date.now() < this.speechSuppressedUntil) return
     if (this.deps.settings.get().autoAnswer === "off" || this.deps.canAutoAnswer?.() === false) return
     if (utterance.channel === "you") return
     const text = utterance.text.trim()

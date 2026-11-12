@@ -16,6 +16,15 @@ afterEach(() => {
 })
 
 describe("SettingsStore", () => {
+  it("keeps readAnswersAloud off for new and existing settings, and persists opt-in", () => {
+    const file = tmpFile()
+    expect(new SettingsStore(file).get().readAnswersAloud).toBe(false)
+    fs.writeFileSync(file, JSON.stringify({ outputLanguage: "en", readAnswersAloud: "yes" }))
+    expect(new SettingsStore(file).get().readAnswersAloud).toBe(false)
+    new SettingsStore(file).update({ readAnswersAloud: true })
+    expect(new SettingsStore(file).get().readAnswersAloud).toBe(true)
+  })
+
   it("keeps meetings on this computer only when turned on", () => {
     const file = tmpFile()
     expect(new SettingsStore(file).get().keepMeetingsLocal).toBe(false)

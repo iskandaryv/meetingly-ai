@@ -66,6 +66,8 @@
  "Hide the live transcript": "隐藏实时转写",
  "Instructions, shortcuts, plan and past meetings": "使用说明、快捷键、套餐和过往会议",
  "Keep meetings on this computer": "将会议保留在此电脑上",
+ "Analyze screen on hover": "悬停时分析屏幕",
+ "Rest the pointer on the camera button for 3 seconds to analyze the screen without clicking.": "将指针在相机按钮上停留 3 秒，无需点击即可分析屏幕。",
  "Listen": "收听",
  "Listening…": "正在收听…",
  "Lite and Pro answer questions from the meeting automatically. On Free, press Answer when a question is heard.": "Lite 和 Pro 会自动回答会议中的问题。使用免费版时，听到问题后请点击“回答”。",

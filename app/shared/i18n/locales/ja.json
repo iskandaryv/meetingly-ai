@@ -66,6 +66,8 @@
  "Hide the live transcript": "ライブ文字起こしを非表示",
  "Instructions, shortcuts, plan and past meetings": "使い方、ショートカット、プラン、過去の会議",
  "Keep meetings on this computer": "会議をこのコンピューターに保存",
+ "Analyze screen on hover": "ホバーで画面を分析",
+ "Rest the pointer on the camera button for 3 seconds to analyze the screen without clicking.": "カメラボタンにポインターを3秒間置くと、クリックせずに画面を分析します。",
  "Listen": "聞く",
  "Listening…": "聞き取り中…",
  "Lite and Pro answer questions from the meeting automatically. On Free, press Answer when a question is heard.": "Lite と Pro は、会議中の質問に自動で回答します。Free では、質問を検知したら「回答」を押してください。",

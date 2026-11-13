@@ -66,6 +66,7 @@ export function MainWindow() {
       await api.invoke("chat:screenshot")
     })
   )
+  const hoverOn = settings?.hoverAnalyze === true
   const showing = (tab: PanelTab) => windows.chat && windows.panelTab === tab
   // The panel shows the code to confirm in the browser, so it opens first.
   const signIn = () =>
@@ -136,17 +137,19 @@ export function MainWindow() {
           size="icon"
           className="relative"
           onClick={screenshot}
-          onMouseEnter={hoverShot.start}
+          onMouseEnter={hoverOn ? hoverShot.start : undefined}
           onMouseLeave={hoverShot.cancel}
           title={t("Analyze screen ({shortcut})", { shortcut: shortcutLabel(KEYS.screenshot) })}
         >
           <Camera className="h-4 w-4" />
           {/* Fills while the pointer rests on the button; the capture runs when it is full. */}
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-x-1.5 bottom-1 h-0.5 origin-left rounded-full bg-sky-300"
-            style={{ transform: `scaleX(${hoverShot.holding ? 1 : 0})`, transition: hoverShot.holding ? `transform ${HOVER_HOLD_MS}ms linear` : "none" }}
-          />
+          {hoverOn && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-1.5 top-1 h-0.5 origin-left rounded-full bg-sky-300"
+              style={{ transform: `scaleX(${hoverShot.holding ? 1 : 0})`, transition: hoverShot.holding ? `transform ${HOVER_HOLD_MS}ms linear` : "none" }}
+            />
+          )}
         </Button>
         {/* Settings for the next meeting open in the panel; its Settings tab links to the web dashboard for the rest. */}
         <Button variant={showing("settings") ? "secondary" : "ghost"} size="icon" onClick={() => api.invoke("panel:toggle", "settings")} title={t("Settings")}>

@@ -60,13 +60,13 @@ export function MainWindow() {
       await api.invoke("chat:screenshot")
     })
   // Resting the pointer on the button: no click, so the meeting app keeps focus and the panel opens behind it.
-  const hoverShot = useHoverHold(() =>
+  const hoverOn = settings?.hoverAnalyze === true
+  const hoverShot = useHoverHold(hoverOn, () =>
     run(async () => {
       await api.invoke("panel:show", "answers", { background: true })
       await api.invoke("chat:screenshot")
     })
   )
-  const hoverOn = settings?.hoverAnalyze === true
   const showing = (tab: PanelTab) => windows.chat && windows.panelTab === tab
   // The panel shows the code to confirm in the browser, so it opens first.
   const signIn = () =>
@@ -136,7 +136,11 @@ export function MainWindow() {
           variant="ghost"
           size="icon"
           className="relative"
-          onClick={screenshot}
+          onClick={() => {
+            // The click already analyzes; a hold still counting down would send a second capture.
+            hoverShot.cancel()
+            void screenshot()
+          }}
           onMouseEnter={hoverOn ? hoverShot.start : undefined}
           onMouseLeave={hoverShot.cancel}
           title={t("Analyze screen ({shortcut})", { shortcut: shortcutLabel(KEYS.screenshot) })}
@@ -196,8 +200,9 @@ const HOVER_HOLD_MS = 3000
 /**
  * Runs `action` once the pointer has rested on an element for HOVER_HOLD_MS. The toolbar is never activated by
  * hovering, so this works while another app has focus. After firing, the pointer must leave before it fires again.
+ * Turning `enabled` off drops a hold in progress, so it never fires after the setting is switched off.
  */
-function useHoverHold(action: () => void) {
+function useHoverHold(enabled: boolean, action: () => void) {
   const [holding, setHolding] = useState(false)
   const timer = useRef<number | undefined>(undefined)
   const armed = useRef(true)
@@ -209,6 +214,12 @@ function useHoverHold(action: () => void) {
     timer.current = undefined
   }
   useEffect(() => clear, [])
+  useEffect(() => {
+    if (enabled) return
+    clear()
+    armed.current = true
+    setHolding(false)
+  }, [enabled])
 
   return {
     holding,

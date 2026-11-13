@@ -242,11 +242,13 @@ export class WindowManager extends EventEmitter {
   hideForCapture(): () => void {
     if (this.stealth) return () => {}
     const visible = KINDS.filter((k) => this.isVisible(k))
+    // Only the window that had focus gets it back: a capture started from the hover must leave the meeting app focused.
+    const focused = BrowserWindow.getFocusedWindow()
     for (const k of visible) this.get(k)?.hide()
     return () => {
       for (const k of visible) {
         const win = this.get(k)
-        if (win) showWindow(win, k)
+        if (win) showWindow(win, k, win !== focused)
       }
     }
   }

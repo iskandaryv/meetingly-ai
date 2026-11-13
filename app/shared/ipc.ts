@@ -32,7 +32,7 @@ export interface InvokeMap {
   "windows:toggle": (kind: WindowKind) => boolean
   "windows:toggle-all": () => void
   /** Show the panel on a tab; toggle hides it when it is already showing that tab. */
-  "panel:show": (tab: PanelTab) => void
+  "panel:show": (tab: PanelTab, opts?: { background?: boolean }) => void
   "panel:toggle": (tab: PanelTab) => void
   /** The user switched tabs inside the panel. */
   "panel:set-tab": (tab: PanelTab) => void

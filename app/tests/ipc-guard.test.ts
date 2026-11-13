@@ -18,10 +18,11 @@ describe("IPC boundaries", () => {
     for (const input of [null, false, "text", []]) expect(() => rendererSettingsPatch(input)).toThrow()
   })
   it("rejects non-boolean native preferences before they can be saved", () => {
-    for (const key of ["autoLaunch", "stealth", "suggestions", "keepMeetingsLocal"]) {
+    for (const key of ["autoLaunch", "stealth", "suggestions", "keepMeetingsLocal", "hoverAnalyze"]) {
       expect(() => rendererSettingsPatch({ [key]: "yes" })).toThrow("expected a boolean")
     }
     expect(rendererSettingsPatch({ autoLaunch: false })).toEqual({ autoLaunch: false })
     expect(rendererSettingsPatch({ keepMeetingsLocal: true })).toEqual({ keepMeetingsLocal: true })
+    expect(rendererSettingsPatch({ hoverAnalyze: true })).toEqual({ hoverAnalyze: true })
   })
 })

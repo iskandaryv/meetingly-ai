@@ -77,7 +77,8 @@ export function registerIpc(deps: IpcDeps): void {
   handle("windows:hide", (_e, kind) => windows.hide(kind))
   handle("windows:toggle", (_e, kind) => windows.toggle(kind))
   handle("windows:toggle-all", () => windows.toggleAll())
-  handle("panel:show", (_e, tab) => windows.showPanel(tab))
+  // background: shown without taking focus (hover-to-analyze on the toolbar).
+  handle("panel:show", (_e, tab, opts) => windows.showPanel(tab, { background: !!opts?.background }))
   handle("panel:toggle", (_e, tab) => windows.togglePanel(tab))
   handle("panel:set-tab", (_e, tab) => windows.setPanelTab(tab))
   handle("windows:fit", (e, size) => {

@@ -66,6 +66,8 @@
  "Hide the live transcript": "Skjul direktetranskripsjonen",
  "Instructions, shortcuts, plan and past meetings": "Instruksjoner, hurtigtaster, abonnement og tidligere møter",
  "Keep meetings on this computer": "Behold møter på denne datamaskinen",
+ "Analyze screen on hover": "Analyser skjerm ved peking",
+ "Rest the pointer on the camera button for 3 seconds to analyze the screen without clicking.": "Hold pekeren på kameraknappen i 3 sekunder for å analysere skjermen uten å klikke.",
  "Listen": "Lytt",
  "Listening…": "Lytter…",
  "Lite and Pro answer questions from the meeting automatically. On Free, press Answer when a question is heard.": "Lite og Pro svarer automatisk på spørsmål fra møtet. På Gratis trykker du på Svar når du hører et spørsmål.",

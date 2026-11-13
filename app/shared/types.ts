@@ -194,6 +194,8 @@ export interface Settings {
    * to the account (only the .txt in Documents/Meetingly). Answers the user asks for still go to the AI. Not synced.
    */
   keepMeetingsLocal: boolean
+  /** Resting the pointer on the toolbar's camera button for a few seconds analyzes the screen, without a click. */
+  hoverAnalyze: boolean
   stealth: boolean
   autoLaunch: boolean
   prompts: Prompt[]
@@ -298,6 +300,8 @@ export const DEFAULT_SETTINGS: Settings = {
   // Off until turned on (the button left of the panel's close button), so a session can be a plain transcript.
   suggestions: false,
   keepMeetingsLocal: false,
+  // Off until turned on: a pointer left on the camera by accident would send the screen to the AI.
+  hoverAnalyze: false,
   stealth: true,
   autoLaunch: false,
   prompts: [DEFAULT_PROMPT],

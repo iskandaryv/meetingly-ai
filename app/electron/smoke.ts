@@ -7,7 +7,7 @@ import type { AddressInfo } from "node:net"
 import type { AsrModel } from "./services/asrModel"
 import { LocalAsrSocket } from "./services/localAsr"
 import type { RefineModels } from "./services/refine"
-import { getLanguage, type AudioSource, type LanguageCode, type SessionState, type WindowKind } from "../shared/types"
+import { getLanguage, type AudioSource, type LanguageCode, type PlanName, type SessionState, type WindowKind } from "../shared/types"
 import type { ChatService } from "./services/chat"
 import type { CloudSync } from "./services/cloud"
 import { MeetingStore } from "./services/meetings"
@@ -275,7 +275,7 @@ const TEST_PHRASE = "The purple elephant is testing system audio capture."
 async function shots(windows: WindowManager, settings: SmokeDeps["settings"], dir: string): Promise<void> {
   const now = Date.now()
   // Suggestions start off (1.2.5); the shots show the rail, so turn them on (smoke runs use a throwaway settings folder).
-  settings.update({ suggestions: true })
+  settings.update(process.env.IGPT_SMOKE_PLAN ? { suggestions: true, autoAnswer: "questions" } : { suggestions: true })
   const sample = [
     { id: "s1", role: "user", kind: "auto", text: "What is Kafka?", timestamp: now },
     { id: "s2", role: "assistant", kind: "auto", text: "**Kafka is a distributed event-streaming platform for publishing, storing and processing real-time data.**\n- Producers write to topics\n- Consumers read at their own pace\n- Partitions scale it out\n- Replicated, so durable", timestamp: now },
@@ -287,6 +287,12 @@ async function shots(windows: WindowManager, settings: SmokeDeps["settings"], di
   windows.showPanel("answers")
   await sleep(1500)
   windows.send("chat", "session:state", { status: "paused", startedAt: now, notice: null, connected: true, audioSource: "both", audioDeviceId: "" })
+  // IGPT_SMOKE_PLAN=pro: shots as a paying account, with auto-answer on (store and marketing pictures).
+  const shotPlan = process.env.IGPT_SMOKE_PLAN as PlanName | undefined
+  if (shotPlan) {
+    const usage = { answers: 12, vision: 1, listening: 20, reports: 0 }
+    windows.send("chat", "plan:state", { status: "ok", plan: shotPlan, used: usage, limits: { answers: 300, vision: 50, listening: 720, reports: 20 } })
+  }
   windows.send("chat", "suggestions:state", {
     topic: "Scaling the payments database",
     items: [

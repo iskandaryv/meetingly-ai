@@ -38,7 +38,7 @@ Meetingly é um assistente de IA gratuito e open-source para entrevistas de empr
 
 - **Respostas reais, na hora.** Quando a outra pessoa perguntar algo, pressione *Responder* (ou deixe o recurso de resposta automática do Pro fazer isso): uma frase em negrito que você pode dizer, seguida de alguns pontos-chave para desenvolver. Sem coaching, sem “você poderia mencionar…”.
 - **Perguntas sugeridas.** Uma coluna lateral acompanha a conversa e oferece perguntas com um clique: a pergunta que acabaram de fazer, termos que surgiram, a provável próxima pergunta.
-- **Reconhecimento de fala no seu computador.** NVIDIA Nemotron transcreve localmente em 28 idiomas enquanto as pessoas falam. Quando uma frase termina, um segundo modelo a reescreve com mais precisão: Parakeet Ultra para 20 idiomas europeus, Qwen3-ASR para chinês, japonês, coreano e vietnamita. Unlimited também oferece transcrição opcional na nuvem, que envia o áudio para o Deepgram.
+- **Reconhecimento de fala no seu computador.** NVIDIA Nemotron transcreve localmente em 28 idiomas enquanto as pessoas falam. Quando uma frase termina, um segundo modelo a transcreve novamente com mais precisão: Parakeet Ultra para 20 idiomas europeus, Qwen3-ASR para chinês, japonês, coreano e vietnamita. Como opção, a transcrição na nuvem envia o áudio para o Deepgram.
 - **Você e Eles, separados.** Seu microfone e o áudio da chamada são transcritos separadamente, então a transcrição parece um chat.
 - **Análise de tela.** Um clique lê o que está na sua tela (uma tarefa de código, um slide, uma pergunta) e responde.
 - **Proteção de conteúdo no compartilhamento de tela.** Usa a proteção do sistema operacional no Windows e macOS. Alguns métodos de captura ainda podem incluir a janela; Linux não oferece a mesma proteção.
@@ -60,15 +60,15 @@ Meetingly é um assistente de IA gratuito e open-source para entrevistas de empr
 
 **Conta grátis.** Clique em *Sign up free* no painel: 50 respostas de AI por dia, sem cartão. Instruções (seu currículo, a descrição da vaga), configurações e relatórios de reunião ficam no seu [dashboard web](https://account.meetinglyai.com) e sincronizam com todos os computadores.
 
-| | Grátis | Lite | Pro | Unlimited |
-|---|---|---|---|---|
-| Preço | $0 | $9.99 / mês, 7 dias grátis | $19.99 / mês | $9 / 24 horas, até $99 / 30 dias |
-| Respostas | 50 por dia | 150 por dia | 300 por dia | Ilimitadas (uso justo) |
-| Resposta automática (responde às perguntas à medida que são feitas) | — (pressione Responder) | Incluído | Incluído | Incluído |
-| Análise de tela | 3 por dia | 15 por dia | 50 por dia | 300 por dia |
-| Sugestões em tempo real | Cerca de 30 minutos por dia | Cerca de 2 horas por dia | Cerca de 4 horas por dia | Cerca de 8 horas por dia |
-| Relatórios de reuniões | 1 por dia | 5 por dia | 20 por dia | 100 por dia |
-| Computadores | 1 | 1 | 2 | 3 |
+| | Grátis | Lite | Pro |
+|---|---|---|---|
+| Preço | $0 | $9.99 / mês, 7 dias grátis | $19.99 / mês |
+| Respostas | 50 por dia | 150 por dia | 300 por dia |
+| Resposta automática (responde às perguntas conforme são feitas) | — (pressione Responder) | Incluído | Incluído |
+| Análise de tela | 3 por dia | 15 por dia | 50 por dia |
+| Sugestões ao vivo | Cerca de 30 minutos por dia | Cerca de 2 horas por dia | Cerca de 4 horas por dia |
+| Relatórios de reuniões | 1 por dia | 5 por dia | 20 por dia |
+| Computadores | 1 | 1 | 2 |
 
 Pague com cartão, ou com SBP ou cripto, na [página de planos](https://account.meetinglyai.com/dashboard/plan). Publique sobre o Meetingly e ganhe Pro grátis: veja a [recompensa para criadores](https://meetinglyai.com/creators/).
 
@@ -87,7 +87,7 @@ A versão 1.2.3 exige um chaveiro seguro do sistema operacional antes de salvar 
 
 | | **Meetingly** | Cluely | Pluely | Interview Coder | Final Round AI | LockedIn AI | Parakeet AI |
 |---|---|---|---|---|---|---|---|
-| Preço | **Grátis**, Lite $9.99, Pro $19.99 / mês, Unlimited a partir de $9 / 24 horas | Plano grátis, Pro $19.99 / mês | Grátis com suas próprias chaves, Pro a partir de $15 / mês, $120 vitalício | $299 / mês ou $799 vitalício | Pro a partir de $25 / mês | $54.99 / mês ou $39.99 / mês com cobrança a cada 3 meses | €129.90 / mês ou créditos |
+| Preço | **Grátis**, Lite $9.99, Pro $19.99 / mês | Plano grátis, Pro $19.99 / mês | Grátis com suas próprias chaves, Pro a partir de $15 / mês, $120 vitalício | $299 / mês ou $799 vitalício | Pro a partir de $25 / mês | $54.99 / mês ou $39.99 / mês com cobrança a cada 3 meses | €129.90 / mês ou créditos |
 | Respostas de IA gratuitas sem sua própria chave | **50 por dia, todos os dias** | "Respostas de IA limitadas" | — | Nenhuma: a IA precisa de assinatura | Nenhuma: sessões ao vivo precisam do Pro | — | Uma sessão de 10 minutos |
 | Oculto no compartilhamento de tela | **Todos os planos; aplicam-se limitações do sistema operacional e do método de captura** | Apenas Pro + Undetectability, US$ 149,99 / mês | Todos os planos | Todos os planos | Pro | — | Planos pagos |
 | Linux | **AppImage e .deb** | — | .deb | — | — | — | Apenas no Chrome |
@@ -106,7 +106,7 @@ A versão 1.2.3 exige um chaveiro seguro do sistema operacional antes de salvar 
 ```mermaid
 flowchart LR
   A["Microphone + call audio"] -->|"Local transcription (default)"| B["On-device speech model"]
-  A -->|"Cloud transcription selected (Unlimited)"| H["Meetingly relay → Deepgram"]
+  A -->|"Cloud transcription selected"| H["Meetingly relay → Deepgram"]
   B --> C["Live transcript"]
   H --> C
   C -->|"Hosted answers"| F["Meetingly relay + AI provider"]
@@ -116,7 +116,7 @@ flowchart LR
   C -.->|"When account is connected"| S["Account sync"]
 ```
 
-O áudio é processado no seu computador quando a transcrição local é selecionada. Escolher transcrição na nuvem no Unlimited envia o áudio pelo relay para Deepgram. As respostas de IA usam o texto relevante da transcrição, perguntas e capturas de tela solicitadas: pelo relay/provedor hospedado ou diretamente pelo seu próprio endpoint. A sincronização de contas conectadas é um caminho de dados separado.
+O áudio é processado no seu computador quando a transcrição local está selecionada. Ao escolher a transcrição na nuvem, o áudio é enviado ao Deepgram por meio do relay. As respostas da IA usam o texto relevante da transcrição, as perguntas e as capturas de tela solicitadas: por meio do relay/provedor hospedado ou diretamente pelo seu próprio endpoint. A sincronização de contas conectadas usa um fluxo de dados separado.
 
 ## Notas de instalação
 
@@ -145,7 +145,7 @@ npm run dev
 
 ```
 app/      desktop app: Electron 44, React 19, Vite 8, TypeScript, Tailwind
-relay/    the small Node service behind the Free, Pro and Unlimited plans (holds the API keys, picks the model per task)
+relay/    the small Node service behind the hosted plans (holds the API keys, picks the model per task)
 docs/     images for this page
 ```
 

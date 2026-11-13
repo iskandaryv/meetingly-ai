@@ -38,7 +38,7 @@ Meetingly は、Windows、macOS、Linux で使える、就職面接とライブ�
 
 - **すぐに、本当の答えを。** 相手に何か聞かれたら、*Answer* を押す（または Pro の自動回答に任せる）だけです。言える答えを太字で1行、その後に話を広げるための要点をいくつか表示します。コーチングも、「…に触れてもよいでしょう」といった提案もありません。
 - **質問の提案。** サイド列が会話を追い、ワンクリックで使える質問を提示します。たった今聞かれた質問、出てきた用語、次に来そうな質問です。
-- **コンピューター上で音声認識。** NVIDIA Nemotronが話されている内容を28言語でローカルに文字起こしします。文が終わると、別のモデルがより正確に書き起こします。20のヨーロッパ言語にはParakeet Ultra、中国語・日本語・韓国語・ベトナム語にはQwen3-ASRを使用します。Unlimitedではオプションでクラウド文字起こしも利用でき、音声はDeepgramに送信されます。
+- **コンピューター上で音声認識。** NVIDIA Nemotronが、話している内容を28言語でローカル文字起こしします。文が終わると、2つ目のモデルがより正確に書き直します。ヨーロッパの20言語にはParakeet Ultra、中国語、日本語、韓国語、ベトナム語にはQwen3-ASRを使用します。オプションのクラウド文字起こしでは、代わりに音声をDeepgramへ送信します。
 - **自分と相手を分けて表示。** 自分のマイクと通話音声を別々に文字起こしするので、チャットのように読めます。
 - **画面分析。** ワンクリックで画面上の内容（コーディング課題、スライド、質問）を読み取り、回答します。
 - **画面共有コンテンツの保護。** Windows と macOS では OS の保護機能を使います。一部のキャプチャ方法ではウィンドウが含まれる場合があります。Linux には同等の保護はありません。
@@ -60,15 +60,15 @@ Meetingly は、Windows、macOS、Linux で使える、就職面接とライブ�
 
 **無料アカウント。** パネルで *Sign up free* をクリックすると、カード不要で1日50件の AI 回答を使えます。指示（履歴書、求人内容）、設定、会議レポートは [web dashboard](https://account.meetinglyai.com) に保存され、すべてのコンピューターに同期されます。
 
-| | 無料 | Lite | Pro | Unlimited |
-|---|---|---|---|---|
-| 価格 | $0 | 月額$9.99、7日間無料 | 月額$19.99 | 24時間$9、30日間最大$99 |
-| 回答 | 1日50件 | 1日150件 | 1日300件 | 無制限（公正利用） |
-| 自動回答（質問されると回答） | —（「回答」を押す） | 含まれる | 含まれる | 含まれる |
-| 画面分析 | 1日3回 | 1日15回 | 1日50回 | 1日300回 |
-| ライブ提案 | 1日約30分 | 1日約2時間 | 1日約4時間 | 1日約8時間 |
-| 会議レポート | 1日1件 | 1日5件 | 1日20件 | 1日100件 |
-| コンピューター | 1 | 1 | 2 | 3 |
+| | Free | Lite | Pro |
+|---|---|---|---|
+| 料金 | $0 | 月額$9.99、7日間無料 | 月額$19.99 |
+| 回答 | 1日50件 | 1日150件 | 1日300件 |
+| 自動回答（質問されると回答） | —（Answerを押す） | 含む | 含む |
+| 画面分析 | 1日3回 | 1日15回 | 1日50回 |
+| リアルタイム提案 | 1日約30分 | 1日約2時間 | 1日約4時間 |
+| 会議レポート | 1日1件 | 1日5件 | 1日20件 |
+| コンピューター | 1台 | 1台 | 2台 |
 
 [plan page](https://account.meetinglyai.com/dashboard/plan) で、カード、SBP、または暗号資産で支払えます。Meetingly について投稿すると Pro が無料になります。詳しくは [creator reward](https://meetinglyai.com/creators/) をご覧ください。
 
@@ -87,7 +87,7 @@ Meetingly は、Windows、macOS、Linux で使える、就職面接とライブ�
 
 | | **Meetingly** | Cluely | Pluely | Interview Coder | Final Round AI | LockedIn AI | Parakeet AI |
 |---|---|---|---|---|---|---|---|
-| 価格 | **無料**、Lite $9.99、Pro 月額$19.99、Unlimited 24時間$9〜 | 無料プラン、Pro 月額$19.99 | 自分のキーを使えば無料、Pro 月額$15〜、買い切り$120 | 月額$299または買い切り$799 | Pro 月額$25〜 | 月額$54.99、または3か月ごとの請求で月額$39.99 | 月額€129.90、またはクレジット制 |
+| 料金 | **無料**、Lite 月額$9.99、Pro 月額$19.99 | 無料プラン、Pro 月額$19.99 | 独自キーなら無料、Pro 月額$15～、買い切り$120 | 月額$299または買い切り$799 | Pro 月額$25～ | 月額$54.99、または3か月ごとの請求で月額$39.99 | 月額€129.90、またはクレジット制 |
 | 自分のキーなしでの無料 AI 回答 | **毎日 50 回** | "Limited AI responses" | — | なし: AI にはサブスクリプションが必要 | なし: ライブセッションには Pro が必要 | — | 10 分セッション 1 回 |
 | 画面共有から非表示 | **全プラン。OS とキャプチャ方法の制限あり** | Pro + Undetectability のみ、$149.99 / 月 | 全プラン | 全プラン | Pro | — | 有料プラン |
 | Linux | **AppImage and .deb** | — | .deb | — | — | — | Chrome のみ |
@@ -106,7 +106,7 @@ Meetingly は、Windows、macOS、Linux で使える、就職面接とライブ�
 ```mermaid
 flowchart LR
   A["Microphone + call audio"] -->|"Local transcription (default)"| B["On-device speech model"]
-  A -->|"Cloud transcription selected (Unlimited)"| H["Meetingly relay → Deepgram"]
+  A -->|"Cloud transcription selected"| H["Meetingly relay → Deepgram"]
   B --> C["Live transcript"]
   H --> C
   C -->|"Hosted answers"| F["Meetingly relay + AI provider"]
@@ -116,7 +116,7 @@ flowchart LR
   C -.->|"When account is connected"| S["Account sync"]
 ```
 
-ローカル文字起こしを選択した場合、音声は自分のコンピューター上で処理されます。Unlimited でクラウド文字起こしを選ぶと、音声はリレー経由で Deepgram に送られます。AI 回答は、関連する文字起こしテキスト、質問、要求されたスクリーンショットを使用します。ホストされたリレー/プロバイダー経由、または自分のエンドポイントへ直接送信されます。連携アカウントの同期は別のデータ経路です。
+ローカル文字起こしを選択すると、音声はコンピューター上で処理されます。クラウド文字起こしを選択すると、音声はリレー経由でDeepgramへ送信されます。AIの回答には、関連する文字起こしテキスト、質問、要求されたスクリーンショットが使用され、ホスト型リレー／プロバイダー経由、または独自のエンドポイント経由で直接処理されます。接続済みアカウントの同期には別のデータ経路が使用されます。
 
 ## インストール時の注意
 
@@ -145,7 +145,7 @@ npm run dev
 
 ```
 app/      desktop app: Electron 44, React 19, Vite 8, TypeScript, Tailwind
-relay/    the small Node service behind the Free, Pro and Unlimited plans (holds the API keys, picks the model per task)
+relay/    the small Node service behind the hosted plans (holds the API keys, picks the model per task)
 docs/     images for this page
 ```
 

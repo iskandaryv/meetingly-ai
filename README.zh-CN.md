@@ -38,7 +38,7 @@ Meetingly 是一款免费开源的 AI 助手，适用于 Windows、macOS 和 Lin
 
 - **即时给出真实答案。** 对方提问时，按下 *Answer*（或让 Pro 自动回答）：先给出一句你可以直接说的加粗回答，再提供几个可展开的要点。不提供指导，也不会说“你可以提到……”。
 - **问题建议。** 侧边栏会跟随对话并提供一键提问：刚刚被问到的问题、出现过的术语、可能的下一个问题。
-- **在你的电脑上进行语音识别。** 人们说话时，NVIDIA Nemotron 会在本地转录 28 种语言。句子结束后，第二个模型会更准确地重新转写：Parakeet Ultra 支持 20 种欧洲语言，Qwen3-ASR 支持中文、日语、韩语和越南语。Unlimited 还提供可选的云端转录，会将音频发送到 Deepgram。
+- **在你的电脑上进行语音识别。** NVIDIA Nemotron 可在本地实时转录 28 种语言。每句话结束后，第二个模型会进行更准确的重新转录：Parakeet Ultra 支持 20 种欧洲语言，Qwen3-ASR 支持中文、日语、韩语和越南语。你也可以选择云端转录，将音频发送到 Deepgram。
 - **你和对方，分开记录。** 你的麦克风和通话音频会分别转写，因此转写稿读起来像聊天记录。
 - **屏幕分析。** 一键读取屏幕内容（编程题、幻灯片、问题）并给出答案。
 - **屏幕共享内容保护。** 在 Windows 和 macOS 上使用操作系统保护。某些捕获方式仍可能包含该窗口；Linux 不提供同等保护。
@@ -60,15 +60,15 @@ Meetingly 是一款免费开源的 AI 助手，适用于 Windows、macOS 和 Lin
 
 **免费账号。** 在面板中点击 *Sign up free*：每天 50 次 AI 回答，无需银行卡。说明（你的简历、职位描述）、设置和会议报告都在你的 [网页仪表盘](https://account.meetinglyai.com) 中，并同步到每台电脑。
 
-| | 免费 | Lite | Pro | Unlimited |
-|---|---|---|---|---|
-| 价格 | $0 | $9.99 / 月，免费试用 7 天 | $19.99 / 月 | $9 / 24 小时，最高 $99 / 30 天 |
-| 回答 | 每天 50 次 | 每天 150 次 | 每天 300 次 | 无限（合理使用） |
-| 自动回答（问题提出时自动回答） | —（按下“回答”） | 包含 | 包含 | 包含 |
-| 屏幕分析 | 每天 3 次 | 每天 15 次 | 每天 50 次 | 每天 300 次 |
-| 实时建议 | 每天约 30 分钟 | 每天约 2 小时 | 每天约 4 小时 | 每天约 8 小时 |
-| 会议报告 | 每天 1 份 | 每天 5 份 | 每天 20 份 | 每天 100 份 |
-| 设备数 | 1 | 1 | 2 | 3 |
+| | 免费版 | Lite | Pro |
+|---|---|---|---|
+| 价格 | $0 | $9.99 / 月，免费试用 7 天 | $19.99 / 月 |
+| 回答 | 每天 50 次 | 每天 150 次 | 每天 300 次 |
+| 自动回答（提问时自动作答） | —（按下“回答”） | 包含 | 包含 |
+| 屏幕分析 | 每天 3 次 | 每天 15 次 | 每天 50 次 |
+| 实时建议 | 每天约 30 分钟 | 每天约 2 小时 | 每天约 4 小时 |
+| 会议报告 | 每天 1 份 | 每天 5 份 | 每天 20 份 |
+| 电脑 | 1 台 | 1 台 | 2 台 |
 
 可在[计划页面](https://account.meetinglyai.com/dashboard/plan)用银行卡、SBP 或加密货币支付。发布关于 Meetingly 的内容可免费获得 Pro：查看[创作者奖励](https://meetinglyai.com/creators/)。
 
@@ -87,7 +87,7 @@ Meetingly 是一款免费开源的 AI 助手，适用于 Windows、macOS 和 Lin
 
 | | **Meetingly** | Cluely | Pluely | Interview Coder | Final Round AI | LockedIn AI | Parakeet AI |
 |---|---|---|---|---|---|---|---|
-| 价格 | **免费**，Lite $9.99，Pro $19.99 / 月，Unlimited $9 / 24 小时起 | 免费套餐，Pro $19.99 / 月 | 使用自己的密钥免费，Pro $15 / 月起，终身版 $120 | $299 / 月或终身版 $799 | Pro $25 / 月起 | $54.99 / 月，或每 3 个月结算时 $39.99 / 月 | €129.90 / 月，或按点数计费 |
+| 价格 | **免费**，Lite $9.99，Pro $19.99 / 月 | 免费方案，Pro $19.99 / 月 | 使用自己的密钥免费，Pro $15 / 月起，终身版 $120 | $299 / 月或终身版 $799 | Pro $25 / 月起 | $54.99 / 月，或每 3 个月结算一次，$39.99 / 月 | €129.90 / 月，或使用点数 |
 | 无需自有密钥的免费 AI 答案 | **每天 50 个，每天都有** | "Limited AI responses" | — | 无：AI 需要订阅 | 无：实时会话需要 Pro | — | 一个 10 分钟会话 |
 | 屏幕共享中隐藏 | **所有计划；受操作系统和捕获方式限制** | 仅 Pro + Undetectability，$149.99 / 月 | 所有计划 | 所有计划 | Pro | — | 付费计划 |
 | Linux | **AppImage 和 .deb** | — | .deb | — | — | — | 仅 Chrome |
@@ -106,7 +106,7 @@ Meetingly 是一款免费开源的 AI 助手，适用于 Windows、macOS 和 Lin
 ```mermaid
 flowchart LR
   A["Microphone + call audio"] -->|"Local transcription (default)"| B["On-device speech model"]
-  A -->|"Cloud transcription selected (Unlimited)"| H["Meetingly relay → Deepgram"]
+  A -->|"Cloud transcription selected"| H["Meetingly relay → Deepgram"]
   B --> C["Live transcript"]
   H --> C
   C -->|"Hosted answers"| F["Meetingly relay + AI provider"]
@@ -116,7 +116,7 @@ flowchart LR
   C -.->|"When account is connected"| S["Account sync"]
 ```
 
-选择本地转写时，音频会在你的电脑上处理。选择 Unlimited 的云端转写会通过中继将音频发送到 Deepgram。AI 答案会使用相关转写文本、问题和请求的截图：通过托管中继/提供商，或直接通过你自己的端点。已连接账户同步是单独的数据路径。
+选择本地转录时，音频会在你的电脑上处理。选择云端转录时，音频会通过中继发送到 Deepgram。AI 回答会使用相关的转录文本、问题和按要求截取的屏幕截图，并通过托管的中继/提供商处理，或直接发送到你自己的端点。已连接账户的同步使用单独的数据路径。
 
 ## 安装说明
 
@@ -145,7 +145,7 @@ npm run dev
 
 ```
 app/      desktop app: Electron 44, React 19, Vite 8, TypeScript, Tailwind
-relay/    the small Node service behind the Free, Pro and Unlimited plans (holds the API keys, picks the model per task)
+relay/    the small Node service behind the hosted plans (holds the API keys, picks the model per task)
 docs/     images for this page
 ```
 

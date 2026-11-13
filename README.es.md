@@ -38,7 +38,7 @@ Meetingly es un asistente de AI gratuito y open-source para entrevistas de traba
 
 - **Respuestas reales, al instante.** Cuando la otra persona pregunte algo, pulsa *Answer* (o deja que la respuesta automática de Pro lo haga): una línea en negrita que puedas decir y, después, algunos puntos clave para ampliar. Sin consejos ni «podrías mencionar…».
 - **Preguntas sugeridas.** Una columna lateral sigue la conversación y ofrece preguntas con un clic: la pregunta que te acaban de hacer, términos que surgieron, la probable siguiente pregunta.
-- **Reconocimiento de voz en tu ordenador.** NVIDIA Nemotron transcribe localmente en 28 idiomas mientras las personas hablan. Cuando termina una frase, un segundo modelo la vuelve a escribir con mayor precisión: Parakeet Ultra para 20 idiomas europeos, Qwen3-ASR para chino, japonés, coreano y vietnamita. Unlimited también ofrece transcripción opcional en la nube, que envía el audio a Deepgram.
+- **Reconocimiento de voz en tu ordenador.** NVIDIA Nemotron transcribe localmente en 28 idiomas mientras las personas hablan. Cuando termina una frase, un segundo modelo vuelve a escribirla con mayor precisión: Parakeet Ultra para 20 idiomas europeos y Qwen3-ASR para chino, japonés, coreano y vietnamita. La transcripción opcional en la nube envía el audio a Deepgram.
 - **Tú y ellos, separados.** Tu micrófono y el audio de la llamada se transcriben por separado, así que la transcripción se lee como un chat.
 - **Análisis de pantalla.** Un clic lee lo que hay en tu pantalla (una tarea de programación, una diapositiva, una pregunta) y lo responde.
 - **Protección del contenido al compartir pantalla.** Usa la protección del sistema operativo en Windows y macOS. Algunos métodos de captura aún pueden incluir la ventana; Linux no ofrece la misma protección.
@@ -60,15 +60,15 @@ Meetingly es un asistente de AI gratuito y open-source para entrevistas de traba
 
 **Cuenta gratis.** Haz clic en *Sign up free* en el panel: 50 respuestas de AI al día, sin tarjeta. Las instrucciones (tu CV, la descripción del puesto), los ajustes y los informes de reunión están en tu [panel web](https://account.meetinglyai.com) y se sincronizan con todos tus ordenadores.
 
-| | Gratis | Lite | Pro | Unlimited |
-|---|---|---|---|---|
-| Precio | $0 | $9.99 / mes, 7 días gratis | $19.99 / mes | $9 / 24 horas, hasta $99 / 30 días |
-| Respuestas | 50 al día | 150 al día | 300 al día | Ilimitadas (uso razonable) |
-| Respuesta automática (responde a las preguntas a medida que se formulan) | — (pulsa Responder) | Incluida | Incluida | Incluida |
-| Análisis de pantalla | 3 al día | 15 al día | 50 al día | 300 al día |
-| Sugerencias en directo | Unos 30 minutos al día | Unas 2 horas al día | Unas 4 horas al día | Unas 8 horas al día |
-| Informes de reuniones | 1 al día | 5 al día | 20 al día | 100 al día |
-| Ordenadores | 1 | 1 | 2 | 3 |
+| | Gratis | Lite | Pro |
+|---|---|---|---|
+| Precio | $0 | $9.99 / mes, 7 días gratis | $19.99 / mes |
+| Respuestas | 50 al día | 150 al día | 300 al día |
+| Respuesta automática (responde las preguntas a medida que se hacen) | — (pulsa Responder) | Incluida | Incluida |
+| Análisis de pantalla | 3 al día | 15 al día | 50 al día |
+| Sugerencias en directo | Unos 30 minutos al día | Unas 2 horas al día | Unas 4 horas al día |
+| Informes de reuniones | 1 al día | 5 al día | 20 al día |
+| Ordenadores | 1 | 1 | 2 |
 
 Paga con tarjeta, o con SBP o cripto, en la [página de planes](https://account.meetinglyai.com/dashboard/plan). Publica sobre Meetingly y consigue Pro gratis: consulta la [recompensa para creadores](https://meetinglyai.com/creators/).
 
@@ -87,7 +87,7 @@ La versión 1.2.3 requiere un llavero seguro del sistema operativo antes de guar
 
 | | **Meetingly** | Cluely | Pluely | Interview Coder | Final Round AI | LockedIn AI | Parakeet AI |
 |---|---|---|---|---|---|---|---|
-| Precio | **Gratis**, Lite $9.99, Pro $19.99 / mes, Unlimited desde $9 / 24 horas | Plan gratuito, Pro $19.99 / mes | Gratis con tus propias claves, Pro desde $15 / mes, $120 de por vida | $299 / mes o $799 de por vida | Pro desde $25 / mes | $54.99 / mes, o $39.99 / mes con facturación trimestral | €129.90 / mes, o créditos |
+| Precio | **Gratis**, Lite $9.99, Pro $19.99 / mes | Plan gratuito, Pro $19.99 / mes | Gratis con tus propias claves, Pro desde $15 / mes, $120 de por vida | $299 / mes o $799 de por vida | Pro desde $25 / mes | $54.99 / mes, o $39.99 / mes facturados cada 3 meses | €129.90 / mes, o créditos |
 | Respuestas de AI gratis sin tu propia clave | **50 al día, todos los días** | "Respuestas de AI limitadas" | — | Ninguna: la AI necesita una suscripción | Ninguna: las sesiones en directo necesitan Pro | — | Una sesión de 10 minutos |
 | Oculto al compartir pantalla | **Todos los planes; se aplican limitaciones del sistema operativo y del método de captura** | Solo Pro + Undetectability, $149.99 / mes | Todos los planes | Todos los planes | Pro | — | Planes de pago |
 | Linux | **AppImage y .deb** | — | .deb | — | — | — | Solo en Chrome |
@@ -106,7 +106,7 @@ La versión 1.2.3 requiere un llavero seguro del sistema operativo antes de guar
 ```mermaid
 flowchart LR
   A["Microphone + call audio"] -->|"Local transcription (default)"| B["On-device speech model"]
-  A -->|"Cloud transcription selected (Unlimited)"| H["Meetingly relay → Deepgram"]
+  A -->|"Cloud transcription selected"| H["Meetingly relay → Deepgram"]
   B --> C["Live transcript"]
   H --> C
   C -->|"Hosted answers"| F["Meetingly relay + AI provider"]
@@ -116,7 +116,7 @@ flowchart LR
   C -.->|"When account is connected"| S["Account sync"]
 ```
 
-El audio se procesa en tu ordenador cuando se selecciona la transcripción local. Elegir transcripción en la nube en Unlimited envía el audio a Deepgram a través del relé. Las respuestas de AI usan el texto relevante de la transcripción, las preguntas y las capturas de pantalla solicitadas: a través del relé/proveedor alojado, o directamente mediante tu propio endpoint. La sincronización de cuentas conectadas es una ruta de datos separada.
+El audio se procesa en tu ordenador cuando se selecciona la transcripción local. Al elegir la transcripción en la nube, el audio se envía a Deepgram a través del relé. Las respuestas de la IA utilizan el texto pertinente de la transcripción, las preguntas y las capturas de pantalla solicitadas: mediante el relé/proveedor alojado o directamente a través de tu propio endpoint. La sincronización de cuentas conectadas utiliza una ruta de datos independiente.
 
 ## Notas de instalación
 
@@ -145,7 +145,7 @@ npm run dev
 
 ```
 app/      desktop app: Electron 44, React 19, Vite 8, TypeScript, Tailwind
-relay/    the small Node service behind the Free, Pro and Unlimited plans (holds the API keys, picks the model per task)
+relay/    the small Node service behind the hosted plans (holds the API keys, picks the model per task)
 docs/     images for this page
 ```
 

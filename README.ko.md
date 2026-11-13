@@ -38,7 +38,7 @@ Meetingly는 Windows, macOS, Linux에서 채용 면접과 실시간 회의에 �
 
 - **진짜 답변을 즉시.** 상대방이 질문하면 *Answer*를 누르세요(Pro의 자동 답변에 맡겨도 됩니다): 말할 수 있는 굵은 한 줄과, 자세히 설명할 수 있는 몇 가지 핵심 포인트가 제공됩니다. 코칭도, "…을 언급해도 됩니다" 같은 말도 없습니다.
 - **추천 질문.** 사이드 컬럼이 대화를 따라가며 한 번 클릭으로 쓸 수 있는 질문을 제공합니다. 방금 받은 질문, 나온 용어, 다음에 나올 가능성이 큰 질문입니다.
-- **컴퓨터에서 음성을 인식하세요.** NVIDIA Nemotron은 사람들이 말하는 동안 28개 언어를 로컬에서 받아씁니다. 문장이 끝나면 두 번째 모델이 더 정확하게 다시 작성합니다. Parakeet Ultra는 유럽 언어 20개를, Qwen3-ASR은 중국어, 일본어, 한국어, 베트남어를 지원합니다. Unlimited는 오디오를 Deepgram으로 전송하는 선택적 클라우드 음성 변환도 제공합니다.
+- **컴퓨터에서 음성을 인식합니다.** NVIDIA Nemotron은 사람들이 말하는 동안 28개 언어를 로컬에서 전사합니다. 문장이 끝나면 두 번째 모델이 더 정확하게 다시 전사합니다. 유럽 20개 언어에는 Parakeet Ultra를, 중국어, 일본어, 한국어, 베트남어에는 Qwen3-ASR을 사용합니다. 선택 사항인 클라우드 전사를 사용하면 오디오가 대신 Deepgram으로 전송됩니다.
 - **나와 상대를 분리.** 내 마이크와 통화 오디오를 따로 텍스트로 변환해, 기록이 채팅처럼 읽힙니다.
 - **화면 분석.** 한 번 클릭으로 화면의 내용(코딩 과제, 슬라이드, 질문)을 읽고 답합니다.
 - **화면 공유 콘텐츠 보호.** Windows와 macOS의 OS 보호 기능을 사용합니다. 일부 캡처 방식에서는 여전히 창이 포함될 수 있으며, Linux는 동일한 보호 기능을 제공하지 않습니다.
@@ -60,15 +60,15 @@ Meetingly는 Windows, macOS, Linux에서 채용 면접과 실시간 회의에 �
 
 **무료 계정.** 패널에서 *Sign up free*를 클릭하세요. 카드 없이 하루 50개의 AI 답변을 제공합니다. 지침(이력서, 직무 설명), 설정, 회의 보고서는 [웹 대시보드](https://account.meetinglyai.com)에 저장되고 모든 컴퓨터와 동기화됩니다.
 
-| | 무료 | Lite | Pro | Unlimited |
-|---|---|---|---|---|
-| 가격 | $0 | 월 $9.99, 7일 무료 | 월 $19.99 | 24시간당 $9, 30일당 최대 $99 |
-| 답변 | 하루 50개 | 하루 150개 | 하루 300개 | 무제한(공정 사용) |
-| 자동 답변(질문이 들어오는 즉시 답변) | —(Answer 누르기) | 포함 | 포함 | 포함 |
-| 화면 분석 | 하루 3회 | 하루 15회 | 하루 50회 | 하루 300회 |
-| 실시간 제안 | 하루 약 30분 | 하루 약 2시간 | 하루 약 4시간 | 하루 약 8시간 |
-| 회의 보고서 | 하루 1개 | 하루 5개 | 하루 20개 | 하루 100개 |
-| 컴퓨터 | 1 | 1 | 2 | 3 |
+| | 무료 | Lite | Pro |
+|---|---|---|---|
+| 가격 | $0 | 월 $9.99, 7일 무료 | 월 $19.99 |
+| 답변 | 하루 50회 | 하루 150회 | 하루 300회 |
+| 자동 답변 (질문을 받으면 바로 답변) | — (답변 누르기) | 포함 | 포함 |
+| 화면 분석 | 하루 3회 | 하루 15회 | 하루 50회 |
+| 실시간 제안 | 하루 약 30분 | 하루 약 2시간 | 하루 약 4시간 |
+| 회의 보고서 | 하루 1회 | 하루 5회 | 하루 20회 |
+| 컴퓨터 | 1대 | 1대 | 2대 |
 
 [플랜 페이지](https://account.meetinglyai.com/dashboard/plan)에서 카드, SBP 또는 암호화폐로 결제하세요. Meetingly에 대해 게시하고 Pro를 무료로 받으세요. [크리에이터 보상](https://meetinglyai.com/creators/)을 확인하세요.
 
@@ -87,7 +87,7 @@ Meetingly는 Windows, macOS, Linux에서 채용 면접과 실시간 회의에 �
 
 | | **Meetingly** | Cluely | Pluely | Interview Coder | Final Round AI | LockedIn AI | Parakeet AI |
 |---|---|---|---|---|---|---|---|
-| 가격 | **무료**, Lite $9.99, Pro 월 $19.99, Unlimited 24시간당 $9부터 | 무료 플랜, Pro 월 $19.99 | 자체 키 사용 시 무료, Pro 월 $15부터, 평생 이용 $120 | 월 $299 또는 평생 이용 $799 | Pro 월 $25부터 | 월 $54.99 또는 3개월마다 결제 시 월 $39.99 | 월 €129.90 또는 크레딧 |
+| 가격 | **무료**, Lite 월 $9.99, Pro 월 $19.99 | 무료 플랜, Pro 월 $19.99 | 자체 키 사용 시 무료, Pro 월 $15부터, 평생 이용권 $120 | 월 $299 또는 평생 이용권 $799 | Pro 월 $25부터 | 월 $54.99 또는 3개월마다 청구 시 월 $39.99 | 월 €129.90 또는 크레딧 |
 | 직접 키 없이 무료 AI 답변 | **매일 하루 50개** | "Limited AI responses" | — | 없음: AI에는 구독 필요 | 없음: 라이브 세션에는 Pro 필요 | — | 10분 세션 1회 |
 | 화면 공유에서 숨김 | **모든 플랜; OS 및 캡처 방식 제한 적용** | Pro + Undetectability만, $149.99 / 월 | 모든 플랜 | 모든 플랜 | Pro | — | 유료 플랜 |
 | Linux | **AppImage 및 .deb** | — | .deb | — | — | — | Chrome에서만 |
@@ -106,7 +106,7 @@ Meetingly는 Windows, macOS, Linux에서 채용 면접과 실시간 회의에 �
 ```mermaid
 flowchart LR
   A["Microphone + call audio"] -->|"Local transcription (default)"| B["On-device speech model"]
-  A -->|"Cloud transcription selected (Unlimited)"| H["Meetingly relay → Deepgram"]
+  A -->|"Cloud transcription selected"| H["Meetingly relay → Deepgram"]
   B --> C["Live transcript"]
   H --> C
   C -->|"Hosted answers"| F["Meetingly relay + AI provider"]
@@ -116,7 +116,7 @@ flowchart LR
   C -.->|"When account is connected"| S["Account sync"]
 ```
 
-로컬 전사를 선택하면 오디오는 내 컴퓨터에서 처리됩니다. Unlimited에서 클라우드 전사를 선택하면 오디오가 릴레이를 통해 Deepgram으로 전송됩니다. AI 답변은 관련 전사 텍스트, 질문, 요청된 스크린샷을 사용합니다. 호스팅 릴레이/제공자를 통하거나, 직접 설정한 엔드포인트를 통해 처리됩니다. 연결된 계정 동기화는 별도의 데이터 경로입니다.
+로컬 전사를 선택하면 오디오는 컴퓨터에서 처리됩니다. 클라우드 전사를 선택하면 오디오가 릴레이를 통해 Deepgram으로 전송됩니다. AI 답변은 관련 전사 텍스트, 질문, 요청된 스크린샷을 사용하며, 호스팅된 릴레이/제공업체를 거치거나 자체 엔드포인트를 통해 직접 처리됩니다. 연결된 계정의 동기화는 별도의 데이터 경로를 사용합니다.
 
 ## 설치 참고 사항
 
@@ -145,7 +145,7 @@ npm run dev
 
 ```
 app/      desktop app: Electron 44, React 19, Vite 8, TypeScript, Tailwind
-relay/    the small Node service behind the Free, Pro and Unlimited plans (holds the API keys, picks the model per task)
+relay/    the small Node service behind the hosted plans (holds the API keys, picks the model per task)
 docs/     images for this page
 ```
 

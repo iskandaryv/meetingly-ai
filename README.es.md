@@ -62,7 +62,7 @@ Meetingly es un asistente de AI gratuito y open-source para entrevistas de traba
 
 | | Gratis | Lite | Pro | Unlimited |
 |---|---|---|---|---|
-| Precio | $0 | $9.99 / mes, 7 días gratis | $19.99 / mes | $39.99 / mes |
+| Precio | $0 | $9.99 / mes, 7 días gratis | $19.99 / mes | $9 / 24 horas, hasta $99 / 30 días |
 | Respuestas | 50 al día | 150 al día | 300 al día | Ilimitadas (uso razonable) |
 | Respuesta automática (responde a las preguntas a medida que se formulan) | — (pulsa Responder) | Incluida | Incluida | Incluida |
 | Análisis de pantalla | 3 al día | 15 al día | 50 al día | 300 al día |
@@ -87,7 +87,7 @@ La versión 1.2.3 requiere un llavero seguro del sistema operativo antes de guar
 
 | | **Meetingly** | Cluely | Pluely | Interview Coder | Final Round AI | LockedIn AI | Parakeet AI |
 |---|---|---|---|---|---|---|---|
-| Precio | **Gratis**, Lite $9.99, Pro $19.99, Unlimited $39.99 / mes | Plan gratuito, Pro $19.99 / mes | Gratis con tus propias claves, Pro desde $15 / mes, $120 de por vida | $299 / mes o $799 de por vida | Pro desde $25 / mes | $54.99 / mes, o $39.99 / mes con facturación cada 3 meses | €129.90 / mes, o créditos |
+| Precio | **Gratis**, Lite $9.99, Pro $19.99 / mes, Unlimited desde $9 / 24 horas | Plan gratuito, Pro $19.99 / mes | Gratis con tus propias claves, Pro desde $15 / mes, $120 de por vida | $299 / mes o $799 de por vida | Pro desde $25 / mes | $54.99 / mes, o $39.99 / mes con facturación trimestral | €129.90 / mes, o créditos |
 | Respuestas de AI gratis sin tu propia clave | **50 al día, todos los días** | "Respuestas de AI limitadas" | — | Ninguna: la AI necesita una suscripción | Ninguna: las sesiones en directo necesitan Pro | — | Una sesión de 10 minutos |
 | Oculto al compartir pantalla | **Todos los planes; se aplican limitaciones del sistema operativo y del método de captura** | Solo Pro + Undetectability, $149.99 / mes | Todos los planes | Todos los planes | Pro | — | Planes de pago |
 | Linux | **AppImage y .deb** | — | .deb | — | — | — | Solo en Chrome |

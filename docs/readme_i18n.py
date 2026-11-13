@@ -88,7 +88,7 @@ Rules:
 def ask(name, lines):
     base, key = os.environ["UPSTREAM_BASE_URL"].rstrip("/"), os.environ["UPSTREAM_API_KEY"]
     payload = {
-        "model": os.environ.get("README_MODEL", "gpt-5.5"),
+        "model": os.environ.get("README_MODEL", "gpt-5.6-sol"),
         "reasoning_effort": "low",
         "max_completion_tokens": 16000,
         "messages": [{"role": "system", "content": SYSTEM.format(name=name, keep=KEEP_NAMES)}, {"role": "user", "content": json.dumps(lines, ensure_ascii=False)}],

@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 BASE, KEY = os.environ["UPSTREAM_BASE_URL"], os.environ["UPSTREAM_API_KEY"]
 en_file, langs_file, out_dir = sys.argv[1:4]
-MODEL = sys.argv[4] if len(sys.argv) > 4 else "gpt-5.5"
+MODEL = sys.argv[4] if len(sys.argv) > 4 else "gpt-5.6-sol"
 BATCH = 60
 
 SYSTEM = """You translate the interface of Meetingly, a desktop AI assistant for live meetings and job interviews, into {name}.

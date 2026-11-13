@@ -62,7 +62,7 @@ Meetingly is a free, open-source AI assistant for job interviews and live meetin
 
 | | Free | Lite | Pro | Unlimited |
 |---|---|---|---|---|
-| Price | $0 | $9.99 / month, 7 days free | $19.99 / month | $39.99 / month |
+| Price | $0 | $9.99 / month, 7 days free | $19.99 / month | $9 / 24 hours, up to $99 / 30 days |
 | Answers | 50 a day | 150 a day | 300 a day | Unlimited (fair use) |
 | Auto-answer (answers questions as they're asked) | — (press Answer) | Included | Included | Included |
 | Screen analysis | 3 a day | 15 a day | 50 a day | 300 a day |
@@ -87,7 +87,7 @@ Version 1.2.3 requires a secure OS keychain before saving an API key. Existing p
 
 | | **Meetingly** | Cluely | Pluely | Interview Coder | Final Round AI | LockedIn AI | Parakeet AI |
 |---|---|---|---|---|---|---|---|
-| Price | **Free**, Lite $9.99, Pro $19.99, Unlimited $39.99 / month | Free plan, Pro $19.99 / month | Free with your own keys, Pro from $15 / month, $120 lifetime | $299 / month or $799 lifetime | Pro from $25 / month | $54.99 / month, or $39.99 / month billed every 3 months | €129.90 / month, or credits |
+| Price | **Free**, Lite $9.99, Pro $19.99 / month, Unlimited from $9 / 24 hours | Free plan, Pro $19.99 / month | Free with your own keys, Pro from $15 / month, $120 lifetime | $299 / month or $799 lifetime | Pro from $25 / month | $54.99 / month, or $39.99 / month billed every 3 months | €129.90 / month, or credits |
 | Free AI answers without your own key | **50 a day, every day** | "Limited AI responses" | — | None: AI needs a subscription | None: live sessions need Pro | — | One 10-minute session |
 | Hidden from screen sharing | **Every plan; OS and capture-method limitations apply** | Only Pro + Undetectability, $149.99 / month | Every plan | Every plan | Pro | — | Paid plans |
 | Linux | **AppImage and .deb** | — | .deb | — | — | — | In Chrome only |

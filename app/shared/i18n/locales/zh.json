@@ -1,4 +1,7 @@
 {
+ "Spoken version": "口语版",
+ "Spoken answer version": "生成口语版答案",
+ "Show the usual answer and a natural spoken paragraph in one AI reply.": "一次请求同时生成原有要点版和自然口语段落。",
  "(empty reply)": "（空回复）",
  "(no description)": "（无描述）",
  "API address": "API 地址",

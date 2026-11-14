@@ -187,6 +187,8 @@ export interface Settings {
   audioDeviceId: string
   autoAnswer: AutoAnswerMode
   answerLength: AnswerLength
+  /** Ask for a second, conversational answer in the same model response. Local preference, not synced. */
+  spokenVariant: boolean
   /** Show suggested questions on the left of the panel while listening. */
   suggestions: boolean
   /**
@@ -295,6 +297,7 @@ export const DEFAULT_SETTINGS: Settings = {
   // Off until the user turns it on; it needs Pro or Unlimited, or the user's own key (autoAnswerAllowed).
   autoAnswer: "off",
   answerLength: "auto",
+  spokenVariant: false,
   // Off until turned on (the button left of the panel's close button), so a session can be a plain transcript.
   suggestions: false,
   keepMeetingsLocal: false,

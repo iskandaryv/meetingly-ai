@@ -239,12 +239,20 @@ export interface PromptParts {
 }
 
 /** The active prompt plus the user's background notes, the answer layout and length, and the language. */
-export function composeSystemPrompt(prompt: Prompt, settings: Pick<Settings, "answerLength">, languageInstruction: string): string {
+export function composeSystemPrompt(prompt: Prompt, settings: Pick<Settings, "answerLength"> & { spokenVariant?: boolean }, languageInstruction: string): string {
   const parts = [prompt.content.trim()]
   const notes = prompt.notes?.trim()
   if (notes) parts.push(`Background about the user, use it whenever relevant:\n${notes}`)
   parts.push(ANSWER_FORMAT)
   parts.push(ANSWER_LENGTHS[settings.answerLength]?.instruction ?? ANSWER_LENGTHS.auto.instruction)
+  if (settings.spokenVariant) parts.push(
+    "Give two versions of each answer in one response. First, use the normal answer format above. " +
+    "After it, write the exact marker [[SPOKEN]] on its own line, then a short natural spoken paragraph " +
+    "that answers the same question directly, without bullets, Markdown, preambles, or coaching. " +
+    "Use only facts in the question or context; never invent personal experience. " +
+    "The spoken paragraph is an additional version, even when the normal answer is short. " +
+    "If the only correct response is [no-answer], output that token alone."
+  )
   parts.push(languageInstruction)
   return parts.join("\n\n")
 }

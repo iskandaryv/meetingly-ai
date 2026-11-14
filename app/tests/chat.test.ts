@@ -100,6 +100,22 @@ describe("formatTranscript", () => {
 })
 
 describe("ChatService priorities", () => {
+  it("does not auto-answer its own spoken audio captured by system loopback", async () => {
+    const { ChatService } = await import("../electron/services/chat")
+    let calls = 0
+    const chat = new ChatService({
+      settings: { get: () => ({ autoAnswer: "always", answerLength: "auto" }), activePrompt: () => DEFAULT_PROMPT } as never,
+      llm: { chat: async () => { calls++; return { text: "answer" } }, languageInstruction: () => "" } as never,
+      session: { transcriptText: () => "" } as never,
+      capture: async () => ({}) as never
+    })
+    chat.setSpeechActive(true)
+    await chat.autoAnswer({ text: "Redis is fast because it stores data in memory.", speaker: null, channel: "them", timestamp: Date.now() })
+    chat.setSpeechActive(false)
+    await chat.autoAnswer({ text: "Redis is fast because it stores data in memory.", speaker: null, channel: "them", timestamp: Date.now() })
+    expect(calls).toBe(0)
+  })
+
   it("a screen analysis is not blocked by an auto-answer check still deciding", async () => {
     const { ChatService, SKIP_TOKEN } = await import("../electron/services/chat")
     const { DEFAULT_PROMPT } = await import("../shared/types")

@@ -1,4 +1,9 @@
 {
+ "Read answers aloud": "自动朗读答案",
+ "Automatically play each completed answer. Recording is silenced during playback. Use headphones so the meeting does not hear it.": "每次回答完成后自动播放，播放时录音静音。请使用耳机，避免会议听到。",
+ "Play answer": "播放答案",
+ "Stop playback": "停止播放",
+ "Speech playback is unavailable on this computer.": "这台电脑无法使用系统语音播放。",
  "(empty reply)": "（空回复）",
  "(no description)": "（无描述）",
  "API address": "API 地址",

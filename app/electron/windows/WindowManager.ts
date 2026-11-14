@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events"
 import type { EventChannel, EventMap } from "../../shared/ipc"
 import type { PanelTab, WindowKind, WindowsState } from "../../shared/types"
 import { MAIN_TOP_MARGIN, MOVE_STEP, PANEL_OVERLAP, WINDOW_SPECS } from "./config"
+import { moveWindow } from "./moveWindow"
 import { attachContextMenu } from "../copy"
 
 const KINDS: WindowKind[] = ["main", "chat"]
@@ -179,11 +180,7 @@ export class WindowManager extends EventEmitter {
     const main = this.get("main")
     if (!main) return
     const b = main.getBounds()
-    const area = screen.getDisplayMatching(b).workArea
-    main.setPosition(
-      clamp(b.x + dx * MOVE_STEP, area.x, area.x + area.width - b.width),
-      clamp(b.y + dy * MOVE_STEP, area.y, area.y + area.height - b.height)
-    )
+    moveWindow(main, b.x + dx * MOVE_STEP, b.y + dy * MOVE_STEP)
     this.layoutChildren()
   }
 
@@ -191,7 +188,8 @@ export class WindowManager extends EventEmitter {
 
   /**
    * The panel can't be moved on its own (it hangs under the toolbar), so dragging its header moves the toolbar,
-   * and the panel follows. Offsets are from where the pointer went down, so nothing accumulates.
+   * and the panel follows. Use event-time renderer deltas (CSS pixels / DIP) instead of sampling
+   * the live cursor when the IPC handler runs: the main process may handle events after the pointer moved.
    */
   dragMain(phase: "start" | "move" | "end", dx: number, dy: number): void {
     const main = this.get("main")
@@ -203,7 +201,7 @@ export class WindowManager extends EventEmitter {
     }
     if (!this.dragOrigin) return
     if (phase === "move") {
-      main.setPosition(Math.round(this.dragOrigin.x + dx), Math.round(this.dragOrigin.y + dy))
+      moveWindow(main, this.dragOrigin.x + dx, this.dragOrigin.y + dy)
       this.layoutChildren()
     } else {
       this.dragOrigin = null
@@ -214,7 +212,7 @@ export class WindowManager extends EventEmitter {
     const main = this.createMain()
     const b = main.getBounds()
     const area = screen.getPrimaryDisplay().workArea
-    main.setPosition(Math.round(area.x + (area.width - b.width) / 2), area.y + MAIN_TOP_MARGIN)
+    moveWindow(main, Math.round(area.x + (area.width - b.width) / 2), area.y + MAIN_TOP_MARGIN)
     if (this.restoreSet) this.showAll()
     else this.show("main")
     this.layoutChildren()
@@ -335,7 +333,7 @@ export class WindowManager extends EventEmitter {
     // Decorated windows keep wherever the user last put them.
     if (kind !== "main" && !WINDOW_SPECS[kind].decorated) {
       const pos = this.positionFor(kind)
-      win.setPosition(pos.x, pos.y)
+      moveWindow(win, pos.x, pos.y)
     }
     showWindow(win, kind)
     if (kind !== "main") this.layoutChildren()
@@ -355,7 +353,7 @@ export class WindowManager extends EventEmitter {
     }
   }
 
-  /** Where a child window belongs relative to the toolbar, clamped to the screen. */
+  /** Where a child window belongs relative to the toolbar. */
   private positionFor(kind: WindowKind): { x: number; y: number } {
     const main = this.get("main")
     const spec = WINDOW_SPECS[kind]
@@ -375,10 +373,7 @@ export class WindowManager extends EventEmitter {
     // The panel: attached, centered under the toolbar with only a hairline seam.
     const x = m.x + (m.width - size.width) / 2
     const y = m.y + m.height - PANEL_OVERLAP
-    return {
-      x: Math.round(clamp(x, area.x, area.x + area.width - size.width)),
-      y: Math.round(clamp(y, area.y, area.y + area.height - size.height))
-    }
+    return { x: Math.round(x), y: Math.round(y) }
   }
 
   private layoutChildren(): void {
@@ -388,7 +383,9 @@ export class WindowManager extends EventEmitter {
       if (win && win.isVisible()) {
         const pos = this.positionFor(kind)
         const b = win.getBounds()
-        if (b.x !== pos.x || b.y !== pos.y) win.setPosition(pos.x, pos.y)
+        if (b.x !== pos.x || b.y !== pos.y) {
+          moveWindow(win, pos.x, pos.y)
+        }
       }
     }
   }

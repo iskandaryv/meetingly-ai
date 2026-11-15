@@ -166,6 +166,7 @@ export function normalize(s: Settings): Settings {
     transcriptionEngine: s.transcriptionEngine === "cloud" ? "cloud" : "local",
     suggestions: s.suggestions !== false,
     keepMeetingsLocal: s.keepMeetingsLocal === true,
+    hoverAnalyze: s.hoverAnalyze === true,
     autoLaunch: s.autoLaunch === true,
     stealth: s.stealth !== false
   }

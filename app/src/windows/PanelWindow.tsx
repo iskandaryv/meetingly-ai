@@ -797,6 +797,9 @@ function SettingsTab({ settings, update, plan, autoAllowed }: {
         <SettingRow label={t("Keep meetings on this computer")} hint={t("No meeting report and no sync to your account. Answers and suggested questions still use the AI.")}>
           <Toggle checked={settings.keepMeetingsLocal} onChange={(on) => void update({ keepMeetingsLocal: on })} label={t("Keep meetings on this computer")} />
         </SettingRow>
+        <SettingRow label={t("Analyze screen on hover")} hint={t("Rest the pointer on the camera button for 3 seconds to analyze the screen without clicking.")}>
+          <Toggle checked={settings.hoverAnalyze} onChange={(on) => void update({ hoverAnalyze: on })} label={t("Analyze screen on hover")} />
+        </SettingRow>
         <SettingRow label={t("Stealth mode")} hint={t("Hidden from screen sharing, recordings and screenshots.")}>
           <Toggle checked={settings.stealth} onChange={(on) => void update({ stealth: on })} label={t("Stealth mode")} />
         </SettingRow>

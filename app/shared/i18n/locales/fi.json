@@ -66,6 +66,8 @@
  "Hide the live transcript": "Piilota reaaliaikainen litterointi",
  "Instructions, shortcuts, plan and past meetings": "Ohjeet, pikanäppäimet, tilaus ja aiemmat kokoukset",
  "Keep meetings on this computer": "Pidä kokoukset tällä tietokoneella",
+ "Analyze screen on hover": "Analysoi näyttö osoitettaessa",
+ "Rest the pointer on the camera button for 3 seconds to analyze the screen without clicking.": "Pidä osoitinta kamerapainikkeen päällä 3 sekuntia analysoidaksesi näytön ilman napsautusta.",
  "Listen": "Kuuntele",
  "Listening…": "Kuunnellaan…",
  "Lite and Pro answer questions from the meeting automatically. On Free, press Answer when a question is heard.": "Lite ja Pro vastaavat kokouksen kysymyksiin automaattisesti. Free-tilauksella paina Vastaa, kun kysymys esitetään.",

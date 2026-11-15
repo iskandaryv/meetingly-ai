@@ -28,6 +28,7 @@ function LocaleRoot() {
   if (!settings) return null
   setLocale(settings.uiLocale)
   document.documentElement.lang = settings.uiLocale
+  document.documentElement.dataset.arrowCursor = settings.arrowCursor ? "true" : "false"
   return <Root key={settings.uiLocale} />
 }
 

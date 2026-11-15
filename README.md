@@ -38,7 +38,7 @@ Meetingly is a free, open-source AI assistant for job interviews and live meetin
 
 - **Real answers, instantly.** When the other side asks something, press *Answer* (or let Pro's auto-answer do it): one bold line you can say, then a few catch points to expand on. No coaching, no "you could mention…".
 - **Suggested questions.** A side column follows the conversation and offers one-click questions: the question you were just asked, terms that came up, the likely next question.
-- **Speech recognition on your computer.** NVIDIA Nemotron transcribes locally in 28 languages as people speak. When a sentence ends, a second model writes it again more accurately: Parakeet Ultra for 20 European languages, Qwen3-ASR for Chinese, Japanese, Korean and Vietnamese. Unlimited also offers optional cloud transcription, which sends audio to Deepgram.
+- **Speech recognition on your computer.** NVIDIA Nemotron transcribes locally in 28 languages as people speak. When a sentence ends, a second model writes it again more accurately: Parakeet Ultra for 20 European languages, Qwen3-ASR for Chinese, Japanese, Korean and Vietnamese. Optional cloud transcription sends audio to Deepgram instead.
 - **You and Them, separated.** Your microphone and the call audio are transcribed apart, so the transcript reads like a chat.
 - **Screen analysis.** One click reads what is on your screen (a coding task, a slide, a question) and answers it.
 - **Screen-share content protection.** Uses OS protection on Windows and macOS. Some capture methods can still include the window; Linux does not offer the same protection.
@@ -60,15 +60,15 @@ Meetingly is a free, open-source AI assistant for job interviews and live meetin
 
 **Free account.** Click *Sign up free* in the panel: 50 AI answers a day, no card. Instructions (your CV, the job description), settings and meeting reports live in your [web dashboard](https://account.meetinglyai.com) and sync to every computer.
 
-| | Free | Lite | Pro | Unlimited |
-|---|---|---|---|---|
-| Price | $0 | $9.99 / month, 7 days free | $19.99 / month | $39.99 / month |
-| Answers | 50 a day | 150 a day | 300 a day | Unlimited (fair use) |
-| Auto-answer (answers questions as they're asked) | — (press Answer) | Included | Included | Included |
-| Screen analysis | 3 a day | 15 a day | 50 a day | 300 a day |
-| Live suggestions | About 30 minutes a day | About 2 hours a day | About 4 hours a day | About 8 hours a day |
-| Meeting reports | 1 a day | 5 a day | 20 a day | 100 a day |
-| Computers | 1 | 1 | 2 | 3 |
+| | Free | Lite | Pro |
+|---|---|---|---|
+| Price | $0 | $9.99 / month, 7 days free | $19.99 / month |
+| Answers | 50 a day | 150 a day | 300 a day |
+| Auto-answer (answers questions as they're asked) | — (press Answer) | Included | Included |
+| Screen analysis | 3 a day | 15 a day | 50 a day |
+| Live suggestions | About 30 minutes a day | About 2 hours a day | About 4 hours a day |
+| Meeting reports | 1 a day | 5 a day | 20 a day |
+| Computers | 1 | 1 | 2 |
 
 Pay by card, or with SBP or crypto, on the [plan page](https://account.meetinglyai.com/dashboard/plan). Post about Meetingly and get Pro free: see the [creator reward](https://meetinglyai.com/creators/).
 
@@ -87,7 +87,7 @@ Version 1.2.3 requires a secure OS keychain before saving an API key. Existing p
 
 | | **Meetingly** | Cluely | Pluely | Interview Coder | Final Round AI | LockedIn AI | Parakeet AI |
 |---|---|---|---|---|---|---|---|
-| Price | **Free**, Lite $9.99, Pro $19.99, Unlimited $39.99 / month | Free plan, Pro $19.99 / month | Free with your own keys, Pro from $15 / month, $120 lifetime | $299 / month or $799 lifetime | Pro from $25 / month | $54.99 / month, or $39.99 / month billed every 3 months | €129.90 / month, or credits |
+| Price | **Free**, Lite $9.99, Pro $19.99 / month | Free plan, Pro $19.99 / month | Free with your own keys, Pro from $15 / month, $120 lifetime | $299 / month or $799 lifetime | Pro from $25 / month | $54.99 / month, or $39.99 / month billed every 3 months | €129.90 / month, or credits |
 | Free AI answers without your own key | **50 a day, every day** | "Limited AI responses" | — | None: AI needs a subscription | None: live sessions need Pro | — | One 10-minute session |
 | Hidden from screen sharing | **Every plan; OS and capture-method limitations apply** | Only Pro + Undetectability, $149.99 / month | Every plan | Every plan | Pro | — | Paid plans |
 | Linux | **AppImage and .deb** | — | .deb | — | — | — | In Chrome only |
@@ -106,7 +106,7 @@ Version 1.2.3 requires a secure OS keychain before saving an API key. Existing p
 ```mermaid
 flowchart LR
   A["Microphone + call audio"] -->|"Local transcription (default)"| B["On-device speech model"]
-  A -->|"Cloud transcription selected (Unlimited)"| H["Meetingly relay → Deepgram"]
+  A -->|"Cloud transcription selected"| H["Meetingly relay → Deepgram"]
   B --> C["Live transcript"]
   H --> C
   C -->|"Hosted answers"| F["Meetingly relay + AI provider"]
@@ -116,7 +116,7 @@ flowchart LR
   C -.->|"When account is connected"| S["Account sync"]
 ```
 
-Audio is processed on your computer when local transcription is selected. Choosing cloud transcription on Unlimited sends audio through the relay to Deepgram. AI answers use the relevant transcript text, questions and requested screenshots: through the hosted relay/provider, or directly through your own endpoint. Connected-account synchronization is a separate data path.
+Audio is processed on your computer when local transcription is selected. Choosing cloud transcription sends audio through the relay to Deepgram. AI answers use the relevant transcript text, questions and requested screenshots: through the hosted relay/provider, or directly through your own endpoint. Connected-account synchronization is a separate data path.
 
 ## Install notes
 
@@ -145,7 +145,7 @@ npm run dev
 
 ```
 app/      desktop app: Electron 44, React 19, Vite 8, TypeScript, Tailwind
-relay/    the small Node service behind the Free, Pro and Unlimited plans (holds the API keys, picks the model per task)
+relay/    the small Node service behind the hosted plans (holds the API keys, picks the model per task)
 docs/     images for this page
 ```
 

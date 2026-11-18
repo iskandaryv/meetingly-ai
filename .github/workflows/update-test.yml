@@ -64,7 +64,7 @@ jobs:
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
             # Through PowerShell: Git Bash would rewrite "/S" into a path and the installer would open its window.
-            powershell -NoProfile -Command "Start-Process -Wait -FilePath (Resolve-Path \"../old/Meetingly Setup ${OLD}.exe\") -ArgumentList /S"
+            powershell -NoProfile -Command "Start-Process -Wait -FilePath (Resolve-Path \"../old/Meetingly-Setup.exe\") -ArgumentList /S"
             ls "$LOCALAPPDATA/Programs/Meetingly" | head -5
             echo "APP=$LOCALAPPDATA/Programs/Meetingly/Meetingly.exe" >> "$GITHUB_ENV"
           else

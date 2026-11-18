@@ -74,7 +74,7 @@ ${key}`
   /** Chat completion; streams through `onChunk` when provided. */
   async chat(messages: LlmMessage[], onChunk?: (delta: string) => void, task: LlmTask = "answer"): Promise<LlmResult> {
     const route = this.route(task)
-    const params = { model: route.model, messages, ...(route.own ? reasoningFor(route.model) : {}) }
+    const params = { model: route.model, messages, ...(route.own ? reasoningFor(route.model, route.own.baseUrl) : {}) }
     try {
       if (!onChunk) {
         const res = await route.client.chat.completions.create(params, { headers: route.headers })
@@ -107,7 +107,7 @@ ${key}`
       const res = await route.client.chat.completions.create(
         {
           model: route.model,
-          ...(route.own ? reasoningFor(route.model) : {}),
+          ...(route.own ? reasoningFor(route.model, route.own.baseUrl) : {}),
           messages: [
             ...(system ? [{ role: "system" as const, content: system }] : []),
             {

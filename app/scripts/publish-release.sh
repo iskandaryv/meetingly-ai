@@ -15,8 +15,8 @@ VERSION=$(node -p "require('./package.json').version")
 # Always package what is in the repo now, never an older dist/.
 npm run build >/dev/null
 npx electron-builder --win --publish never >/dev/null
-SETUP="release/Meetingly Setup ${VERSION}.exe"
-PORTABLE="release/Meetingly ${VERSION}.exe"
+SETUP="release/Meetingly-Setup.exe"
+PORTABLE="release/Meetingly.exe"
 [ -f "$SETUP" ] && [ -f "$PORTABLE" ] || { echo "installers missing in release/"; ls release; exit 1; }
 
 STAGE=$(mktemp -d)
@@ -26,8 +26,9 @@ cp "$SETUP" "$STAGE/Meetingly-Setup.exe"
 cp "$PORTABLE" "$STAGE/Meetingly.exe"
 cp "release/latest.yml" "$STAGE/latest.yml"
 cp "${SETUP}.blockmap" "$STAGE/Meetingly-Setup-${VERSION}.exe.blockmap" 2>/dev/null || true
-# latest.yml references the versioned file name used by electron-builder; align it with what we uploaded.
-sed -i "s|Meetingly Setup ${VERSION}.exe|Meetingly-Setup-${VERSION}.exe|g" "$STAGE/latest.yml"
+cp "${SETUP}.blockmap" "$STAGE/Meetingly-Setup.exe.blockmap" 2>/dev/null || true
+# Ensure latest.yml aligns with the release artifact names
+sed -i "s|Meetingly Setup ${VERSION}.exe|Meetingly-Setup.exe|g" "$STAGE/latest.yml" 2>/dev/null || true
 
 # macOS and Linux, built on GitHub Actions. The box downloads them itself (much faster than this PC);
 # the GitHub token goes over stdin, never onto a command line.

@@ -58,6 +58,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "artifactName": "Meetingly-Setup.exe",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerSidebar": "build/installerSidebar.bmp",
@@ -65,6 +66,9 @@
       "installerHeader": "build/installerHeader.bmp",
       "shortcutName": "Meetingly",
       "uninstallDisplayName": "Meetingly"
+    },
+    "portable": {
+      "artifactName": "Meetingly.exe"
     },
     "mac": {
       "category": "public.app-category.productivity",

@@ -25,10 +25,39 @@ export function hostOf(url: string): string {
   }
 }
 
-/** gpt-5.x and o-series models think before answering; low effort keeps answers fast. Other models reject the field. */
-export function reasoningFor(model: string): { reasoning_effort?: "low" } {
+export function isLocalEndpoint(url?: string): boolean {
+  if (!url) return false
+  try {
+    const hostname = new URL(url).hostname.toLowerCase()
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      hostname === "[::1]" ||
+      hostname === "0.0.0.0" ||
+      hostname.endsWith(".local") ||
+      hostname.endsWith(".internal") ||
+      hostname.endsWith(".lan")
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
+ * gpt-5.x and o-series models think before answering; low effort keeps answers fast.
+ * Verified compatible local inference servers (e.g. Ollama on localhost) support reasoning_effort: "none"
+ * to suppress internal thinking tokens and prevent streaming stalls.
+ * Cloud providers (OpenAI, DeepSeek cloud, Alibaba Cloud Model Studio) either reject "none" or control
+ * reasoning through different parameters (e.g. enable_thinking), so the field is omitted for remote endpoints.
+ */
+export function reasoningFor(model: string, baseUrl?: string): { reasoning_effort?: "low" | "none" } {
   const name = model.split("/").pop() ?? model
-  return /^(gpt-5|o[1-9])/i.test(name) ? { reasoning_effort: "low" } : {}
+  if (/^(gpt-5|o[1-9])/i.test(name)) return { reasoning_effort: "low" }
+  if (baseUrl && isLocalEndpoint(baseUrl) && /qwen|deepseek|r1|thinking/i.test(name)) {
+    return { reasoning_effort: "none" }
+  }
+  return {}
 }
 
 /** A provider error in words a person can act on. Marked so the relay's wording is never applied to it. */
@@ -93,7 +122,7 @@ export class OwnKeyService {
     const storedKey = key ? this.deps.box.encrypt(key) : ""
     const client = new OpenAI({ apiKey: key || "none", baseURL: baseUrl, maxRetries: 0, timeout: 30_000, fetch: this.deps.fetch })
     try {
-      await client.chat.completions.create({ model, messages: [{ role: "user", content: "Reply with the word OK." }], ...reasoningFor(model) })
+      await client.chat.completions.create({ model, messages: [{ role: "user", content: "Reply with the word OK." }], ...reasoningFor(model, baseUrl) })
     } catch (err) {
       throw describeOwnKeyError(err, { baseUrl, model })
     }

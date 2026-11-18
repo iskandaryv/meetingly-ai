@@ -5,7 +5,7 @@ import path from "node:path"
 import type { AddressInfo } from "node:net"
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
 import { Llm, describeRelayError } from "../electron/services/llm"
-import { OwnKeyService, describeOwnKeyError, normalizeBaseUrl, reasoningFor, type SecretBox } from "../electron/services/ownKey"
+import { OwnKeyService, describeOwnKeyError, isLocalEndpoint, normalizeBaseUrl, reasoningFor, type SecretBox } from "../electron/services/ownKey"
 import { PlanService } from "../electron/services/plan"
 import { SettingsStore } from "../electron/services/settings"
 
@@ -75,11 +75,43 @@ describe("own key helpers", () => {
     expect(normalizeBaseUrl("https://openrouter.ai/api/v1/chat/completions")).toBe("https://openrouter.ai/api/v1")
   })
 
-  it("asks reasoning models for low effort, and only them", () => {
+  it("asks reasoning models for appropriate effort, gated on endpoint compatibility", () => {
+    // 1. Compatible local endpoint + supported model
+    expect(isLocalEndpoint("http://localhost:11434/v1")).toBe(true)
+    expect(isLocalEndpoint("http://127.0.0.1:11434/v1")).toBe(true)
+    expect(isLocalEndpoint("http://[::1]:11434/v1")).toBe(true)
+    expect(reasoningFor("qwen3.5:4b", "http://localhost:11434/v1")).toEqual({ reasoning_effort: "none" })
+    expect(reasoningFor("deepseek-r1:8b", "http://127.0.0.1:11434/v1")).toEqual({ reasoning_effort: "none" })
+    expect(reasoningFor("ollama/deepseek-r1:14b", "http://localhost:11434/v1")).toEqual({ reasoning_effort: "none" })
+    expect(reasoningFor("my-thinking-model", "http://localhost:8080/v1")).toEqual({ reasoning_effort: "none" })
+
+    // 2. DeepSeek cloud endpoint -> omitted (uses thinking parameter or unsupported)
+    expect(isLocalEndpoint("https://api.deepseek.com")).toBe(false)
+    expect(reasoningFor("deepseek-chat", "https://api.deepseek.com")).toEqual({})
+    expect(reasoningFor("deepseek-reasoner", "https://api.deepseek.com/v1")).toEqual({})
+    expect(reasoningFor("deepseek-r1", "https://api.deepseek.com")).toEqual({})
+
+    // 3. Alibaba Cloud Model Studio compatibility -> omitted (uses enable_thinking instead)
+    expect(isLocalEndpoint("https://dashscope.aliyuncs.com/compatible-mode/v1")).toBe(false)
+    expect(reasoningFor("deepseek-v4-pro", "https://dashscope.aliyuncs.com/compatible-mode/v1")).toEqual({})
+    expect(reasoningFor("qwen-max", "https://dashscope.aliyuncs.com/compatible-mode/v1")).toEqual({})
+    expect(reasoningFor("qwen-plus", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1")).toEqual({})
+
+    // 4. Unknown endpoint / no baseUrl
+    expect(reasoningFor("qwen3.5:4b", "https://example.com/v1")).toEqual({})
+    expect(reasoningFor("deepseek-r1")).toEqual({})
+    expect(reasoningFor("qwen2.5:7b", "")).toEqual({})
+
+    // 5. Model without reasoning support
+    expect(reasoningFor("llama3.2", "http://localhost:11434/v1")).toEqual({})
+    expect(reasoningFor("gpt-4.1-mini", "https://api.openai.com/v1")).toEqual({})
+    expect(reasoningFor("mistral-small", "http://localhost:11434/v1")).toEqual({})
+
+    // 6. Existing reasoning-effort selection behavior (low for gpt-5 and o-series)
     expect(reasoningFor("gpt-5.5")).toEqual({ reasoning_effort: "low" })
     expect(reasoningFor("openai/o4-mini")).toEqual({ reasoning_effort: "low" })
-    expect(reasoningFor("gpt-4.1-mini")).toEqual({})
-    expect(reasoningFor("llama3.2")).toEqual({})
+    expect(reasoningFor("o1-preview", "https://api.openai.com/v1")).toEqual({ reasoning_effort: "low" })
+    expect(reasoningFor("o3-mini", "http://localhost:11434/v1")).toEqual({ reasoning_effort: "low" })
   })
 
   it("words provider errors, and the relay wording leaves them alone", () => {
@@ -129,6 +161,15 @@ describe("OwnKeyService", () => {
     const service = new OwnKeyService({ settings: store(), box })
     await expect(service.save({ baseUrl: "api.openai.com", key: "k", model: "m" })).rejects.toThrow(/https/)
     await expect(service.save({ baseUrl: base, key: "k", model: " " })).rejects.toThrow()
+  })
+
+  it("includes reasoning_effort none only for local reasoning models during validation request", async () => {
+    const settings = store()
+    const service = new OwnKeyService({ settings, box })
+    await service.save({ baseUrl: `${base}/`, key: "sk-test", model: "qwen3.5:4b" })
+    const lastRequest = seen[seen.length - 1]
+    expect(lastRequest.body.model).toBe("qwen3.5:4b")
+    expect(lastRequest.body.reasoning_effort).toBe("none")
   })
 })
 

@@ -25,10 +25,14 @@ export function hostOf(url: string): string {
   }
 }
 
-/** gpt-5.x and o-series models think before answering; low effort keeps answers fast. Other models reject the field. */
-export function reasoningFor(model: string): { reasoning_effort?: "low" } {
+/** gpt-5.x and o-series models think before answering; low effort keeps answers fast. Qwen/DeepSeek thinking models need none. Other models reject the field. */
+export function reasoningFor(model: string): { reasoning_effort?: "low" | "none" } {
   const name = model.split("/").pop() ?? model
-  return /^(gpt-5|o[1-9])/i.test(name) ? { reasoning_effort: "low" } : {}
+  return /^(gpt-5|o[1-9])/i.test(name)
+    ? { reasoning_effort: "low" }
+    : /qwen|deepseek|r1|thinking/i.test(name)
+    ? { reasoning_effort: "none" }
+    : {}
 }
 
 /** A provider error in words a person can act on. Marked so the relay's wording is never applied to it. */

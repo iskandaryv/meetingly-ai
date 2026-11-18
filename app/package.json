@@ -44,10 +44,10 @@
     ],
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        "nsis"
       ],
       "icon": "build/icon.ico",
+      "artifactName": "Meetingly-Setup.exe",
       "extraResources": [
         {
           "from": "vendor/transcribe/win-${arch}",

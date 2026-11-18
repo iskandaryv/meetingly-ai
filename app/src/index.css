@@ -42,7 +42,7 @@ a {
 
 .selectable {
   user-select: text;
-  cursor: text;
+  cursor: default;
 }
 
 /* Thin scrollbars that stay out of the way. */
@@ -102,3 +102,25 @@ textarea,
 select {
   color-scheme: dark;
 }
+
+/* Enforce standard Windows arrow cursor across entire UI */
+*,
+*::before,
+*::after,
+html,
+body,
+input,
+textarea,
+select,
+button,
+a,
+[role="button"],
+[class*="cursor-"],
+[style*="cursor"],
+.selectable,
+.scroll,
+.drag,
+.no-drag {
+  cursor: default !important;
+}
+

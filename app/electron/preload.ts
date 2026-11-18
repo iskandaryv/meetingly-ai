@@ -19,3 +19,21 @@ const api: RendererApi = {
 }
 
 contextBridge.exposeInMainWorld("api", api)
+
+// Enforce standard Windows arrow cursor via preload DOM injection
+const doc = (globalThis as any).document
+if (typeof doc !== "undefined") {
+  const applyCursor = () => {
+    if (doc.getElementById("agy-arrow-cursor")) return
+    const style = doc.createElement("style")
+    style.id = "agy-arrow-cursor"
+    style.textContent = "* { cursor: default !important; }"
+    ;(doc.head || doc.documentElement).appendChild(style)
+  }
+  if (doc.readyState === "loading") {
+    doc.addEventListener("DOMContentLoaded", applyCursor)
+  } else {
+    applyCursor()
+  }
+}
+

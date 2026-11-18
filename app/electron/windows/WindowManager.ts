@@ -309,6 +309,11 @@ export class WindowManager extends EventEmitter {
     win.webContents.on("will-navigate", (e) => e.preventDefault())
     attachContextMenu(win.webContents)
 
+    // Enforce standard Windows arrow cursor across the window
+    win.webContents.on("did-finish-load", () => {
+      win.webContents.insertCSS("* { cursor: default !important; }", { cssOrigin: "user" }).catch(() => {})
+    })
+
     const devUrl = process.env.VITE_DEV_SERVER_URL
     if (devUrl) void win.loadURL(`${devUrl}#/${kind}`)
     else void win.loadFile(path.join(__dirname, "../dist/index.html"), { hash: `/${kind}` })
